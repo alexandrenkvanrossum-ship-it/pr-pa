@@ -36,7 +36,7 @@ var Store = (function(){
     var b=blank(); Object.keys(b).forEach(function(k){ if(mem[k]==null) mem[k]=b[k]; });
     return mem;
   }
-  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(mem)); }catch(e){} }
+  function save(silent){ try{ localStorage.setItem(KEY,JSON.stringify(mem)); }catch(e){} if(!silent && typeof Sync!=="undefined") Sync.schedule(); }
   return {get:load, save:save};
 })();
 

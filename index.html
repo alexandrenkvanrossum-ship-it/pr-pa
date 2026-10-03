@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
 /* Layout : barre latérale translucide (ordi) ou barre d'onglets en bas (téléphone), une colonne de travail centrée, fenêtres en verre dépoli par-dessus. Thème clair uniquement, à la demande d'Alexandre. */
 :root{
@@ -321,6 +322,10 @@ label.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);marg
 .badge-ex{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-pale);border-radius:6px;padding:1px 6px}
 .gem-msg{background:var(--surface);border-radius:var(--r);padding:12px 14px;box-shadow:inset 0 0 0 .5px var(--line)}
 
+.sync-pill{display:inline-flex;align-items:center;gap:7px;height:32px;border:0;border-radius:var(--r-pill);padding:0 12px;background:var(--glass-strong);box-shadow:inset 0 0 0 .5px var(--line);font-size:12.5px;font-weight:600;color:var(--ink-2);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px)}
+.sync-pill .sd{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.sync-pill .sd.ok{background:var(--green)} .sync-pill .sd.run{background:var(--blue)} .sync-pill .sd.warn{background:var(--amber)}
+
 </style>
 </head><body>
 <div id="root"></div>
@@ -474,7 +479,7 @@ var Store = (function(){
     var b=blank(); Object.keys(b).forEach(function(k){ if(mem[k]==null) mem[k]=b[k]; });
     return mem;
   }
-  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(mem)); }catch(e){} }
+  function save(silent){ try{ localStorage.setItem(KEY,JSON.stringify(mem)); }catch(e){} if(!silent && typeof Sync!=="undefined") Sync.schedule(); }
   return {get:load, save:save};
 })();
 
@@ -558,6 +563,111 @@ function parseTask(raw, now){
 }
 
 
+
+/* Synchronisation Supabase : le stockage local reste la copie de travail (hors ligne),
+   chaque élément est un document (kind, id, data) dans la table docs, protégée par compte. */
+var SUPA_URL = "https://fdiswyamvqvqwrsvzwgf.supabase.co";
+var SUPA_KEY = "sb_publishable_SCyWlsrbFi_Ogn-gPENJow_c6gvZjeG";
+
+var Sync = (function(){
+  var sb=null, user=null, status="local", listeners=[], pushT=null, channel=null, busy=false;
+  var SNAP="prepa.synced.v1";
+  function emit(){ listeners.forEach(function(f){ try{ f(status,user); }catch(e){} }); }
+  function setStatus(s){ status=s; emit(); }
+  function snapGet(){ try{ return JSON.parse(localStorage.getItem(SNAP)||"{}"); }catch(e){ return {}; } }
+  function snapSet(m){ try{ localStorage.setItem(SNAP,JSON.stringify(m)); }catch(e){} }
+
+  /* état local -> documents */
+  function toDocs(s){
+    var m={};
+    s.tasks.forEach(function(t){ m["task|"+t.id]=t; });
+    s.notes.forEach(function(n){ m["note|"+n.id]=n; });
+    m["state|goals"]=s.goals||{};
+    m["state|ressentis"]=s.ressentis||{};
+    m["state|slotDone"]=s.slotDone||{};
+    m["state|meta"]={cshSkip:s.cshSkip||0,seeded:!!s.seeded};
+    return m;
+  }
+  function applyDoc(s,kind,id,data,deleted){
+    if(kind==="task"||kind==="note"){
+      var arr=kind==="task"?s.tasks:s.notes, i=arr.findIndex(function(x){ return x.id===id; });
+      if(deleted){ if(i>=0) arr.splice(i,1); return; }
+      if(i>=0) arr[i]=data; else arr.push(data);
+    } else if(kind==="state"){
+      if(deleted) return;
+      if(id==="meta"){ s.cshSkip=data.cshSkip||0; s.seeded=s.seeded||!!data.seeded; }
+      else s[id]=data||{};
+    }
+  }
+
+  function init(){
+    if(!window.supabase || !window.supabase.createClient){ setStatus("local"); return; }
+    try{ sb=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true}}); }catch(e){ setStatus("local"); return; }
+    sb.auth.getSession().then(function(r){ user=r.data&&r.data.session?r.data.session.user:null; if(user) start(); else setStatus("signedout"); });
+    sb.auth.onAuthStateChange(function(ev,session){ var u=session?session.user:null; var changed=(u&&u.id)!==(user&&user.id); user=u; if(user&&changed) start(); if(!user){ stopRealtime(); setStatus("signedout"); } });
+    window.addEventListener("online",function(){ if(user) pull().then(push); });
+  }
+
+  function start(){ setStatus("syncing"); pull(true).then(push).then(realtime).catch(function(){ setStatus("offline"); }); }
+
+  function pull(first){
+    if(!sb||!user) return Promise.resolve();
+    return sb.from("docs").select("kind,id,data,deleted,updated_at").then(function(r){
+      if(r.error) throw r.error;
+      var s=Store.get(), snap=snapGet(), local=toDocs(s);
+      if(first && r.data.length){ var keys={}; r.data.forEach(function(row){ keys[row.kind+"|"+row.id]=1; }); s.tasks=s.tasks.filter(function(t){ return !t.example || keys["task|"+t.id]; }); }
+      r.data.forEach(function(row){
+        var key=row.kind+"|"+row.id, localJson=JSON.stringify(local[key]), remoteJson=JSON.stringify(row.data);
+        /* modifié localement depuis la dernière synchro et pas à distance : on garde le local */
+        var localDirty=snap[key]!==undefined && snap[key]!==localJson;
+        if(localDirty && snap[key]===remoteJson) return;
+        applyDoc(s,row.kind,row.id,row.data,row.deleted);
+        if(row.deleted) delete snap[key]; else snap[key]=remoteJson;
+      });
+      snapSet(snap); Store.save(true);
+      if(window.__prepaRefresh) window.__prepaRefresh();
+      setStatus(navigator.onLine===false?"offline":"synced");
+    });
+  }
+
+  function push(){
+    if(!sb||!user||busy) return Promise.resolve();
+    var s=Store.get(), snap=snapGet(), docs=toDocs(s), rows=[], now=new Date().toISOString();
+    Object.keys(docs).forEach(function(key){ var j=JSON.stringify(docs[key]); if(snap[key]!==j){ var p=key.split("|"); rows.push({kind:p[0],id:p[1],data:docs[key],deleted:false,updated_at:now}); } });
+    Object.keys(snap).forEach(function(key){ if(!(key in docs)){ var p=key.split("|"); rows.push({kind:p[0],id:p[1],data:{},deleted:true,updated_at:now}); } });
+    if(!rows.length){ setStatus("synced"); return Promise.resolve(); }
+    busy=true; setStatus("syncing");
+    return sb.from("docs").upsert(rows,{onConflict:"user_id,kind,id"}).then(function(r){
+      busy=false;
+      if(r.error){ setStatus("offline"); return; }
+      var sn=snapGet();
+      rows.forEach(function(row){ var key=row.kind+"|"+row.id; if(row.deleted) delete sn[key]; else sn[key]=JSON.stringify(row.data); });
+      snapSet(sn); setStatus("synced");
+    },function(){ busy=false; setStatus("offline"); });
+  }
+
+  function realtime(){
+    if(!sb||!user||channel) return;
+    channel=sb.channel("docs-"+user.id).on("postgres_changes",{event:"*",schema:"public",table:"docs",filter:"user_id=eq."+user.id},function(p){
+      var row=p.new; if(!row||!row.kind) return;
+      var s=Store.get(), key=row.kind+"|"+row.id, snap=snapGet(), j=JSON.stringify(row.data);
+      if(snap[key]===j && !row.deleted) return;
+      applyDoc(s,row.kind,row.id,row.data,row.deleted);
+      if(row.deleted) delete snap[key]; else snap[key]=j;
+      snapSet(snap); Store.save(true);
+      if(window.__prepaRefresh) window.__prepaRefresh();
+    }).subscribe();
+  }
+  function stopRealtime(){ if(channel&&sb){ try{ sb.removeChannel(channel); }catch(e){} } channel=null; }
+
+  function schedule(){ if(!user) return; clearTimeout(pushT); pushT=setTimeout(push,700); }
+
+  function signIn(email,pw){ return sb.auth.signInWithPassword({email:email,password:pw}); }
+  function signUp(email,pw){ return sb.auth.signUp({email:email,password:pw,options:{emailRedirectTo:location.origin+location.pathname}}); }
+  function signOut(){ stopRealtime(); return sb.auth.signOut(); }
+
+  return {init:init, schedule:schedule, on:function(f){ listeners.push(f); f(status,user); }, status:function(){ return status; }, user:function(){ return user; }, available:function(){ return !!sb; }, signIn:signIn, signUp:signUp, signOut:signOut, syncNow:function(){ return pull().then(push); }};
+})();
 
 /* Construction des journées : cours, blocs fixes, créneaux de travail proposés, pales. */
 function inVacances(dISO){ for(var i=0;i<VACANCES.length;i++){ if(dISO>=VACANCES[i].from && dISO<=VACANCES[i].to) return VACANCES[i]; } return null; }
@@ -708,7 +818,7 @@ function seed(){
     {raw:"traduction allemand pour vendredi"},
     {raw:"civi : congrès de Reform UK", over:{sub:"ang"}}
   ];
-  ex.forEach(function(e){ var p=parseTask(e.raw); var t=taskFrom(p); for(var k in (e.over||{})) t[k]=e.over[k]; t.example=true; s.tasks.push(t); });
+  ex.forEach(function(e,ix){ var p=parseTask(e.raw); var t=taskFrom(p); t.id="ex-"+(ix+1); for(var k in (e.over||{})) t[k]=e.over[k]; t.example=true; s.tasks.push(t); });
   s.seeded=true; save();
 }
 function taskFrom(p){
@@ -743,6 +853,7 @@ function setActive(){
 }
 function topbar(title){
   return '<div class="topbar" id="topbar"><span class="t-title">'+esc(title)+'</span><span class="sp"></span>'+
+    '<button class="sync-pill" data-a="account" id="sync-pill" aria-label="Compte et synchronisation">'+syncLabel()+'</button>'+
     '<button class="icon-btn gem-btn" data-a="gemini" aria-label="Demander à Gemini" title="Demander à Gemini">'+I.spark+'</button></div>';
 }
 function go(v,p){ S.view=v; S.param=p||null; render(); window.scrollTo(0,0); try{ history.replaceState(null,"","#"+v+(p?"-"+p:"")); }catch(e){} }
@@ -1137,6 +1248,40 @@ function geminiSheet(){
   openSheet('<div class="sheet-h"><div class="ttl"><div class="eyebrow" style="color:var(--blue)">Assistant</div><h2>Demander à Gemini</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b"><div class="gem-msg">L\'assistant sera actif dès que tu auras créé ta clé gratuite Google AI Studio (étape 1). Il connaîtra la page où tu te trouves : en HGG il répondra en contexte HGG, dans l\'agenda il connaîtra ta semaine.</div><form class="quick" onsubmit="return false"><input disabled placeholder="Pose ta question…" aria-label="Question"><button class="go" disabled aria-label="Envoyer">'+I.send+'</button></form></div>');
 }
 
+/* ---------- compte et synchronisation ---------- */
+function syncLabel(){
+  var stt=typeof Sync!=="undefined"?Sync.status():"local";
+  var m={synced:["ok","Synchronisé"],syncing:["run","Synchro…"],offline:["warn","Hors ligne"],signedout:["off","Se connecter"],local:["off","Sur cet appareil"]}[stt]||["off",""];
+  return '<span class="sd '+m[0]+'"></span>'+m[1];
+}
+function accountSheet(msg){
+  var u=Sync.user(), h='<div class="sheet-h"><div class="ttl"><div class="eyebrow">Compte</div><h2>Synchronisation</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
+  if(!Sync.available()){
+    h+='<div class="gem-msg">La synchronisation fonctionne dans l\'app installée, à l\'adresse alexandrenkvanrossum-ship-it.github.io/pr-pa. Ici, tes données restent sur cet appareil.</div>';
+  } else if(u){
+    h+='<div class="gem-msg"><b>'+esc(u.email)+'</b><div class="small muted" style="margin-top:4px">Tes tâches, notes, objectifs et ressentis sont synchronisés entre tes appareils.</div></div>';
+    h+='<div class="row"><button class="btn tint" data-a="syncnow">Synchroniser maintenant</button><button class="btn" data-a="signout">Se déconnecter</button></div>';
+  } else {
+    h+='<p class="muted small" style="margin:0">Connecte-toi avec le même compte sur ton téléphone et ton ordi pour retrouver partout les mêmes données.</p>';
+    h+='<form id="auth-form" class="stack" style="gap:10px"><div><label class="lbl" for="au-mail">E-mail</label><input class="field" id="au-mail" type="email" autocomplete="email" required></div><div><label class="lbl" for="au-pw">Mot de passe (8 caractères minimum)</label><input class="field" id="au-pw" type="password" minlength="8" autocomplete="current-password" required></div>'+
+       '<div class="row"><button class="btn primary" type="submit" data-mode="in">Se connecter</button><button class="btn tint" type="submit" data-mode="up">Créer mon compte</button></div></form>';
+  }
+  if(msg) h+='<div class="note-box">'+esc(msg)+'</div>';
+  h+='</div>';
+  openSheet(h);
+  var f=document.getElementById("auth-form");
+  if(f){ var mode="in"; f.querySelectorAll("button[data-mode]").forEach(function(b){ b.addEventListener("click",function(){ mode=b.getAttribute("data-mode"); }); });
+    f.addEventListener("submit",function(ev){ ev.preventDefault();
+      var em=document.getElementById("au-mail").value.trim(), pw=document.getElementById("au-pw").value;
+      (mode==="up"?Sync.signUp(em,pw):Sync.signIn(em,pw)).then(function(r){
+        if(r.error){ accountSheet(r.error.message==="Invalid login credentials"?"E-mail ou mot de passe incorrect.":r.error.message); return; }
+        if(mode==="up" && !(r.data&&r.data.session)){ accountSheet("Compte créé. Ouvre l'e-mail de confirmation reçu, puis reviens te connecter ici."); return; }
+        closeSheet(); render(); toast("Connecté. Synchronisation en cours.");
+      });
+    });
+  }
+}
+
 /* ---------- chronos ---------- */
 var tickH=null;
 function tickTimers(){
@@ -1154,6 +1299,9 @@ document.addEventListener("click",function(ev){
   if(a==="close"){ closeSheet(); render(); return; }
   if(a==="quick"){ quickSheet(); return; }
   if(a==="gemini"){ geminiSheet(); return; }
+  if(a==="account"){ accountSheet(); return; }
+  if(a==="syncnow"){ Sync.syncNow().then(function(){ toast("Synchronisé."); }); return; }
+  if(a==="signout"){ Sync.signOut().then(function(){ closeSheet(); render(); toast("Déconnecté. Tes données restent sur cet appareil."); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }
   if(a==="del"){ s.tasks=s.tasks.filter(function(x){return x.id!==b.getAttribute("data-id");}); save(); render(); toast("Tâche supprimée."); return; }
   if(a==="tfilter"){ S.todoFilter=b.getAttribute("data-f"); render(); return; }
@@ -1202,6 +1350,8 @@ closeSheet=function(){ _close(); layer.removeAttribute("data-slot"); };
 /* ---------- démarrage ---------- */
 function start(){
   shell(); seed();
+  window.__prepaRefresh=function(){ var a=document.activeElement; if(layer.innerHTML || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return; render(); };
+  if(typeof Sync!=="undefined"){ Sync.on(function(){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); }); Sync.init(); }
   var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p[1]||null; } }
   render();
   if("serviceWorker" in navigator && location.protocol==="https:" && !window.claude){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }

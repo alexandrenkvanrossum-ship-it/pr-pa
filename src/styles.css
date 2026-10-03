@@ -304,3 +304,7 @@ label.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);marg
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .badge-ex{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-pale);border-radius:6px;padding:1px 6px}
 .gem-msg{background:var(--surface);border-radius:var(--r);padding:12px 14px;box-shadow:inset 0 0 0 .5px var(--line)}
+
+.sync-pill{display:inline-flex;align-items:center;gap:7px;height:32px;border:0;border-radius:var(--r-pill);padding:0 12px;background:var(--glass-strong);box-shadow:inset 0 0 0 .5px var(--line);font-size:12.5px;font-weight:600;color:var(--ink-2);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px)}
+.sync-pill .sd{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.sync-pill .sd.ok{background:var(--green)} .sync-pill .sd.run{background:var(--blue)} .sync-pill .sd.warn{background:var(--amber)}

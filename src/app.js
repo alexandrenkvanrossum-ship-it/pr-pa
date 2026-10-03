@@ -49,7 +49,7 @@ function seed(){
     {raw:"traduction allemand pour vendredi"},
     {raw:"civi : congrès de Reform UK", over:{sub:"ang"}}
   ];
-  ex.forEach(function(e){ var p=parseTask(e.raw); var t=taskFrom(p); for(var k in (e.over||{})) t[k]=e.over[k]; t.example=true; s.tasks.push(t); });
+  ex.forEach(function(e,ix){ var p=parseTask(e.raw); var t=taskFrom(p); t.id="ex-"+(ix+1); for(var k in (e.over||{})) t[k]=e.over[k]; t.example=true; s.tasks.push(t); });
   s.seeded=true; save();
 }
 function taskFrom(p){
@@ -84,6 +84,7 @@ function setActive(){
 }
 function topbar(title){
   return '<div class="topbar" id="topbar"><span class="t-title">'+esc(title)+'</span><span class="sp"></span>'+
+    '<button class="sync-pill" data-a="account" id="sync-pill" aria-label="Compte et synchronisation">'+syncLabel()+'</button>'+
     '<button class="icon-btn gem-btn" data-a="gemini" aria-label="Demander à Gemini" title="Demander à Gemini">'+I.spark+'</button></div>';
 }
 function go(v,p){ S.view=v; S.param=p||null; render(); window.scrollTo(0,0); try{ history.replaceState(null,"","#"+v+(p?"-"+p:"")); }catch(e){} }
@@ -478,6 +479,40 @@ function geminiSheet(){
   openSheet('<div class="sheet-h"><div class="ttl"><div class="eyebrow" style="color:var(--blue)">Assistant</div><h2>Demander à Gemini</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b"><div class="gem-msg">L\'assistant sera actif dès que tu auras créé ta clé gratuite Google AI Studio (étape 1). Il connaîtra la page où tu te trouves : en HGG il répondra en contexte HGG, dans l\'agenda il connaîtra ta semaine.</div><form class="quick" onsubmit="return false"><input disabled placeholder="Pose ta question…" aria-label="Question"><button class="go" disabled aria-label="Envoyer">'+I.send+'</button></form></div>');
 }
 
+/* ---------- compte et synchronisation ---------- */
+function syncLabel(){
+  var stt=typeof Sync!=="undefined"?Sync.status():"local";
+  var m={synced:["ok","Synchronisé"],syncing:["run","Synchro…"],offline:["warn","Hors ligne"],signedout:["off","Se connecter"],local:["off","Sur cet appareil"]}[stt]||["off",""];
+  return '<span class="sd '+m[0]+'"></span>'+m[1];
+}
+function accountSheet(msg){
+  var u=Sync.user(), h='<div class="sheet-h"><div class="ttl"><div class="eyebrow">Compte</div><h2>Synchronisation</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
+  if(!Sync.available()){
+    h+='<div class="gem-msg">La synchronisation fonctionne dans l\'app installée, à l\'adresse alexandrenkvanrossum-ship-it.github.io/pr-pa. Ici, tes données restent sur cet appareil.</div>';
+  } else if(u){
+    h+='<div class="gem-msg"><b>'+esc(u.email)+'</b><div class="small muted" style="margin-top:4px">Tes tâches, notes, objectifs et ressentis sont synchronisés entre tes appareils.</div></div>';
+    h+='<div class="row"><button class="btn tint" data-a="syncnow">Synchroniser maintenant</button><button class="btn" data-a="signout">Se déconnecter</button></div>';
+  } else {
+    h+='<p class="muted small" style="margin:0">Connecte-toi avec le même compte sur ton téléphone et ton ordi pour retrouver partout les mêmes données.</p>';
+    h+='<form id="auth-form" class="stack" style="gap:10px"><div><label class="lbl" for="au-mail">E-mail</label><input class="field" id="au-mail" type="email" autocomplete="email" required></div><div><label class="lbl" for="au-pw">Mot de passe (8 caractères minimum)</label><input class="field" id="au-pw" type="password" minlength="8" autocomplete="current-password" required></div>'+
+       '<div class="row"><button class="btn primary" type="submit" data-mode="in">Se connecter</button><button class="btn tint" type="submit" data-mode="up">Créer mon compte</button></div></form>';
+  }
+  if(msg) h+='<div class="note-box">'+esc(msg)+'</div>';
+  h+='</div>';
+  openSheet(h);
+  var f=document.getElementById("auth-form");
+  if(f){ var mode="in"; f.querySelectorAll("button[data-mode]").forEach(function(b){ b.addEventListener("click",function(){ mode=b.getAttribute("data-mode"); }); });
+    f.addEventListener("submit",function(ev){ ev.preventDefault();
+      var em=document.getElementById("au-mail").value.trim(), pw=document.getElementById("au-pw").value;
+      (mode==="up"?Sync.signUp(em,pw):Sync.signIn(em,pw)).then(function(r){
+        if(r.error){ accountSheet(r.error.message==="Invalid login credentials"?"E-mail ou mot de passe incorrect.":r.error.message); return; }
+        if(mode==="up" && !(r.data&&r.data.session)){ accountSheet("Compte créé. Ouvre l'e-mail de confirmation reçu, puis reviens te connecter ici."); return; }
+        closeSheet(); render(); toast("Connecté. Synchronisation en cours.");
+      });
+    });
+  }
+}
+
 /* ---------- chronos ---------- */
 var tickH=null;
 function tickTimers(){
@@ -495,6 +530,9 @@ document.addEventListener("click",function(ev){
   if(a==="close"){ closeSheet(); render(); return; }
   if(a==="quick"){ quickSheet(); return; }
   if(a==="gemini"){ geminiSheet(); return; }
+  if(a==="account"){ accountSheet(); return; }
+  if(a==="syncnow"){ Sync.syncNow().then(function(){ toast("Synchronisé."); }); return; }
+  if(a==="signout"){ Sync.signOut().then(function(){ closeSheet(); render(); toast("Déconnecté. Tes données restent sur cet appareil."); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }
   if(a==="del"){ s.tasks=s.tasks.filter(function(x){return x.id!==b.getAttribute("data-id");}); save(); render(); toast("Tâche supprimée."); return; }
   if(a==="tfilter"){ S.todoFilter=b.getAttribute("data-f"); render(); return; }
@@ -543,6 +581,8 @@ closeSheet=function(){ _close(); layer.removeAttribute("data-slot"); };
 /* ---------- démarrage ---------- */
 function start(){
   shell(); seed();
+  window.__prepaRefresh=function(){ var a=document.activeElement; if(layer.innerHTML || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return; render(); };
+  if(typeof Sync!=="undefined"){ Sync.on(function(){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); }); Sync.init(); }
   var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p[1]||null; } }
   render();
   if("serviceWorker" in navigator && location.protocol==="https:" && !window.claude){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }
