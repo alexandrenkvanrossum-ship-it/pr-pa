@@ -59,19 +59,34 @@ Deno.serve(async (req) => {
       });
       out = { text: textOf(j) };
     } else if (mode === "news") {
+      // Flux RSS (Le Monde International, France 24 en secours) : Gemini choisit et résume
+      // uniquement à partir des textes fournis, sans rien ajouter.
+      const FEEDS = ["https://www.lemonde.fr/international/rss_full.xml", "https://www.france24.com/fr/monde/rss"];
+      let items: { title: string; desc: string; link: string }[] = [];
+      for (const url of FEEDS) {
+        try {
+          const xml = await (await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } })).text();
+          const strip = (x: string) => x.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, "").replace(/&#039;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").trim();
+          items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 12).map((m) => ({
+            title: strip(m[1].match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? ""),
+            desc: strip(m[1].match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "").slice(0, 600),
+            link: strip(m[1].match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? ""),
+          })).filter((x) => x.title && x.link);
+          if (items.length) break;
+        } catch (_) { /* flux suivant */ }
+      }
+      if (!items.length) throw new Error("Flux d'actualités injoignables.");
+      const list = items.map((x, i) => `[${i}] ${x.title} — ${x.desc}`).join("\n");
       const j = await callGemini({
         contents: [{ role: "user", parts: [{ text:
-          `Nous sommes le ${date}. Cherche l'actualité internationale la plus importante des dernières 24 heures ` +
-          `(géopolitique, politique ou société, pas d'économie sauf si incontournable). ` +
-          `Réponds uniquement avec un objet JSON : {"titre": "titre court en français", "resume": "trois phrases courtes et factuelles en français"}` }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0.2 },
+          "Voici les derniers articles de la rubrique internationale d'un grand quotidien. Choisis l'information internationale la plus importante " +
+          "(géopolitique, politique ou société ; pas d'économie sauf si incontournable). Résume-la en trois phrases courtes et factuelles en français, " +
+          "en t'appuyant UNIQUEMENT sur le titre et le chapô fournis, sans rien ajouter. Réponds avec un objet JSON {\"index\": n, \"titre\": \"...\", \"resume\": \"...\"}.\n\n" + list }] }],
+        generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
       });
       const o = jsonOf(textOf(j));
-      const chunks = j?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-      const sources = chunks.map((c: any) => c.web).filter(Boolean).slice(0, 3)
-        .map((w: any) => ({ title: w.title, url: w.uri }));
-      out = { titre: o.titre ?? "", resume: o.resume ?? "", sources };
+      const it = items[Number(o.index)] ?? items[0];
+      out = { titre: o.titre || it.title, resume: o.resume || it.desc, sources: [{ title: new URL(it.link).hostname.replace("www.", ""), url: it.link }] };
     } else if (mode === "classify") {
       const j = await callGemini({
         contents: [{ role: "user", parts: [{ text:
