@@ -308,3 +308,9 @@ label.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);marg
 .sync-pill{display:inline-flex;align-items:center;gap:7px;height:32px;border:0;border-radius:var(--r-pill);padding:0 12px;background:var(--glass-strong);box-shadow:inset 0 0 0 .5px var(--line);font-size:12.5px;font-weight:600;color:var(--ink-2);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px)}
 .sync-pill .sd{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
 .sync-pill .sd.ok{background:var(--green)} .sync-pill .sd.run{background:var(--blue)} .sync-pill .sd.warn{background:var(--amber)}
+
+.msg{max-width:88%;padding:9px 13px;border-radius:16px;font-size:14.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.u{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:5px}
+.msg.a{align-self:flex-start;background:var(--surface);box-shadow:inset 0 0 0 .5px var(--line);border-bottom-left-radius:5px}
+.skel{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--fill),#E6E6EB,var(--fill));background-size:200% 100%;animation:sk 1.3s linear infinite}
+@keyframes sk{to{background-position:-200% 0}}

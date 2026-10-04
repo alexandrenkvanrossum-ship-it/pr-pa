@@ -161,7 +161,8 @@ function vHome(){
   }).join("");
   h+='</div></section>';
   h+='<section class="stack"><div class="card"><div class="card-h"><h2>Tâches du jour</h2><button class="link-btn" data-go="todo">Tout voir</button></div>'+quickBox("home")+'<div class="tasks" style="margin-top:6px">'+taskRows(todayTasks())+'</div></div>';
-  h+='<div class="card"><div class="card-h"><h2>Actualité internationale</h2></div><p class="news-empty muted" style="margin:0">Dès que Gemini sera connecté, la nouvelle la plus importante du jour s\'affichera ici, résumée en trois lignes, avec le lien vers l\'article.</p></div></section></div>';
+  h+='<div class="card" id="news-card">'+newsHTML()+'</div></section></div>';
+  setTimeout(loadNews,50);
   return h;
 }
 function todayTasks(){
@@ -179,11 +180,20 @@ function bindQuick(){
     var cur=null;
     function upd(){
       var v=inp.value.trim(); btn.disabled=!v; if(!v){ box.innerHTML=""; cur=null; return; }
-      cur=parseTask(v); if(f._sub) cur.sub=f._sub;
+      cur=parseTask(v); if(f._sub) cur.sub=f._sub; if(f._g){ if(!cur.type&&f._g.type) cur.type=f._g.type; if(!cur.dur&&f._g.dur) cur.dur=f._g.dur; }
       box.innerHTML=parseChips(cur);
       var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); };
     }
-    inp.addEventListener("input",function(){ f._sub=null; upd(); });
+    var gT=null;
+    inp.addEventListener("input",function(){ f._sub=null; f._g=null; upd(); clearTimeout(gT);
+      var v=inp.value.trim();
+      if(cur && !cur.sub && v.length>6 && typeof Sync!=="undefined" && Sync.user()){
+        gT=setTimeout(function(){ Sync.invoke({mode:"classify",input:v}).then(function(r){
+          if(inp.value.trim()!==v || !r || !r.sub) return;
+          f._sub=r.sub; f._g=r; upd(); if(cur){ if(!cur.type&&r.type) cur.type=r.type; if(!cur.dur&&r.dur) cur.dur=r.dur; box.innerHTML=parseChips(cur)+'<span class="chip act">classé par Gemini</span>'; var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); }; }
+        },function(){}); },900);
+      }
+    });
     f.addEventListener("submit",function(e){
       e.preventDefault(); if(!inp.value.trim()) return; upd();
       var t=taskFrom(cur); st().tasks.push(t); save();
@@ -475,8 +485,61 @@ function quickSheet(){
   openSheet('<div class="sheet-h"><div class="ttl"><h2>Nouvelle tâche</h2><div class="small muted">Écris naturellement : date, « pour », « ! », mots-clés réf, ex, civi, DM…</div></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">'+quickBox("sheet")+'</div>');
   bindQuick(); var i=document.getElementById("q-sheet"); if(i) i.focus();
 }
+var chat=[];
+function pageContext(){
+  var t=iso(today()), parts=["Page : "+S.view+(S.param?" ("+subj(S.param).name+")":""),"Date : "+fmtLong(t)];
+  var ev=dayEvents(t).filter(function(e){ return e.kind!=="fixed"; }).map(function(e){ return hLabel(e.s)+"-"+hLabel(e.e)+" "+e.t; });
+  parts.push("Programme du jour : "+ev.join(" ; "));
+  var tasks=st().tasks.filter(function(x){ return !x.done && (!S.param || x.sub===S.param); }).slice(0,15).map(function(x){ return x.title+" ["+subj(x.sub).name+(x.due?", pour le "+x.due:"")+(x.prio?", priorité "+x.prio:"")+"]"; });
+  parts.push("Tâches ouvertes : "+(tasks.join(" ; ")||"aucune"));
+  var p=upcomingPales(3).map(function(x){ return x.date+" "+x.t; }); parts.push("Prochains DST : "+p.join(" ; "));
+  if(S.view==="matiere"&&S.param==="csh") parts.push("Thème de CSH de l'année : L'humanité.");
+  return parts.join("\n");
+}
+function fmtMsg(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[-*] /gm,"• "); }
 function geminiSheet(){
-  openSheet('<div class="sheet-h"><div class="ttl"><div class="eyebrow" style="color:var(--blue)">Assistant</div><h2>Demander à Gemini</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b"><div class="gem-msg">L\'assistant sera actif dès que tu auras créé ta clé gratuite Google AI Studio (étape 1). Il connaîtra la page où tu te trouves : en HGG il répondra en contexte HGG, dans l\'agenda il connaîtra ta semaine.</div><form class="quick" onsubmit="return false"><input disabled placeholder="Pose ta question…" aria-label="Question"><button class="go" disabled aria-label="Envoyer">'+I.send+'</button></form></div>');
+  var u=typeof Sync!=="undefined"&&Sync.user();
+  var h='<div class="sheet-h"><div class="ttl"><div class="eyebrow" style="color:var(--blue)">Assistant · '+esc(S.view==="matiere"?subj(S.param).name:({home:"Accueil",agenda:"Agenda",todo:"To-Do",matieres:"Matières",echeances:"Échéances",notes:"Notes",methodo:"Méthodo",plus:"Plus"})[S.view]||"")+'</div><h2>Demander à Gemini</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b" id="chat-log">';
+  if(!u) h+='<div class="gem-msg">Connecte-toi (bouton en haut à droite) pour utiliser l\'assistant.</div>';
+  else if(!chat.length) h+='<div class="gem-msg small muted">Pose une question ou une petite demande. Gemini connaît la page ouverte, ton programme du jour, tes tâches et tes prochains DST. Il peut se tromper : vérifie toujours une citation ou un chiffre.</div>';
+  chat.forEach(function(m){ h+='<div class="msg '+(m.role==="user"?"u":"a")+'">'+fmtMsg(m.text)+'</div>'; });
+  h+='</div><form class="quick" id="chat-form" style="margin:0 18px 18px"><input id="chat-in" autocomplete="off" placeholder="Pose ta question…" aria-label="Question"'+(u?'':' disabled')+'><button class="go" type="submit"'+(u?'':' disabled')+' aria-label="Envoyer">'+I.send+'</button></form>';
+  openSheet(h);
+  var log=document.getElementById("chat-log"); log.scrollTop=log.scrollHeight;
+  var f=document.getElementById("chat-form"), inp=document.getElementById("chat-in");
+  if(u && window.innerWidth>=600) inp.focus();
+  f.addEventListener("submit",function(ev){
+    ev.preventDefault(); var q=inp.value.trim(); if(!q||!u) return;
+    chat.push({role:"user",text:q}); chat.push({role:"assistant",text:"…",pending:true}); geminiSheet();
+    Sync.invoke({mode:"chat",context:pageContext(),messages:chat.filter(function(m){ return !m.pending; })}).then(function(r){
+      chat.pop(); chat.push({role:"assistant",text:r.text||"(pas de réponse)"}); if(document.getElementById("chat-log")) geminiSheet();
+    },function(e){ chat.pop(); chat.push({role:"assistant",text:"Gemini n'a pas répondu ("+e.message+")."}); if(document.getElementById("chat-log")) geminiSheet(); });
+  });
+}
+
+/* ---------- actualité du jour (Gemini + recherche Google) ---------- */
+var newsLoading=false, newsErr=null;
+function newsHTML(){
+  var n=st().news, t=iso(today());
+  var h='<div class="card-h"><h2>Actualité internationale</h2>'+(n&&n.date===t?'<span class="small faint">Gemini</span>':'')+'</div>';
+  if(n && n.date===t && n.titre){
+    h+='<div style="font-weight:700;font-size:16px;line-height:1.3;margin-bottom:6px">'+esc(n.titre)+'</div><p class="muted" style="margin:0 0 8px">'+esc(n.resume)+'</p>';
+    if(n.sources&&n.sources.length) h+='<div class="row" style="gap:6px">'+n.sources.map(function(x){ return '<a class="chip" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.title||"Source")+' '+I.arrow+'</a>'; }).join("")+'</div>';
+    return h;
+  }
+  if(typeof Sync==="undefined"||!Sync.user()) return h+'<p class="news-empty muted" style="margin:0">Connecte-toi (bouton en haut à droite) pour recevoir chaque jour la nouvelle la plus importante, résumée en trois lignes.</p>';
+  if(newsErr) return h+'<p class="news-empty muted" style="margin:0">Actualité indisponible pour le moment.</p><button class="link-btn" data-a="news-retry" style="margin-top:6px">Réessayer</button>';
+  return h+'<div class="stack" style="gap:8px"><div class="skel"></div><div class="skel" style="width:80%"></div><div class="skel" style="width:60%"></div></div>';
+}
+function loadNews(force){
+  var n=st().news, t=iso(today());
+  if(newsLoading || typeof Sync==="undefined" || !Sync.user()) return;
+  if(!force && n && n.date===t) return;
+  newsLoading=true; newsErr=null;
+  Sync.invoke({mode:"news",date:fmtLong(t)+" "+parseISO(t).getFullYear()}).then(function(r){
+    newsLoading=false; st().news={date:t,titre:r.titre,resume:r.resume,sources:r.sources||[]}; save();
+    var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML();
+  },function(e){ newsLoading=false; newsErr=e.message; var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML(); });
 }
 
 /* ---------- compte et synchronisation ---------- */
@@ -531,6 +594,7 @@ document.addEventListener("click",function(ev){
   if(a==="quick"){ quickSheet(); return; }
   if(a==="gemini"){ geminiSheet(); return; }
   if(a==="account"){ accountSheet(); return; }
+  if(a==="news-retry"){ newsErr=null; var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML(); loadNews(true); return; }
   if(a==="syncnow"){ Sync.syncNow().then(function(){ toast("Synchronisé."); }); return; }
   if(a==="signout"){ Sync.signOut().then(function(){ closeSheet(); render(); toast("Déconnecté. Tes données restent sur cet appareil."); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }

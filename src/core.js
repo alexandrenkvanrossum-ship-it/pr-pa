@@ -29,7 +29,7 @@ function uid(p){ return (p||"x")+Date.now().toString(36)+Math.random().toString(
 /* ---------- stockage ---------- */
 var Store = (function(){
   var KEY="prepa.v1", mem=null;
-  function blank(){ return {tasks:[],notes:[],goals:{},ressentis:{},slotDone:{},seeded:false,cshSkip:0}; }
+  function blank(){ return {tasks:[],notes:[],goals:{},ressentis:{},slotDone:{},seeded:false,cshSkip:0,news:null}; }
   function load(){
     if(mem) return mem;
     try{ var raw=localStorage.getItem(KEY); mem=raw?JSON.parse(raw):blank(); }catch(e){ mem=blank(); }

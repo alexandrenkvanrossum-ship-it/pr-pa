@@ -20,6 +20,7 @@ var Sync = (function(){
     m["state|ressentis"]=s.ressentis||{};
     m["state|slotDone"]=s.slotDone||{};
     m["state|meta"]={cshSkip:s.cshSkip||0,seeded:!!s.seeded};
+    if(s.news) m["state|news"]=s.news;
     return m;
   }
   function applyDoc(s,kind,id,data,deleted){
@@ -100,5 +101,13 @@ var Sync = (function(){
   function signUp(email,pw){ return sb.auth.signUp({email:email,password:pw,options:{emailRedirectTo:location.origin+location.pathname}}); }
   function signOut(){ stopRealtime(); return sb.auth.signOut(); }
 
-  return {init:init, schedule:schedule, on:function(f){ listeners.push(f); f(status,user); }, status:function(){ return status; }, user:function(){ return user; }, available:function(){ return !!sb; }, signIn:signIn, signUp:signUp, signOut:signOut, syncNow:function(){ return pull().then(push); }};
+  function invoke(body){
+    if(!sb||!user||!sb.functions) return Promise.reject(new Error("signedout"));
+    return sb.functions.invoke("gemini",{body:body}).then(function(r){
+      if(r.error){ var m=r.error.message||"Erreur"; if(r.error.context&&r.error.context.json) return r.error.context.json().then(function(j){ throw new Error(j.error||m); }); throw new Error(m); }
+      if(r.data&&r.data.error) throw new Error(r.data.error);
+      return r.data;
+    });
+  }
+  return {invoke:invoke, init:init, schedule:schedule, on:function(f){ listeners.push(f); f(status,user); }, status:function(){ return status; }, user:function(){ return user; }, available:function(){ return !!sb; }, signIn:signIn, signUp:signUp, signOut:signOut, syncNow:function(){ return pull().then(push); }};
 })();
