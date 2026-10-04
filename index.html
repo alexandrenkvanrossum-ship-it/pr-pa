@@ -1312,7 +1312,7 @@ function newsHTML(){
     return h;
   }
   if(typeof Sync==="undefined"||!Sync.user()) return h+'<p class="news-empty muted" style="margin:0">Connecte-toi (bouton en haut à droite) pour recevoir chaque jour la nouvelle la plus importante, résumée en trois lignes.</p>';
-  if(newsErr) return h+'<p class="news-empty muted" style="margin:0">Actualité indisponible pour le moment.</p><button class="link-btn" data-a="news-retry" style="margin-top:6px">Réessayer</button>';
+  if(newsErr) return h+'<p class="news-empty muted" style="margin:0">Actualité indisponible pour le moment.</p><p class="small faint" style="margin:4px 0 0;overflow-wrap:anywhere">Détail : '+esc(newsErr)+'</p><button class="link-btn" data-a="news-retry" style="margin-top:6px">Réessayer</button>';
   return h+'<div class="stack" style="gap:8px"><div class="skel"></div><div class="skel" style="width:80%"></div><div class="skel" style="width:60%"></div></div>';
 }
 function loadNews(force){
