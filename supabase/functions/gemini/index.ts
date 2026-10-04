@@ -1,7 +1,7 @@
 // Fonction Supabase « gemini » : relais entre l'app et l'API Gemini.
 // La clé reste côté serveur (secret GEMINI_API_KEY) ; seul un utilisateur connecté peut l'appeler.
 const KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const MODELS = (Deno.env.get("GEMINI_MODEL") ?? "gemini-flash-latest,gemini-2.5-flash")
+const MODELS = (Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash,gemini-flash-latest,gemini-flash-lite-latest")
   .split(",").map((m) => m.trim()).filter(Boolean);
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +11,9 @@ const cors = {
 
 async function callGemini(body: unknown) {
   let last: unknown = null;
+  const tried: string[] = [];
   for (const m of MODELS) {
+    tried.push(m);
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
@@ -20,9 +22,11 @@ async function callGemini(body: unknown) {
     const j = await r.json();
     if (r.ok) return j;
     last = j;
-    if (r.status !== 404) break; // modèle inconnu : on essaie le suivant
+    // modèle inconnu (404), sans quota gratuit (429) ou indisponible (503) : on essaie le suivant
+    if (![404, 429, 503].includes(r.status)) break;
   }
-  throw new Error(JSON.stringify((last as any)?.error ?? last));
+  const err = (last as any)?.error ?? last;
+  throw new Error(`Modèles essayés : ${tried.join(", ")}. Dernière erreur : ${err?.code ?? ""} ${err?.message ?? JSON.stringify(err)}`.slice(0, 600));
 }
 const textOf = (j: any) =>
   (j?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? "").join("").trim();

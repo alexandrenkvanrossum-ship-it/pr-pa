@@ -535,11 +535,13 @@ function loadNews(force){
   var n=st().news, t=iso(today());
   if(newsLoading || typeof Sync==="undefined" || !Sync.user()) return;
   if(!force && n && n.date===t) return;
+  var lastFail=0; try{ lastFail=+localStorage.getItem("prepa.newsFail")||0; }catch(e){}
+  if(!force && Date.now()-lastFail<3600e3){ newsErr=newsErr||"Nouvel essai automatique dans moins d'une heure."; var c0=document.getElementById("news-card"); if(c0) c0.innerHTML=newsHTML(); return; }
   newsLoading=true; newsErr=null;
   Sync.invoke({mode:"news",date:fmtLong(t)+" "+parseISO(t).getFullYear()}).then(function(r){
     newsLoading=false; st().news={date:t,titre:r.titre,resume:r.resume,sources:r.sources||[]}; save();
     var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML();
-  },function(e){ newsLoading=false; newsErr=e.message; var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML(); });
+  },function(e){ newsLoading=false; newsErr=e.message; try{ localStorage.setItem("prepa.newsFail",String(Date.now())); }catch(x){} var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML(); });
 }
 
 /* ---------- compte et synchronisation ---------- */
