@@ -932,8 +932,7 @@ function vHome(){
   h+='</section></div>';
 
   if(hasCSH(t)){
-    var p=cshPick();
-    h+='<section class="csh-pick" style="margin-top:14px"><div class="eyebrow">CSH · Aujourd\'hui, je te propose de travailler sur</div><div class="oeuvre">'+esc(p.t)+'</div><p class="angle" style="margin:0 0 12px">'+esc(p.a)+'</p><div class="row"><span class="tag s-csh">'+esc(p.st)+'</span>'+p.sous.map(function(x){ return '<span class="chip">'+esc(x)+'</span>'; }).join("")+'<span class="sp" style="flex:1"></span><button class="btn sm" data-a="csh-skip" '+((st().cshSkip||0)%3===2?"disabled":"")+'>Autre proposition</button></div></section>';
+    h+='<div style="margin-top:14px">'+'<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Journée de CSH : ton œuvre du jour et son parcours d'étude t'attendent dans l'atelier."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>'+'</div>';
   }
 
   h+='<div class="grid g2" style="margin-top:14px">';
@@ -1000,7 +999,7 @@ function parseChips(p){
 }
 function actionLabel(p){
   if(p.action==="rappel") return "rappel "+p.remind+" min avant"+(p.time?" ("+hLabel(fromMin(toMin(p.time)-p.remind))+")":"");
-  if(p.action==="csh-oeuvre") return "parcours d'étude dans l'Atelier CSH";
+  if(p.action==="csh-oeuvre") return "œuvre pour l'Atelier CSH";
   if(p.action==="hgg-fiche") return "fiche automatique dans l'Atelier HGG";
   if(p.action==="civi") return "CIVI "+(p.sub==="all"?"allemand":"anglais")+" (Google Doc)";
   if(p.action==="dm") return "découpage jeudi, vendredi, dimanche";
@@ -1009,7 +1008,7 @@ function actionLabel(p){
 }
 function actionToast(t){
   if(t.action==="rappel") return "Ajouté à l'agenda, rappel "+t.remind+" min avant.";
-  if(t.action==="csh-oeuvre") return "Œuvre ajoutée. Le parcours d'étude sera rédigé par l'Atelier CSH.";
+  if(t.action==="csh-oeuvre") return "Tâche ajoutée. Pour la fiche, note aussi l'œuvre dans l'Atelier CSH.";
   if(t.action==="hgg-fiche") return "Ajouté. La fiche sera créée par l'Atelier HGG.";
   if(t.action==="civi") return "Ajouté. L'insertion dans ta CIVI arrive avec la connexion Google Docs.";
   return "Tâche ajoutée.";
@@ -1128,11 +1127,8 @@ function vMatiere(id){
     h+=modCard("Colles d'HGG","Une semaine sur deux (semaine du 5 octobre : HGG). Le thème est proposé d'après le calendrier de l'atelier ; tu confirmes.");
   }
   if(id==="csh"){
-    var p=cshPick();
-    h+='<section class="csh-pick"><div class="eyebrow">Aujourd\'hui, je te propose de travailler sur</div><div class="oeuvre">'+esc(p.t)+'</div><p class="angle" style="margin:0 0 12px">'+esc(p.a)+'</p><button class="btn sm" data-a="csh-skip">Autre proposition</button></section>';
-    h+=modCard("Atelier CSH","Sur claude.ai, jumeau de l'Atelier HGG : parcours d'étude des œuvres, références, duos, coups de cœur. Il sera créé à l'étape 10.");
+    h+='<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Œuvre du jour, parcours d'étude avec extraits vérifiés, références, duos, sous-thèmes, feuille blanche, Anki."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
     h+='<section class="card"><div class="card-h"><h2>Sous-thèmes</h2><span class="small muted">18</span></div>'+["I","II","III"].map(function(part){ return '<div class="eyebrow" style="margin:8px 0 6px">'+({I:"I · Définir",II:"II · À l'épreuve",III:"III · Rayonnante"})[part]+'</div><div class="sous">'+SOUS_THEMES.filter(function(x){return x[0]===part;}).map(function(x){ return '<span class="chip">'+esc(x[1])+'</span>'; }).join("")+'</div>'; }).join("")+'</section>';
-    h+='<section class="card"><div class="card-h"><h2>Œuvres à venir</h2></div><div class="tasks">'+CSH_PICKS.map(function(x){ return '<div class="task"><div class="tt"><span>'+esc(x.t)+'</span><div class="tm"><span class="tag s-csh">'+x.st+'</span><span class="meta">'+esc(x.a)+'</span></div></div></div>'; }).join("")+'</div></section>';
   }
   if(id==="maths"){
     h+='<div class="grid g2">'+modCard("Séance du jour","Plan minuté à l'exercice près. Chaque jour de maths, l'app te demande où en est le cours.")+modCard("Quiz de cours","15 min en début de séance, quatre boutons : Parfait, Correct, Hésitant, À revoir.")+modCard("Reprise espacée","Exercices « clé » seulement : J+3, J+10, J+30 depuis la dernière tentative.")+modCard("DM du lundi","Découpé sur jeudi, vendredi et dimanche. Incompressible.")+'</div>';
