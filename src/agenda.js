@@ -56,6 +56,19 @@ function dayEvents(dISO){
     add({kind:"fixed",s:"20:00",e:"20:40",t:"Dîner",sub:"neutral"});
     if(!vac || wd!==6) add({kind:"fixed",s:"23:00",e:"23:20",t:"Actualité",sub:"neutral",actu:true});
   }
+  // Colles BJcolle : bloquées de 10 min avant la préparation à la fin du passage ; le travail qui chevauche est raccourci
+  if(typeof BJ!=="undefined"){
+    BJ.mineOn(dISO).forEach(function(c){
+      var b=BJ.block(c), cs=toMin(b.s), ce=toMin(b.e);
+      ev=ev.reduce(function(acc,w){
+        if(w.kind!=="work" || toMin(w.e)<=cs || toMin(w.s)>=ce){ acc.push(w); return acc; }
+        if(toMin(w.s)<cs && cs-toMin(w.s)>=20){ var a={}; for(var k in w) a[k]=w[k]; a.e=fromMin(cs); a.id=w.id+"-a"; acc.push(a); }
+        if(toMin(w.e)>ce && toMin(w.e)-ce>=20){ var z={}; for(var k2 in w) z[k2]=w[k2]; z.s=fromMin(ce); z.id=w.id+"-z"; acc.push(z); }
+        return acc;
+      },[]);
+      add({kind:"exam",s:b.s,e:b.e,t:"Colle – "+c.discipline.replace(/ LV\d$/,"")+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
+    });
+  }
   ev.sort(function(a,b){ return toMin(a.s)-toMin(b.s); });
   return ev;
 }

@@ -78,7 +78,7 @@ function setActive(){
     var on=b.getAttribute("data-go")===v && !b.getAttribute("data-p");
     if(S.view==="matiere" && b.getAttribute("data-p")===S.param) on=true;
     if(S.view==="matiere" && b.getAttribute("data-go")==="matieres" && b.closest(".side")) on=false;
-    if(["echeances","notes","methodo","todo"].indexOf(S.view)>=0 && b.closest(".tabbar") && b.getAttribute("data-go")==="plus") on=true;
+    if(["echeances","notes","methodo","todo","bjclasse","bjcolleurs","bjcolleur"].indexOf(S.view)>=0 && b.closest(".tabbar") && b.getAttribute("data-go")==="plus") on=true;
     b.classList.toggle("on",on);
   });
 }
@@ -87,7 +87,7 @@ function topbar(title){
     '<button class="sync-pill" data-a="account" id="sync-pill" aria-label="Compte et synchronisation">'+syncLabel()+'</button>'+
     '<button class="icon-btn gem-btn" data-a="gemini" aria-label="Demander à Gemini" title="Demander à Gemini">'+I.spark+'</button></div>';
 }
-function go(v,p){ S.view=v; S.param=p||null; render(); window.scrollTo(0,0); try{ history.replaceState(null,"","#"+v+(p?"-"+p:"")); }catch(e){} }
+function go(v,p){ S.view=v; S.param=p||null; render(); window.scrollTo(0,0); try{ history.replaceState(null,"","#"+v+(p?"-"+encodeURIComponent(p):"")); }catch(e){} }
 
 function render(){
   var html="";
@@ -97,6 +97,9 @@ function render(){
     case "matieres": html=vMatieres(); break;
     case "matiere": html=vMatiere(S.param); break;
     case "echeances": html=vEcheances(); break;
+    case "bjclasse": html=vBjClasse(); break;
+    case "bjcolleurs": html=vBjColleurs(); break;
+    case "bjcolleur": html=vBjColleur(S.param); break;
     case "notes": html=vNotes(); break;
     case "methodo": html=vMethodo(); break;
     case "plus": html=vPlus(); break;
@@ -121,6 +124,7 @@ function dayObjectives(dISO){
 function dueToday(dISO){
   var s=st(), out=[];
   paleOn(dISO).forEach(function(p){ out.push({when:hLabel(p.s),t:"DST · "+p.t,sub:p.sub}); });
+  if(typeof BJ!=="undefined") BJ.mineOn(dISO).forEach(function(c){ var pr=colleurLine(c.colleur); out.push({when:hLabel(c.debut),t:"Colle de "+c.discipline+(c.colleur?" avec "+c.colleur:"")+(/^\d/.test(c.tirage||"")?" · tirage "+hLabel(c.tirage):"")+(c.salle?" · "+c.salle:"")+(pr?" — "+pr:""),sub:BJ.subOf(c)}); });
   s.tasks.filter(function(t){ return !t.done && t.time && t.day===dISO; }).forEach(function(t){ out.push({when:hLabel(t.time),t:t.title+" · rappel "+t.remind+" min avant",sub:t.sub}); });
   s.tasks.filter(function(t){ return !t.done && t.due===dISO; }).forEach(function(t){ out.push({when:"Pour auj.",t:t.title,sub:t.sub}); });
   return out;
@@ -144,7 +148,7 @@ function vHome(){
   h+=objs.length?'<ol class="objs">'+objs.map(function(o,i){ return '<li><span class="n">'+(i+1)+'</span><span>'+esc(o.t)+'</span></li>'; }).join("")+'</ol>':'<div class="empty">Rien d\'imposé aujourd\'hui.</div>';
   h+='</section>';
   h+='<section class="card"><div class="card-h"><h2>Échéances du jour</h2><button class="link-btn" data-go="echeances">Toutes</button></div>';
-  h+=dues.length?'<div class="stack" style="gap:8px">'+dues.map(function(x){ return '<div class="due '+subj(x.sub).cls+'"><span class="when">'+esc(x.when)+'</span><span class="what">'+esc(x.t)+'</span></div>'; }).join("")+'</div>':'<div class="empty"><b>Aucune échéance aujourd\'hui</b>Les colles apparaîtront ici dès que BJcolle sera branché.</div>';
+  h+=dues.length?'<div class="stack" style="gap:8px">'+dues.map(function(x){ return '<div class="due '+subj(x.sub).cls+'"><span class="when">'+esc(x.when)+'</span><span class="what">'+esc(x.t)+'</span></div>'; }).join("")+'</div>':'<div class="empty"><b>Aucune échéance aujourd\'hui</b>Ni colle, ni DST, ni rendu.</div>';
   h+='</section></div>';
 
   if(hasCSH(t)){
@@ -362,14 +366,14 @@ function modCard(t,d){ return '<section class="card"><div class="card-h"><h2>'+e
 /* ---------- Échéances ---------- */
 function vEcheances(){
   var t=iso(today()), m=S.echMode;
-  var h=topbar("Échéances")+'<div class="ag-head"><h1 class="large-title" style="margin:0">Échéances</h1><div class="seg"><button class="'+(m==="dst"?"on":"")+'" data-a="echmode" data-m="dst">DST</button><button class="'+(m==="colles"?"on":"")+'" data-a="echmode" data-m="colles">Colles</button></div></div>';
+  var h=topbar("Échéances")+'<div class="ag-head"><h1 class="large-title" style="margin:0">Échéances</h1><div class="seg"><button class="'+(m==="dst"?"on":"")+'" data-a="echmode" data-m="dst">DST</button><button class="'+(m==="colles"?"on":"")+'" data-a="echmode" data-m="colles">Colles'+(typeof BJ!=="undefined"&&BJ.unread()?' ('+BJ.unread()+')':'')+'</button></div></div>';
   if(m==="dst"){
     var fut=PALES.filter(function(p){ return p.date>=t; }), past=PALES.filter(function(p){ return p.date<t; });
     h+='<section class="card">'+fut.map(function(p){ return echRow(p,t); }).join("")+'</section>';
     if(past.length) h+='<section class="card" style="margin-top:14px"><div class="group-h">Passées</div>'+past.map(function(p){ return echRow(p,t,true); }).join("")+'</section>';
   } else {
     var w=mondayOf(today()), ref=parseISO("2026-10-05"), k=Math.round((w-ref)/(7*864e5));
-    h+='<section class="card"><div class="card-h"><h2>Planning de colles</h2></div><div class="empty"><b>BJcolle n\'est pas encore branché</b>Dès la connexion, tes colles s\'afficheront ici, seront bloquées dans l\'agenda (10 min avant la préparation) et tu seras prévenu à chaque changement.</div></section>';
+    h+=bjColles();
     h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Alternance maths / HGG</h2></div>'+[0,1,2,3].map(function(i){ var ws=addDays(w,7*i), hgg=((k+i)%2+2)%2===0; return '<div class="ech"><div class="d '+(hgg?"s-hgg":"s-maths")+'"><b>'+ws.getDate()+'</b><small>'+MON_S[ws.getMonth()]+'</small></div><div class="w">Semaine du '+ws.getDate()+' '+MONTHS[ws.getMonth()]+'</div><span class="tag '+(hgg?"s-hgg":"s-maths")+'">Colle '+(hgg?"d'HGG":"de maths")+'</span></div>'; }).join("")+'</section>';
   }
   return h;
@@ -379,8 +383,99 @@ function echRow(p,t,past){
   return '<div class="ech'+(past?" off":"")+'"><div class="d '+s.cls+'"><b>'+d.getDate()+'</b><small>'+MON_S[d.getMonth()]+'</small></div><div><div class="w">'+esc(p.t)+'</div><div class="small muted">'+DAYS[d.getDay()]+' · '+hLabel(p.s)+'–'+hLabel(p.e)+'</div></div><span class="cd'+(!past&&n<=7?" soon":"")+'">'+(past?"passée":n===0?"aujourd'hui":"J-"+n)+'</span></div>';
 }
 
+/* ---------- BJcolle ---------- */
+function n1(x){ return x==null?"–":(Math.round(x*10)/10).toString().replace(".",","); }
+function agoLabel(t){ if(!t) return "jamais"; var m=Math.round((Date.now()-new Date(t))/60000); if(m<1) return "à l'instant"; if(m<60) return "il y a "+m+" min"; var h=Math.round(m/60); if(h<24) return "il y a "+h+" h"; return "le "+fmtLong(t.slice(0,10)); }
+function colleurLine(name){
+  if(typeof BJ==="undefined"||!name) return "";
+  var c=BJ.colleur(BJ.colleurKey(name.split(/\s*\/\s*/)[0])); if(!c||!c.notes.length) return "";
+  return "moyenne "+n1(c.moy)+" sur "+c.notes.length+" notes"+(c.moyMoi!=null?" · toi : "+n1(c.moyMoi):"")+(c.sujets?" · "+c.sujets+" sujets connus":"");
+}
+function bjColleRow(c,past){
+  var d=parseISO(c.date), s=subj(BJ.subOf(c)), pr=colleurLine(c.colleur), n=diffDays(c.date,iso(today()));
+  return '<div class="ech'+(past?" off":"")+'"><div class="d '+s.cls+'"><b>'+d.getDate()+'</b><small>'+MON_S[d.getMonth()]+'</small></div><div style="min-width:0"><div class="w">'+esc(c.discipline)+(c.type?' <span class="tag">'+esc(c.type)+'</span>':'')+'</div><div class="small muted">'+DAYS[d.getDay()]+' · '+hLabel(c.debut||"00:00")+(/^\d/.test(c.tirage||"")?' · tirage '+hLabel(c.tirage):c.tirage?' · tirage anticipé':'')+(c.salle?' · '+esc(c.salle):'')+'</div>'+(c.colleur?'<div class="small"><button class="link-btn" data-go="bjcolleur" data-p="'+esc(BJ.colleurKey(c.colleur.split(/\s*\/\s*/)[0]))+'">'+esc(c.colleur)+'</button>'+(pr?' <span class="muted">· '+esc(pr)+'</span>':'')+'</div>':'')+(c.ordre&&c.ordre.length&&!past?'<div class="small faint">Passage '+(c.ordre.findIndex(function(x){return /VAN ROSSUM/i.test(x);})+1||"?")+' sur '+c.ordre.length+'</div>':'')+(past&&c.sujet?'<div class="small"><b>Sujet :</b> '+esc(c.sujet)+'</div>':'')+'</div><span class="cd'+(!past&&n<=1?" soon":"")+'">'+(past?(c.note||"—"):n===0?"aujourd'hui":n===1?"demain":"J-"+n)+'</span></div>';
+}
+function bjColles(){
+  if(typeof BJ==="undefined") return "";
+  var D=BJ.data(), stt=D.state, h="";
+  if(!Sync.user()) return '<section class="card"><div class="empty"><b>Connecte-toi pour voir tes colles</b>Plus → Compte.</div></section>';
+  h+='<div class="row" style="justify-content:space-between;margin:0 0 10px"><span class="small muted">BJcolle · vérifié '+agoLabel(stt&&stt.last_ok)+(stt&&stt.error?' · <span style="color:var(--red)">'+esc(stt.error)+'</span>':'')+'</span><button class="btn sm" data-a="bjcheck">Vérifier maintenant</button></div>';
+  if(!BJ.ready() && !D.colles.length) return h+'<section class="card"><div class="empty"><b>Le robot BJcolle n\'a pas encore tourné</b>Une fois installé dans Supabase, il consulte BJcolle chaque heure : planning, notes, sujets et commentaires de la classe, archives de première année.</div></section>';
+  var ev=D.events.filter(function(e){ return !e.lu; });
+  if(ev.length) h+='<section class="card"><div class="card-h"><h2>Nouveautés</h2><button class="link-btn" data-a="bjread">Tout marquer lu</button></div><div class="stack" style="gap:8px">'+ev.slice(0,12).map(function(e){ return '<div class="due s-neutral"><span class="when">'+esc(agoLabel(e.at))+'</span><span class="what"><b>'+esc(e.titre)+'</b>'+(e.detail?'<br><span class="small muted">'+esc(e.detail)+'</span>':'')+'</span></div>'; }).join("")+'</div></section>';
+  var up=BJ.upcoming();
+  h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Mes prochaines colles</h2><span class="small muted">'+up.length+'</span></div>'+(up.length? up.map(function(c){ return bjColleRow(c); }).join("") : '<div class="empty">Aucune colle à venir publiée. Le planning sort le jeudi ou le vendredi.</div>')+'</section>';
+  var past=BJ.mine().filter(function(c){ return c.date<iso(today()) && (c.scope==="moi"||c.scope==="kore"); }).sort(function(a,b){ return b.date.localeCompare(a.date); });
+  if(past.length) h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Mes dernières colles</h2></div>'+past.slice(0,6).map(function(c){ return bjColleRow(c,true); }).join("")+'</section>';
+  h+='<div class="grid g2" style="margin-top:14px"><button class="ext" data-go="bjclasse" style="border:0;text-align:left"><div><b>Colles de la classe</b><span class="small muted">Sujets, notes et commentaires, au fil de l\'eau et archives de 1re année.</span></div>'+I.right+'</button><button class="ext" data-go="bjcolleurs" style="border:0;text-align:left"><div><b>Colleurs</b><span class="small muted">Moyennes, répartition des notes, sujets déjà donnés, exigences.</span></div>'+I.right+'</button></div>';
+  return h;
+}
+var MY_DISC=["Mathématiques","Histoire-Géographie","Français-Philosophie","Anglais LV1","Allemand LV1"];
+function vBjClasse(){
+  var D=BJ.data(), F=S.bjF||(S.bjF={disc:"",annee:"",q:"",colleur:"",n:80});
+  var discs=[...new Set(D.colles.map(function(c){return c.discipline;}))].sort(function(a,b){ return (MY_DISC.indexOf(a)<0)-(MY_DISC.indexOf(b)<0) || a.localeCompare(b); });
+  var annees=[...new Set(D.colles.map(function(c){return c.annee;}).filter(Boolean))].sort().reverse();
+  var q=norm(F.q||"");
+  var list=D.colles.filter(function(c){ return (c.scope==="classe"||c.scope==="archive-classe") && (!F.disc||c.discipline===F.disc) && (!F.annee||c.annee===F.annee) && (!F.colleur||BJ.colleurKey(c.colleur||"")===F.colleur) && (!q||norm([c.sujet,c.commentaire,c.colleur,c.eleve].join(" ")).indexOf(q)>=0); }).sort(function(a,b){ return ((b.date||"")+(b.debut||"")).localeCompare((a.date||"")+(a.debut||"")); });
+  var h=topbar("Colles de la classe")+'<button class="link-btn" data-go="echeances" style="display:inline-flex;align-items:center;gap:2px;margin-bottom:10px">'+I.left+' Échéances</button><h1 class="large-title">Colles de la classe</h1>';
+  h+='<p class="small muted" style="margin:0 0 12px">Privé : visible par toi seul, pour ta préparation. Les sujets apparaissent dès que le colleur remplit la feuille (vérification chaque heure).</p>';
+  h+='<div class="row" style="gap:8px;margin-bottom:12px"><select class="field" id="bjf-disc" style="flex:1 1 160px"><option value="">Toutes les matières</option>'+discs.map(function(d){ return '<option'+(F.disc===d?" selected":"")+'>'+esc(d)+'</option>'; }).join("")+'</select><select class="field" id="bjf-annee" style="flex:0 1 130px"><option value="">Toutes les années</option>'+annees.map(function(a){ return '<option'+(F.annee===a?" selected":"")+'>'+a+'</option>'; }).join("")+'</select><input class="field" id="bjf-q" placeholder="Chercher un sujet, un mot…" value="'+esc(F.q||"")+'" style="flex:2 1 200px"></div>';
+  if(F.colleur) h+='<div class="row" style="margin-bottom:10px"><span class="tag">Colleur : '+esc(F.colleur)+'</span><button class="link-btn" data-a="bjfclr">Retirer</button></div>';
+  h+='<div class="small muted" style="margin-bottom:8px">'+list.length+' colle'+(list.length>1?"s":"")+' · '+list.filter(function(c){return c.sujet;}).length+' avec sujet</div>';
+  h+='<div class="stack" style="gap:8px">'+list.slice(0,F.n).map(function(c){ var s=subj(BJ.subOf(c));
+    return '<section class="card" style="padding:12px 14px"><div class="row" style="justify-content:space-between;gap:8px"><span class="tag '+s.cls+'">'+esc(c.discipline)+'</span><span class="small muted">'+fmtLong(c.date)+' · '+hLabel(c.debut||"00:00")+'</span></div>'+(c.sujet?'<div style="font-weight:700;margin-top:6px">'+esc(c.sujet)+'</div>':'<div class="small faint" style="margin-top:6px">Sujet pas encore relevé</div>')+'<div class="small muted" style="margin-top:4px"><button class="link-btn" data-go="bjcolleur" data-p="'+esc(BJ.colleurKey((c.colleur||"").split(/\s*\/\s*/)[0]))+'">'+esc(c.colleur||"")+'</button> · '+esc(c.eleve||"")+(c.note?' · <b>'+esc(c.note)+'</b>':'')+'</div>'+(c.commentaire?'<details style="margin-top:6px"><summary class="small" style="cursor:pointer">Commentaire du colleur</summary><p class="small" style="white-space:pre-wrap;margin:6px 0 0">'+esc(c.commentaire)+'</p></details>':'')+'</section>'; }).join("")+'</div>';
+  if(list.length>F.n) h+='<div style="text-align:center;margin-top:12px"><button class="btn sm" data-a="bjmore">Afficher plus</button></div>';
+  return h;
+}
+function vBjColleurs(){
+  var F=S.bjCF||(S.bjCF={disc:""});
+  var all=BJ.colleurs().filter(function(c){ return c.notes.length; });
+  var discs=[...new Set(all.map(function(c){return c.discipline;}))].sort(function(a,b){ return (MY_DISC.indexOf(a)<0)-(MY_DISC.indexOf(b)<0) || a.localeCompare(b); });
+  var list=all.filter(function(c){ return !F.disc||c.discipline===F.disc; }).sort(function(a,b){ return (MY_DISC.indexOf(a.discipline)<0)-(MY_DISC.indexOf(b.discipline)<0) || a.discipline.localeCompare(b.discipline) || b.n-a.n; });
+  var h=topbar("Colleurs")+'<button class="link-btn" data-go="echeances" style="display:inline-flex;align-items:center;gap:2px;margin-bottom:10px">'+I.left+' Échéances</button><h1 class="large-title">Colleurs</h1>';
+  h+='<select class="field" id="bjcf-disc" style="margin-bottom:12px;max-width:320px"><option value="">Toutes les matières</option>'+discs.map(function(d){ return '<option'+(F.disc===d?" selected":"")+'>'+esc(d)+'</option>'; }).join("")+'</select>';
+  h+='<section class="card">'+(list.length? list.map(function(c){ var s=subj(BJ.subOf({discipline:c.discipline}));
+    return '<button class="ech" data-go="bjcolleur" data-p="'+esc(c.nom)+'" style="width:100%;border:0;background:none;text-align:left;cursor:pointer"><div class="d '+s.cls+'"><b>'+n1(c.moy)+'</b><small>moy.</small></div><div style="min-width:0"><div class="w">'+esc(c.nom)+'</div><div class="small muted">'+esc(c.discipline)+' · '+c.notes.length+' notes · écart-type '+n1(c.sd)+(c.sujets?' · '+c.sujets+' sujets':'')+'</div></div><span class="cd">'+(c.moyMoi!=null?"toi "+n1(c.moyMoi):"")+'</span></button>'; }).join("") : '<div class="empty">Pas encore de notes relevées.</div>')+'</section>';
+  return h;
+}
+function bjHist(notes,mine){
+  var bins=[0,0,0,0,0,0,0,0,0,0]; notes.forEach(function(v){ bins[Math.min(9,Math.floor(v/2))]++; });
+  var mx=Math.max.apply(null,bins)||1, w=100/10;
+  var bars=bins.map(function(b,i){ var hh=b/mx*60; return '<rect x="'+(i*w+1)+'" y="'+(66-hh)+'" width="'+(w-2)+'" height="'+hh+'" rx="1.5" fill="var(--blue)" opacity=".75"/>'; }).join("");
+  var marks=(mine||[]).map(function(v){ var x=v/20*100; return '<line x1="'+x+'" x2="'+x+'" y1="2" y2="66" stroke="var(--red)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>'; }).join("");
+  return '<svg viewBox="0 0 100 78" preserveAspectRatio="none" style="width:100%;height:120px" aria-label="Répartition des notes">'+bars+marks+'<line x1="0" x2="100" y1="66" y2="66" stroke="var(--line-strong)" vector-effect="non-scaling-stroke"/></svg><div class="row small faint" style="justify-content:space-between"><span>0</span><span>5</span><span>10</span><span>15</span><span>20</span></div>';
+}
+function vBjColleur(nom){
+  var c=BJ.colleur(nom), list=BJ.collesDe(nom).sort(function(a,b){ return ((b.date||"")+(b.debut||"")).localeCompare((a.date||"")+(a.debut||"")); });
+  var h=topbar(nom||"Colleur")+'<button class="link-btn" data-go="bjcolleurs" style="display:inline-flex;align-items:center;gap:2px;margin-bottom:10px">'+I.left+' Colleurs</button><h1 class="large-title">'+esc(nom||"")+'</h1>';
+  if(!c) return h+'<div class="empty">Aucune donnée pour ce colleur.</div>';
+  var mine=list.filter(function(x){ return x.moi && x.note_num!=null; }).map(function(x){ return x.note_num; });
+  var cls=BJ.avg(list.filter(function(x){ return x.note_num!=null; }).map(function(x){return x.note_num;}));
+  h+='<p class="small muted" style="margin:0 0 12px">'+esc(Object.keys(c.disc).join(", "))+' · '+c.n+' colles relevées</p>';
+  h+='<div class="grid g3"><section class="card"><div class="eyebrow">Moyenne</div><div class="tab" style="font-size:30px;font-weight:800">'+n1(c.moy)+'</div><div class="small muted">écart-type '+n1(c.sd)+' · '+c.notes.length+' notes</div></section><section class="card"><div class="eyebrow">Tes notes avec lui</div><div class="tab" style="font-size:30px;font-weight:800">'+n1(c.moyMoi)+'</div><div class="small muted">'+(mine.length?mine.map(n1).join(" · "):"pas encore de colle")+'</div></section><section class="card"><div class="eyebrow">Sujets connus</div><div class="tab" style="font-size:30px;font-weight:800">'+c.sujets+'</div><div class="small muted">dernière colle '+(c.last?fmtLong(c.last):"–")+'</div></section></div>';
+  h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Répartition des notes</h2><span class="small muted">en rouge : tes notes</span></div>'+bjHist(c.notes,mine)+'</section>';
+  var key="prepa.bjsum."+nom, sum=null; try{ sum=JSON.parse(localStorage.getItem(key)||"null"); }catch(e){}
+  var nCom=list.filter(function(x){return x.commentaire;}).length;
+  h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Ce qu\'il attend</h2><button class="btn sm" data-a="bjsum" data-p="'+esc(nom)+'" '+(nCom?"":"disabled")+'>'+(sum?"Actualiser":"Résumer avec Gemini")+'</button></div>'+(sum?'<div class="small" style="white-space:pre-wrap">'+esc(sum.text)+'</div><div class="small faint" style="margin-top:6px">D\'après '+sum.n+' commentaires · '+fmtLong(sum.at.slice(0,10))+'</div>':'<div class="small muted">'+(nCom?nCom+" commentaires disponibles : Gemini en tire ses exigences récurrentes.":"Pas encore de commentaire relevé.")+'</div>')+'</section>';
+  var byYear={}; list.filter(function(x){return x.sujet;}).forEach(function(x){ (byYear[x.annee||"?"]=byYear[x.annee||"?"]||[]).push(x); });
+  h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Sujets déjà donnés</h2><button class="link-btn" data-a="bjfcol" data-p="'+esc(nom)+'">Tout voir</button></div>'+(Object.keys(byYear).length? Object.keys(byYear).sort().reverse().map(function(y){ return '<div class="group-h">'+y+'</div>'+byYear[y].map(function(x){ return '<div class="small" style="padding:6px 0;border-bottom:1px solid var(--line)"><b>'+esc(x.sujet)+'</b><br><span class="muted">'+fmtLong(x.date)+' · '+esc(x.eleve||"")+(x.note?' · '+esc(x.note):'')+'</span></div>'; }).join(""); }).join("") : '<div class="empty">Aucun sujet relevé pour l\'instant.</div>')+'</section>';
+  return h;
+}
+function bjSummary(nom){
+  var list=BJ.collesDe(nom).filter(function(x){return x.commentaire;}).slice(0,60);
+  if(!list.length) return;
+  toast("Gemini lit les commentaires…");
+  var txt=list.map(function(x){ return "- ("+(x.note||"?")+", "+x.discipline+") "+x.commentaire.replace(/\s+/g," ").slice(0,700); }).join("\n");
+  Sync.invoke({mode:"chat", context:"Profil de colleur BJcolle", messages:[{role:"user", text:"Voici les commentaires écrits par "+nom+" (colleur de prépa ECG) sur des colles d'élèves, avec la note. Dégage, sans rien inventer et en t'appuyant uniquement sur ces commentaires : 1) ses exigences récurrentes (ce qu'il valorise), 2) les reproches qui reviennent, 3) trois conseils concrets pour réussir une colle avec lui. Réponse brève, en puces.\n\n"+txt}]}).then(function(r){
+    try{ localStorage.setItem("prepa.bjsum."+nom, JSON.stringify({text:r.text, n:list.length, at:new Date().toISOString()})); }catch(e){}
+    if(S.view==="bjcolleur") render();
+  }).catch(function(e){ toast("Gemini : "+(e&&e.message||"erreur")); });
+}
+
 /* ---------- Notes ---------- */
-function notesOf(id){ return st().notes.filter(function(n){ return n.ep===id; }).sort(function(a,b){ return a.date.localeCompare(b.date); }); }
+var BJ_EP={"Mathématiques":"o-maths","Histoire-Géographie":"o-hgg","Français-Philosophie":"o-csh","Anglais LV1":"o-ang","Allemand LV1":"o-all","Entretiens de personnalité":"o-entretien"};
+function bjNotes(id){ if(typeof BJ==="undefined") return []; return BJ.mine().filter(function(c){ return c.annee==="2026-2027" && c.note_num!=null && BJ_EP[c.discipline]===id; }).map(function(c){ return {id:"bj-"+c.id,ep:id,v:c.note_num,date:c.date,label:(c.type?c.type+" · ":"Colle · ")+(c.colleur||""),com:"",bj:true}; }); }
+function notesOf(id){ return st().notes.filter(function(n){ return n.ep===id; }).concat(bjNotes(id)).sort(function(a,b){ return a.date.localeCompare(b.date); }); }
 function avg(list){ if(!list.length) return null; return list.reduce(function(a,n){ return a+n.v; },0)/list.length; }
 function f1(x){ return x==null?"–":(Math.round(x*10)/10).toFixed(1).replace(".",","); }
 function spark(list,col){
@@ -618,6 +713,12 @@ document.addEventListener("click",function(ev){
     return;
   }
   if(a==="echmode"){ S.echMode=b.getAttribute("data-m"); render(); return; }
+  if(a==="bjcheck"){ BJ.checkNow().then(function(){ toast("Vérification lancée : résultat dans une minute."); }).catch(function(e){ toast(e&&e.message||"Vérification impossible."); }); return; }
+  if(a==="bjread"){ BJ.markRead(); render(); return; }
+  if(a==="bjmore"){ S.bjF.n+=120; render(); return; }
+  if(a==="bjfclr"){ S.bjF.colleur=""; render(); return; }
+  if(a==="bjfcol"){ S.bjF=S.bjF||{disc:"",annee:"",q:"",n:80}; S.bjF.colleur=b.getAttribute("data-p"); go("bjclasse"); return; }
+  if(a==="bjsum"){ bjSummary(b.getAttribute("data-p")); return; }
   if(a==="notesmode"){ S.notesMode=b.getAttribute("data-m"); render(); return; }
   if(a==="methmode"){ S.methMode=b.getAttribute("data-m"); render(); return; }
   if(a==="notedetail"){ noteDetail(b.getAttribute("data-id")); return; }
@@ -630,7 +731,13 @@ document.addEventListener("input",function(ev){
   st().goals[r.getAttribute("data-goal")]=+r.value; save();
   var v=document.getElementById("goal-val"); if(v) v.textContent=f1(+r.value);
 });
-document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-goal]"); if(r){ noteDetail(r.getAttribute("data-goal")); render(); } });
+document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-goal]"); if(r){ noteDetail(r.getAttribute("data-goal")); render(); return; }
+  var id=ev.target.id;
+  if(id==="bjf-disc"){ S.bjF.disc=ev.target.value; S.bjF.n=80; render(); }
+  else if(id==="bjf-annee"){ S.bjF.annee=ev.target.value; S.bjF.n=80; render(); }
+  else if(id==="bjf-q"){ S.bjF.q=ev.target.value; S.bjF.n=80; render(); }
+  else if(id==="bjcf-disc"){ S.bjCF.disc=ev.target.value; render(); }
+});
 document.addEventListener("keydown",function(ev){ if(ev.key==="Escape" && layer.innerHTML){ closeSheet(); render(); } });
 window.addEventListener("scroll",function(){ var tb=document.getElementById("topbar"); if(tb) tb.classList.toggle("scrolled",window.scrollY>40); },{passive:true});
 
@@ -644,8 +751,9 @@ closeSheet=function(){ _close(); layer.removeAttribute("data-slot"); };
 function start(){
   shell(); seed();
   window.__prepaRefresh=function(){ var a=document.activeElement; if(layer.innerHTML || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return; render(); };
-  if(typeof Sync!=="undefined"){ Sync.on(function(){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); }); Sync.init(); }
-  var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p[1]||null; } }
+  if(typeof Sync!=="undefined"){ var bjLoaded=false; Sync.on(function(stt,user){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); if(user && !bjLoaded && typeof BJ!=="undefined"){ bjLoaded=true; BJ.load(); setInterval(function(){ if(document.visibilityState==="visible") BJ.load(); },10*60000); } }); Sync.init(); }
+  if(typeof BJ!=="undefined") BJ.on(function(){ window.__prepaRefresh(); });
+  var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus","bjclasse","bjcolleurs","bjcolleur"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p.length>1?decodeURIComponent(p.slice(1).join("-")):null; } }
   render();
   if("serviceWorker" in navigator && location.protocol==="https:" && !window.claude){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }
 }

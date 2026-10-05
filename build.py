@@ -5,13 +5,14 @@ from PIL import Image, ImageDraw, ImageFont
 root = pathlib.Path(__file__).parent
 src = root / "src"
 css = (src / "styles.css").read_text()
-js = "\n".join((src / f).read_text() for f in ["data.js", "core.js", "agenda.js", "app.js"])
+js = "\n".join((src / f).read_text() for f in ["data.js", "core.js", "sync.js", "bj.js", "agenda.js", "app.js"])
 js = js.replace('if(typeof module!=="undefined") module.exports={parseTask:parseTask, iso:iso, parseISO:parseISO, norm:norm};', "")
 
 head = """<title>Prépa ECG2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
 """ + css + "\n</style>\n"
 body = '<div id="root"></div>\n<script>\n' + js + "\n</script>\n"

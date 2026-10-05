@@ -109,5 +109,5 @@ var Sync = (function(){
       return r.data;
     });
   }
-  return {invoke:invoke, init:init, schedule:schedule, on:function(f){ listeners.push(f); f(status,user); }, status:function(){ return status; }, user:function(){ return user; }, available:function(){ return !!sb; }, signIn:signIn, signUp:signUp, signOut:signOut, syncNow:function(){ return pull().then(push); }};
+  return {client:function(){ return sb; }, invoke:invoke, init:init, schedule:schedule, on:function(f){ listeners.push(f); f(status,user); }, status:function(){ return status; }, user:function(){ return user; }, available:function(){ return !!sb; }, signIn:signIn, signUp:signUp, signOut:signOut, syncNow:function(){ return pull().then(push); }};
 })();
