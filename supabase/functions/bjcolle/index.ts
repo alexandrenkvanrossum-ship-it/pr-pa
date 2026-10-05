@@ -240,6 +240,19 @@ async function run(mode: string) {
     }
   }
 
+  // Une même colle peut figurer dans plusieurs listes (la mienne et celle de la classe) : on fusionne
+  const RANG: Record<string, number> = { moi: 0, kore: 1, "archive-moi": 2, "archive-kore": 3, classe: 4, "archive-classe": 5 };
+  const fus = new Map<string, any>();
+  for (const r of rows) {
+    const a = fus.get(r.id);
+    if (!a) { fus.set(r.id, r); continue; }
+    const [hi, lo] = (RANG[r.scope] ?? 9) < (RANG[a.scope] ?? 9) ? [r, a] : [a, r];
+    const m: any = { ...lo, ...Object.fromEntries(Object.entries(hi).filter(([, v]) => v !== null && v !== undefined && v !== "")) };
+    m.moi = !!(a.moi || r.moi); m.scope = hi.scope;
+    fus.set(r.id, m);
+  }
+  rows.splice(0, rows.length, ...fus.values());
+
   // 4. Changements sur mes colles → nouveautés
   const t0 = today();
   for (const r of rows.filter((x) => x.moi && x.scope === "moi" || x.scope === "kore")) {
