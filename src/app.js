@@ -53,7 +53,7 @@ function seed(){
   s.seeded=true; save();
 }
 function taskFrom(p){
-  return {id:uid("t"),title:p.title,sub:p.sub||"perso",type:p.type,dur:p.dur,due:p.due,day:p.day,time:p.time,remind:p.remind,prio:p.prio,action:p.action,done:false,created:new Date().toISOString(),progress:0,spent:0};
+  return {id:uid("t"),title:p.title,sub:p.sub||"perso",type:p.type,dur:p.dur,due:p.due,day:p.day,time:p.time,remind:p.remind,prio:p.prio,action:p.action,devoir:!!p.devoir,memo:!!p.memo,done:false,created:new Date().toISOString(),progress:0,spent:0};
 }
 
 /* ---------- coquille ---------- */
@@ -106,7 +106,7 @@ function render(){
     default: html=vHome();
   }
   app.innerHTML='<div class="inner page-enter">'+html+'</div>';
-  setActive(); bindQuick(); tickTimers();
+  setActive(); bindQuick(); bindUpload(); tickTimers();
 }
 
 /* ---------- objectifs et échéances du jour ---------- */
@@ -151,6 +151,7 @@ function vHome(){
   h+=dues.length?'<div class="stack" style="gap:8px">'+dues.map(function(x){ return '<div class="due '+subj(x.sub).cls+'"><span class="when">'+esc(x.when)+'</span><span class="what">'+esc(x.t)+'</span></div>'; }).join("")+'</div>':'<div class="empty"><b>Aucune échéance aujourd\'hui</b>Ni colle, ni DST, ni rendu.</div>';
   h+='</section></div>';
 
+  h+=homeMethodoCards();
   if(hasCSH(t)){
     h+='<div style="margin-top:14px">'+'<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Journée de CSH : ton œuvre du jour et son parcours d'étude t'attendent dans l'atelier."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>'+'</div>';
   }
@@ -183,25 +184,27 @@ function bindQuick(){
     var cur=null;
     function upd(){
       var v=inp.value.trim(); btn.disabled=!v; if(!v){ box.innerHTML=""; cur=null; return; }
-      cur=parseTask(v); if(f._sub) cur.sub=f._sub; if(f._g){ if(!cur.type&&f._g.type) cur.type=f._g.type; if(!cur.dur&&f._g.dur) cur.dur=f._g.dur; }
-      box.innerHTML=parseChips(cur);
+      cur=parseTask(v); if(f._sub) cur.sub=f._sub; if(f._g){ if(!cur.type&&f._g.type) cur.type=f._g.type; if(!cur.dur&&f._g.dur){ cur.dur=f._g.dur; cur.durEstimee=true; } }
+      if(f._dur){ cur.dur=f._dur; cur.durEstimee=false; }
+      box.innerHTML=parseChips(cur)+placeChip(cur);
       var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); };
     }
     var gT=null;
+    box.addEventListener("click",function(ev){ var d=ev.target.closest("[data-qdur]"); if(!d) return; ev.preventDefault(); f._dur=+d.getAttribute("data-qdur"); upd(); inp.focus(); });
     inp.addEventListener("input",function(){ f._sub=null; f._g=null; upd(); clearTimeout(gT);
       var v=inp.value.trim();
       if(cur && !cur.sub && v.length>6 && typeof Sync!=="undefined" && Sync.user()){
         gT=setTimeout(function(){ Sync.invoke({mode:"classify",input:v}).then(function(r){
           if(inp.value.trim()!==v || !r || !r.sub) return;
-          f._sub=r.sub; f._g=r; upd(); if(cur){ if(!cur.type&&r.type) cur.type=r.type; if(!cur.dur&&r.dur) cur.dur=r.dur; box.innerHTML=parseChips(cur)+'<span class="chip act">classé par Gemini</span>'; var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); }; }
+          f._sub=r.sub; f._g=r; upd(); if(cur){ box.innerHTML=parseChips(cur)+'<span class="chip act">classé par Gemini</span>'+placeChip(cur); var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); }; }
         },function(){}); },900);
       }
     });
     f.addEventListener("submit",function(e){
       e.preventDefault(); if(!inp.value.trim()) return; upd();
-      var t=taskFrom(cur); st().tasks.push(t); save();
-      inp.value=""; f._sub=null; box.innerHTML=""; btn.disabled=true;
-      toast(actionToast(t)); closeSheet(); render();
+      var t=taskFrom(cur); st().tasks.push(t); save(); if(typeof Plan!=="undefined") Plan.invalidate();
+      inp.value=""; f._sub=null; f._dur=null; f._g=null; box.innerHTML=""; btn.disabled=true;
+      toast(actionToast(t)+placeToast(t)); closeSheet(); render();
     });
   });
 }
@@ -210,12 +213,27 @@ function parseChips(p){
   var h='<label class="'+s.cls+'" style="display:inline-flex"><span class="sr" hidden>Matière</span><select aria-label="Matière" style="--s:var(--'+(p.sub||"perso")+');--si:var(--'+(p.sub||"perso")+'-ink)">'+
     ["maths","hgg","csh","ang","all","perso"].map(function(id){ return '<option value="'+id+'"'+(id===(p.sub||"perso")?" selected":"")+'>'+subj(id).name+'</option>'; }).join("")+'</select></label>';
   if(p.type) h+='<span class="chip">'+esc(p.type)+'</span>';
-  if(p.dur) h+='<span class="chip">'+durTxt(p.dur)+'</span>';
+  if(p.devoir && p.action!=="dm") h+='<span class="chip">'+(p.memo?"rappel de devoir":"devoir")+'</span>';
+  if(p.sub && p.sub!=="perso" && !p.time && !p.memo && p.action!=="rappel") h+='<span class="chip" style="background:none;padding-left:0">'+(p.dur&&!p.durEstimee?"Durée :":p.dur?"Durée estimée "+durTxt(p.dur)+", à ajuster :":"Combien de temps ?")+'</span>'+[15,30,45,60,90,120].map(function(m){ return '<button type="button" class="chip'+(p.dur===m&&!p.durEstimee?" on":"")+'" data-qdur="'+m+'">'+durTxt(m)+'</button>'; }).join("");
+  else if(p.dur) h+='<span class="chip">'+durTxt(p.dur)+'</span>';
   if(p.due) h+='<span class="chip">avant le '+fmtDay(p.due)+'</span>';
   if(p.day) h+='<span class="chip">'+fmtDay(p.day)+(p.time?' · '+hLabel(p.time):'')+'</span>';
   if(p.prio) h+='<span class="chip"><span class="prio">'+"!!!".slice(0,p.prio)+'</span>'+["","important","prioritaire","impératif"][p.prio]+'</span>';
   var a=actionLabel(p); if(a) h+='<span class="chip act">→ '+esc(a)+'</span>';
   return h;
+}
+function placeChip(p){
+  if(typeof Plan==="undefined" || !p.sub || p.sub==="perso" || p.time || p.memo || p.action==="rappel" || !p.title) return "";
+  var t=taskFrom(p); t.id="preview"; var r=Plan.preview(t);
+  if(r.unplaced) return '<span class="chip" style="background:var(--red-pale);color:var(--red)">pas de créneau '+subj(p.sub).short+' libre'+(p.due?" avant l'échéance":"")+'</span>';
+  if(r.dropped) return '<span class="chip">pas de place sur 14 jours : ajoute une date ou « ! »</span>';
+  if(!r.at.length) return "";
+  var a=r.at[0]; return '<span class="chip act">→ '+(a.d===iso(today())?"aujourd'hui":fmtDay(a.d))+' '+hLabel(a.s)+(r.at.length>1?" (en "+r.at.length+" fois)":"")+'</span>'+(r.bumped>0?'<span class="chip">repousse '+plural(r.bumped,"élément")+' hors délai</span>':r.pushed>0?'<span class="chip">décale '+plural(r.pushed,"tâche")+' sans date</span>':'');
+}
+function placeToast(t){
+  if(typeof Plan==="undefined" || t.time || t.memo || t.sub==="perso" || t.action==="rappel") return "";
+  var w=Plan.whenOf("task|"+t.id); if(w){ var a=w[0]; return " Placée "+(a.d===iso(today())?"aujourd'hui":fmtDay(a.d))+" à "+hLabel(a.s)+"."; }
+  return " Aucun créneau libre"+(t.due?" avant l'échéance":"")+" : voir la To-Do.";
 }
 function actionLabel(p){
   if(p.action==="rappel") return "rappel "+p.remind+" min avant"+(p.time?" ("+hLabel(fromMin(toMin(p.time)-p.remind))+")":"");
@@ -223,7 +241,6 @@ function actionLabel(p){
   if(p.action==="hgg-fiche") return "fiche automatique dans l'Atelier HGG";
   if(p.action==="civi") return "CIVI "+(p.sub==="all"?"allemand":"anglais")+" (Google Doc)";
   if(p.action==="dm") return "découpage jeudi, vendredi, dimanche";
-  if(!p.time && (p.due||p.day)) return "placée dans un créneau "+subj(p.sub||"perso").short;
   return "";
 }
 function actionToast(t){
@@ -242,6 +259,7 @@ function taskRows(list){
     if(t.day) meta.push('<span class="meta">'+relDay(t.day)+(t.time?" · "+hLabel(t.time):"")+'</span>');
     if(t.dur) meta.push('<span class="meta">'+durTxt(t.dur)+'</span>');
     if(t.progress && !t.done) meta.push('<span class="meta">fait à '+t.progress+' %</span>');
+    if(!t.done && !t.time && !t.memo && typeof Plan!=="undefined" && t.sub!=="perso"){ var wt=whenTxt("task|"+t.id); meta.push(wt?'<span class="meta">prévu '+esc(wt)+'</span>':'<span class="meta late">sans créneau</span>'); }
     return '<div class="task p'+(t.prio||0)+(t.done?" done":"")+'"><button class="check'+(t.done?" on":"")+'" data-a="toggle" data-id="'+t.id+'" aria-label="'+(t.done?"Rouvrir":"Terminer")+'">'+(t.done?I.check:"")+'</button>'+
       '<div class="tt"><span>'+esc(t.title)+'</span><div class="tm">'+tag(t.sub)+(t.type?'<span class="meta">'+esc(t.type)+'</span>':'')+meta.join("")+(t.prio?'<span class="prio">'+"!!!".slice(0,t.prio)+'</span>':'')+(t.example?'<span class="badge-ex">exemple</span>':'')+'</div></div>'+
       '<button class="del" data-a="del" data-id="'+t.id+'" aria-label="Supprimer">'+I.trash+'</button></div>';
@@ -256,6 +274,7 @@ function vTodo(){
     ["Cette semaine",open.filter(function(x){ return when(x)&&when(x)>t&&diffDays(when(x),t)<=7; })],["Plus tard",open.filter(function(x){ return when(x)&&diffDays(when(x),t)>7; })],["Sans date",open.filter(function(x){ return !when(x); })]];
   var h=topbar("To-Do")+'<h1 class="large-title">To-Do</h1><p class="subtitle">Une seule liste pour tout : matières, ateliers et vie quotidienne.</p>';
   h+=quickBox("todo");
+  h+='<div style="margin-top:14px">'+planAlerts()+'</div>';
   h+='<div class="filters" style="margin:14px 0 6px">'+[["*","Tout"]].concat(SUBJECT_ORDER.concat(["perso"]).map(function(id){ return [id,subj(id).name]; })).map(function(x){ return '<button class="chip'+(f===x[0]?" on":"")+'" data-a="tfilter" data-f="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("")+'</div>';
   h+='<div class="stack">';
   groups.forEach(function(g){ if(!g[1].length) return; g[1].sort(function(a,b){ return (b.prio||0)-(a.prio||0)||String(when(a)).localeCompare(String(when(b))); }); h+='<section class="card"><div class="group-h">'+g[0]+' <span class="n">'+g[1].length+'</span></div><div class="tasks">'+taskRows(g[1])+'</div></section>'; });
@@ -301,8 +320,8 @@ function vAgenda(){
 function timedTasks(x){
   return st().tasks.filter(function(t){ return t.time && t.day===x && !t.done; }).map(function(t){ return {kind:"work",s:t.time,e:fromMin(Math.min(toMin(t.time)+(t.dur||45),H1)),t:t.title,sub:t.sub,id:"task-"+t.id,taskId:t.id}; });
 }
-function slotKey(d,e,r,ix){ return d+"|"+e.id+"|"+(r.task||r.lab)+"|"+ix; }
-function isDone(d,e,r,ix){ if(r.task){ var t=st().tasks.find(function(x){return x.id===r.task;}); return t&&t.done; } return !!st().slotDone[slotKey(d,e,r,ix)]; }
+function slotKey(d,e,r,ix){ return d+"|"+e.id+"|"+(r.task||(r.ref?r.ref.k+":"+r.ref.id:r.lab))+"|"+ix; }
+function isDone(d,e,r,ix){ if(r.ref&&r.ref.k==="exo") return !!st().mathsDone[r.ref.id]; if(r.ref&&r.ref.k==="hgg") return !!hggState().done[r.ref.id]; if(r.task){ var t=st().tasks.find(function(x){return x.id===r.task;}); return t&&t.done; } return !!st().slotDone[slotKey(d,e,r,ix)]; }
 
 function openSlot(dISO,id){
   var e=dayEvents(dISO).concat(timedTasks(dISO)).find(function(x){ return x.id===id; }); if(!e) return;
@@ -319,7 +338,7 @@ function openSlot(dISO,id){
     road.forEach(function(r,ix){
       var dn1=isDone(dISO,e,r,ix), key=slotKey(dISO,e,r,ix);
       if(r.pause){ h+='<div class="road-it" style="background:var(--surface-2)"><span class="min">'+hLabel(fromMin(clock))+'</span><span class="lab muted">Pause '+r.min+' min · debout</span><span></span></div>'; clock+=r.min; return; }
-      h+='<div class="road-it'+(dn1?" done":"")+'"><button class="check'+(dn1?" on":"")+'" data-a="road" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'" aria-label="Cocher">'+(dn1?I.check:"")+'</button><div><div class="lab">'+esc(r.lab)+'</div><div class="sub">'+hLabel(fromMin(clock))+' · '+r.min+' min'+(r.filler?" · proposition":"")+(r.partial?" · suite plus tard":"")+'</div>'+(r.task&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-task="'+r.task+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+'</div>'+
+      h+='<div class="road-it'+(dn1?" done":"")+'"><button class="check'+(dn1?" on":"")+'" data-a="road" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'" data-ref="'+(r.ref&&r.ref.k!=="task"?esc(r.ref.k+":"+r.ref.id):"")+'" aria-label="Cocher">'+(dn1?I.check:"")+'</button><div><div class="lab">'+esc(r.lab)+'</div><div class="sub">'+hLabel(fromMin(clock))+' · '+r.min+' min'+(r.filler?" · proposition":"")+(r.partial?" · suite plus tard":"")+(r.late?' · <span style="color:var(--red)">en retard</span>':'')+(r.star?" · ★ classique":"")+'</div>'+(r.quiz&&!dn1?'<button class="btn tint sm" data-a="quiz" style="margin-top:6px">Lancer le quiz</button>':'')+(r.ref&&r.ref.k==="hgg"&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-ref="hgg:'+esc(r.ref.id)+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+(r.task&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-task="'+r.task+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+'</div>'+
         (dn1?'<span></span>':'<button class="timer'+(S.timers[key]?" run":"")+'" data-a="timer" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'">'+(S.timers[key]?"0:00":"▶ "+r.min+"′")+'</button>')+'</div>';
       clock+=r.min;
     });
@@ -344,24 +363,210 @@ function vMatiere(id){
   h+='<section class="hero-subj '+s.cls+'"><h1>'+s.name+'</h1><p>'+esc(s.blurb)+'</p></section><div class="stack" style="margin-top:14px">';
   if(id==="hgg"){
     h+='<a class="ext" href="https://claude.ai/artifact/TyMQ4dNtMg8XY5NeQqBuhZ" target="_blank" rel="noopener"><div><b>Atelier HGG</b><span class="small muted">Sur claude.ai : fiches, revue de presse, sujets, accroches.</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
-    h+=modCard("Colles d'HGG","Une semaine sur deux (semaine du 5 octobre : HGG). Le thème est proposé d'après le calendrier de l'atelier ; tu confirmes.");
+    h+=hggAskCard()+hggWorkCard()+hggProgCard()+filesCard("hgg");
   }
   if(id==="csh"){
     h+='<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Œuvre du jour, parcours d'étude avec extraits vérifiés, références, duos, sous-thèmes, feuille blanche, Anki."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
     h+='<section class="card"><div class="card-h"><h2>Sous-thèmes</h2><span class="small muted">18</span></div>'+["I","II","III"].map(function(part){ return '<div class="eyebrow" style="margin:8px 0 6px">'+({I:"I · Définir",II:"II · À l'épreuve",III:"III · Rayonnante"})[part]+'</div><div class="sous">'+SOUS_THEMES.filter(function(x){return x[0]===part;}).map(function(x){ return '<span class="chip">'+esc(x[1])+'</span>'; }).join("")+'</div>'; }).join("")+'</section>';
   }
   if(id==="maths"){
-    h+='<div class="grid g2">'+modCard("Séance du jour","Plan minuté à l'exercice près. Chaque jour de maths, l'app te demande où en est le cours.")+modCard("Quiz de cours","15 min en début de séance, quatre boutons : Parfait, Correct, Hésitant, À revoir.")+modCard("Reprise espacée","Exercices « clé » seulement : J+3, J+10, J+30 depuis la dernière tentative.")+modCard("DM du lundi","Découpé sur jeudi, vendredi et dimanche. Incompressible.")+'</div>';
-    h+='<div class="note-box">Pour remplir la banque d\'exercices, envoie à Claude le cours, les exercices d\'accompagnement, le TD (et celui de l\'autre classe) du chapitre en cours.</div>';
+    h+='<section class="card"><div class="card-h"><h2>Chapitre en cours</h2></div><input class="field" id="m-chap" list="m-chaps" value="'+esc(mathsChap())+'"><datalist id="m-chaps">'+mathsChaps().map(function(c){ return '<option value="'+esc(c)+'">'; }).join("")+'</datalist><p class="small muted" style="margin:6px 0 0">Sert de chapitre par défaut pour tes dépôts et met en avant ses énoncés dans les quiz.</p></section>';
+    h+='<div class="grid g2">'+mathsTodayCard()+quizCard()+'</div>'+exoCard()+filesCard("maths");
+    h+='<div class="note-box">DM : dépose-le en type « DM » avec sa date de rendu ; il devient une tâche découpée sur jeudi, vendredi et dimanche (2 h max par créneau).</div>';
   }
   if(id==="ang"||id==="all"){
     h+='<a class="ext" href="https://drive.google.com/drive/folders/'+(id==="ang"?"1gB_5IFmCYKBvV6NEVnpvW_s4Af3p55eN":"17qWGaCZyhugv6wWramnWl_WTCE6nAE7S")+'" target="_blank" rel="noopener"><div><b>CIVI · '+(id==="ang"?"Nothing New on the English-Speaking Front":"CIVI")+'</b><span class="small muted">Ton document sur Drive. Il s\'affichera ici avec la même structure après conversion en Google Doc.</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
     h+=modCard("Revue de presse du dimanche",id==="ang"?"Entièrement en anglais, vocabulaire par article, envoi vers Anki.":"Titres en allemand avec traduction, chapeau en allemand, corps en français ; un ou deux articles entièrement en allemand avec leur vocabulaire.");
   }
+  if(id!=="hgg"&&id!=="maths") h+=filesCard(id);
   h+='<section class="card"><div class="card-h"><h2>Tâches</h2><span class="small muted">'+tasks.length+'</span></div><div class="tasks">'+taskRows(tasks)+'</div></section></div>';
   return h;
 }
 function modCard(t,d){ return '<section class="card"><div class="card-h"><h2>'+esc(t)+'</h2><span class="small faint">bientôt</span></div><p class="muted small" style="margin:0">'+esc(d)+'</p></section>'; }
+
+/* ---------- Fichiers, maths, HGG (parties 2 et 3) ---------- */
+function whenTxt(key){ var w=typeof Plan!=="undefined"?Plan.whenOf(key):null; if(!w) return ""; var a=w[0]; return (a.d===iso(today())?"auj.":fmtDay(a.d))+" "+hLabel(a.s)+(w.length>1?" (+"+(w.length-1)+")":""); }
+function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement(el||document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}],throwOnError:false}); }catch(e){} }
+var FILE_KINDS={maths:[["cours","Cours"],["td","TD"],["exos","Exercices d'accompagnement"],["dm","DM"],["corrige","Corrigé"],["autre","Autre"]],_:[["cours","Cours"],["doc","Document"],["autre","Autre"]]};
+function kindName(sub,k){ var l=(FILE_KINDS[sub]||FILE_KINDS._).filter(function(x){ return x[0]===k; })[0]; return l?l[1]:k; }
+function mathsChap(){ var c=st().mathsCfg||{}; if(c.chap) return c.chap; var d=typeof MATHS_DRIVE!=="undefined"?MATHS_DRIVE:null; var x=d&&d.chapitres.filter(function(y){ return y.n===d.en_cours; })[0]; return x?x.titre:""; }
+function mathsChaps(){ var a=(typeof MATHS_DRIVE!=="undefined"?MATHS_DRIVE.chapitres:[]).map(function(c){ return c.titre; }); Files.of("maths").forEach(function(f){ if(f.chap && a.indexOf(f.chap)<0) a.push(f.chap); }); return a; }
+function nextMonday(){ var d=today(), k=(8-d.getDay())%7||7; return iso(addDays(d,k)); }
+function fileStatus(f){
+  if(f.status==="analyse" && (Files.busy(f.id) || Date.now()-new Date(f.at)<5*60000)) return '<span class="meta">analyse en cours'+(f.progress&&f.progress<100?" · "+f.progress+" %":"")+'…</span>';
+  if(f.status==="err"||f.status==="analyse") return '<span class="meta late">analyse échouée</span> <button class="link-btn" data-a="freanalyse" data-id="'+f.id+'">Réessayer</button>'+(f.err?'<div class="small faint">'+esc(f.err)+'</div>':'');
+  if(f.status==="ok" && f.kind==="cours") return '<span class="meta">'+plural(f.n||0,"énoncé")+' relevé'+((f.n||0)>1?"s":"")+'</span>';
+  if(f.status==="ok") return '<span class="meta">'+plural(f.n||0,"exercice")+(f.corrige?" · temps estimé avec le corrigé":" · sans corrigé")+'</span>';
+  if(f.kind==="corrige") return f.pair?'<span class="meta">corrigé de « '+esc((st().files[f.pair]||{}).name||"?")+' »</span>':'<span class="meta">corrigé non rattaché</span>';
+  return '';
+}
+function filesCard(sub){
+  var fs=Files.of(sub), kinds=FILE_KINDS[sub]||FILE_KINDS._, isM=sub==="maths";
+  var ex=fs.filter(function(f){ return ["td","exos","dm"].indexOf(f.kind)>=0; });
+  var h='<section class="card"><div class="card-h"><h2>Mes fichiers</h2><span class="small muted">'+fs.length+'</span></div>';
+  h+='<p class="small muted" style="margin:0 0 10px">'+(isM?"Dépose ici cours, TD, exercices, DM et corrigés du chapitre en cours (PDF, photo, Word). L'app compte les exercices, estime leur durée (avec le corrigé si tu le donnes), les répartit sur tes créneaux de maths, et tire de ton cours les quiz de début de séance.":sub==="hgg"?"Dépose ici tes documents d'HGG (photos de cours, polycopiés…). Tes chapitres du Drive sont déjà connus de l'app.":"Dépose ici tes documents de "+subj(sub).name+" pour les retrouver partout.")+'</p>';
+  if(!Sync.user()) return h+'<div class="empty"><b>Connecte-toi pour déposer des fichiers</b>Plus → Compte.</div></section>';
+  h+='<form id="up-form" data-sub="'+sub+'" class="stack" style="gap:8px"><div class="grid g2" style="gap:8px">';
+  h+='<select class="field" id="up-kind" aria-label="Type de fichier">'+kinds.map(function(k){ return '<option value="'+k[0]+'">'+esc(k[1])+'</option>'; }).join("")+'</select>';
+  if(isM) h+='<input class="field" id="up-chap" list="up-chaps" placeholder="Chapitre" value="'+esc(mathsChap())+'"><datalist id="up-chaps">'+mathsChaps().map(function(c){ return '<option value="'+esc(c)+'">'; }).join("")+'</datalist>';
+  else if(sub==="hgg") h+='<input class="field" id="up-chap" placeholder="Chapitre (facultatif)">';
+  if(isM){
+    h+='<label id="up-date-w" class="small muted" style="display:flex;flex-direction:column;gap:4px"><span id="up-date-l">À finir avant le</span><input class="field" type="date" id="up-date" value="'+iso(addDays(today(),13))+'"></label>';
+    h+='<select class="field" id="up-pair" hidden aria-label="Corrigé de"><option value="">Corrigé de…</option>'+ex.map(function(f){ return '<option value="'+f.id+'">'+esc(kindName(sub,f.kind)+" · "+(f.label||f.name))+'</option>'; }).join("")+'</select>';
+  }
+  h+='</div><div class="row" style="gap:8px;flex-wrap:wrap"><label class="btn sm" style="cursor:pointer">'+I.plus+' Choisir<input type="file" id="up-file" multiple accept=".pdf,.docx,.pptx,.txt,image/*" hidden></label><span class="small muted" id="up-names">Aucun fichier choisi</span><button class="btn tint sm" type="submit" id="up-go" disabled>Téléverser</button></div></form>';
+  if(fs.length){
+    var byChap={}; fs.forEach(function(f){ var c=f.chap||"Sans chapitre"; (byChap[c]=byChap[c]||[]).push(f); });
+    Object.keys(byChap).forEach(function(c){
+      h+='<div class="group-h" style="margin-top:12px">'+esc(c)+'</div><div class="notes-list">';
+      byChap[c].forEach(function(f){ h+='<div class="it" style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between"><div style="min-width:0"><div style="font-weight:600;overflow-wrap:anywhere">'+esc(f.name)+'</div><div class="tm" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="tag '+subj(sub).cls+'">'+esc(kindName(sub,f.kind))+'</span>'+fileStatus(f)+(f.kind==="dm"&&f.due?'<span class="meta">à rendre '+fmtDay(f.due)+'</span>':'')+'</div></div><div class="row" style="gap:4px;flex:none"><button class="btn sm" data-a="fopen" data-id="'+f.id+'">Ouvrir</button><button class="icon-btn" data-a="fdel" data-id="'+f.id+'" aria-label="Supprimer">'+I.trash+'</button></div></div>'; });
+      h+='</div>';
+    });
+  }
+  return h+'</section>';
+}
+function bindUpload(){
+  var f=document.getElementById("up-form"); if(!f) return;
+  var fi=document.getElementById("up-file"), go=document.getElementById("up-go"), nm=document.getElementById("up-names");
+  fi.addEventListener("change",function(){ go.disabled=!fi.files.length; nm.textContent=fi.files.length?Array.prototype.map.call(fi.files,function(x){ return x.name; }).join(", "):"Aucun fichier choisi"; });
+  var kind=document.getElementById("up-kind");
+  function sync(){ var k=kind.value, w=document.getElementById("up-date-w"), pr=document.getElementById("up-pair"), l=document.getElementById("up-date-l"), d=document.getElementById("up-date"); if(!w) return;
+    w.hidden=!(k==="td"||k==="exos"||k==="dm"); pr.hidden=k!=="corrige";
+    if(k==="dm"){ l.textContent="À rendre le"; d.value=nextMonday(); } else { l.textContent="À finir avant le"; if(d.value===nextMonday()) d.value=iso(addDays(today(),13)); } }
+  kind.addEventListener("change",sync); sync();
+  f.addEventListener("submit",function(ev){
+    ev.preventDefault(); var sub=f.getAttribute("data-sub"), files=Array.prototype.slice.call(fi.files); if(!files.length) return;
+    var meta={sub:sub, kind:kind.value, chap:(document.getElementById("up-chap")||{}).value||""};
+    var d=document.getElementById("up-date"); if(d && !document.getElementById("up-date-w").hidden){ if(meta.kind==="dm") meta.due=d.value; else meta.target=d.value; }
+    var pr=document.getElementById("up-pair"); if(pr && meta.kind==="corrige") meta.pair=pr.value||null;
+    if(meta.kind==="corrige" && !meta.pair && sub==="maths"){ toast("Choisis le TD ou le DM que ce corrigé accompagne."); return; }
+    if(sub==="maths" && meta.chap){ st().mathsCfg=st().mathsCfg||{}; }
+    go.disabled=true; go.textContent="Envoi…";
+    var chain=Promise.resolve(), n=0;
+    files.forEach(function(file){ chain=chain.then(function(){ return Files.upload(file,meta).then(function(rec){ n++; if(Files.analysable(rec)||(rec.kind==="corrige"&&rec.pair)){ Files.analyze(rec.id).then(function(){ toast("Analyse terminée : "+rec.name); Plan.invalidate(); window.__prepaRefresh(); },function(e){ toast("Analyse impossible : "+(e&&e.message||e)); window.__prepaRefresh(); }); } }); }); });
+    chain.then(function(){ toast(plural(n,"fichier")+" envoyé"+(n>1?"s":"")+(sub==="maths"&&meta.kind!=="autre"?" · analyse en cours (jusqu'à une minute)":"")+"."); render(); },function(e){ toast(e&&e.message||"Envoi impossible."); render(); });
+  });
+}
+
+/* ---------- Maths : exercices et quiz ---------- */
+function exoCard(){
+  var s=st(), fs=Files.of("maths").filter(function(f){ return (f.kind==="td"||f.kind==="exos") && s.mathsEx[f.id]; });
+  var h='<section class="card"><div class="card-h"><h2>Exercices à faire</h2></div>';
+  if(!fs.length) return h+'<div class="empty"><b>Aucun TD analysé</b>Dépose ton TD (et son corrigé) dans « Mes fichiers » : l\'app compte les exercices et les répartit sur tes créneaux de maths.</div></section>';
+  var all=[]; fs.forEach(function(f){ (s.mathsEx[f.id].exos||[]).forEach(function(e,i){ all.push({f:f,e:e,k:f.id+"#"+i}); }); });
+  var left=all.filter(function(x){ return !s.mathsDone[x.k]; }), mins=left.reduce(function(a,x){ return a+(x.e.minutes||30); },0);
+  var P=Plan.get(), late=P.unplaced.filter(function(x){ return x.ref&&x.ref.k==="exo"; });
+  h+='<div class="row" style="gap:16px;flex-wrap:wrap;margin-bottom:8px"><div><div style="font-size:26px;font-weight:800">'+left.length+'<span class="small muted"> / '+all.length+'</span></div><div class="small muted">exercices restants</div></div><div><div style="font-size:26px;font-weight:800">'+durTxt(mins)+'</div><div class="small muted">de travail estimé</div></div></div>';
+  if(late.length) h+='<div class="note-box" style="margin:0 0 8px">'+plural(late.length,"exercice")+' ne tiennent pas dans tes créneaux avant la date choisie : repousse la date ou marque des exercices comme faits.</div>';
+  fs.forEach(function(f){
+    var X=s.mathsEx[f.id], ex=X.exos||[], dn=ex.filter(function(e,i){ return s.mathsDone[f.id+"#"+i]; }).length;
+    h+='<details class="card flat" style="margin-top:8px"'+(dn<ex.length?" open":"")+'><summary style="cursor:pointer"><b>'+esc(f.label||f.name)+'</b> <span class="small muted">· '+esc(X.chap||f.chap||"")+' · '+dn+'/'+ex.length+' faits · à finir avant '+(f.target?fmtDay(f.target):"—")+(X.corrige?"":" · sans corrigé")+'</span></summary><div class="tasks" style="margin-top:6px">';
+    ex.forEach(function(e,i){ var k=f.id+"#"+i, d=!!s.mathsDone[k], w=whenTxt("exo|"+k);
+      h+='<div class="task'+(d?" done":"")+'"><button class="check'+(d?" on":"")+'" data-a="exo" data-k="'+esc(k)+'" aria-label="Fait">'+(d?I.check:"")+'</button><div class="tt"><span>Ex. '+esc(e.num)+(e.titre?' · '+esc(e.titre):'')+(e.classique?' <span title="classique à savoir refaire">★</span>':'')+'</span><div class="tm"><span class="meta">'+durTxt(e.minutes||30)+'</span><span class="meta">'+["","facile","moyen","difficile"][e.difficulte||2]+'</span>'+(e.questions?'<span class="meta">'+plural(e.questions,"question")+'</span>':'')+(d?'':w?'<span class="meta">prévu '+esc(w)+'</span>':'<span class="meta late">pas de créneau</span>')+'</div></div><span class="row" style="gap:2px"><button class="chip" data-a="exomin" data-k="'+esc(k)+'" data-v="-10" aria-label="Moins de temps">−</button><button class="chip" data-a="exomin" data-k="'+esc(k)+'" data-v="10" aria-label="Plus de temps">+</button></span></div>'; });
+    h+='</div></details>';
+  });
+  return h+'</section>';
+}
+function quizPool(){
+  var s=st(), out=[];
+  Object.keys(s.mathsCours||{}).forEach(function(fid){ if(!s.files[fid]) return; (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(s.quizOff[fid+"|"+it.section]) return; out.push({k:fid+"#"+i, it:it, fid:fid, chap:s.mathsCours[fid].chap}); }); });
+  return out;
+}
+function quizPick(n){
+  var s=st(), t=iso(today()), due=[], fresh=[], cur=mathsChap();
+  quizPool().forEach(function(x){ var q=s.quiz[x.k]; if(!q) fresh.push(x); else if(q.n<=t) due.push(x); });
+  due.sort(function(a,b){ return s.quiz[a.k].l-s.quiz[b.k].l; });
+  fresh.sort(function(a,b){ return (b.chap===cur)-(a.chap===cur); });
+  var out=due.slice(0,n); return out.concat(fresh.slice(0,Math.max(0,Math.min(5,n-out.length)))).map(function(x){ return x.k; });
+}
+function quizCard(){
+  var s=st(), pool=quizPool(), t=iso(today());
+  var h='<section class="card"><div class="card-h"><h2>Quiz de cours</h2><span class="small muted">15 min en début de séance</span></div>';
+  if(!pool.length) return h+'<div class="empty"><b>Pas encore de cours</b>Dépose ton cours (type « Cours ») : les définitions, propriétés et théorèmes sont relevés tels qu\'ils sont écrits.</div>'+quizSections()+'</section>';
+  var seen=pool.filter(function(x){ return s.quiz[x.k]; }), due=seen.filter(function(x){ return s.quiz[x.k].n<=t; }).length, ok=seen.filter(function(x){ return s.quiz[x.k].l>=3; }).length;
+  h+='<div class="row" style="gap:16px;flex-wrap:wrap;margin-bottom:10px"><div><div style="font-size:24px;font-weight:800">'+pool.length+'</div><div class="small muted">énoncés</div></div><div><div style="font-size:24px;font-weight:800">'+due+'</div><div class="small muted">à revoir aujourd\'hui</div></div><div><div style="font-size:24px;font-weight:800">'+ok+'</div><div class="small muted">bien sus</div></div></div>';
+  h+='<button class="btn tint" data-a="quiz">Lancer le quiz</button>'+quizSections()+'</section>';
+  return h;
+}
+function quizSections(){
+  var s=st(), secs=[];
+  Object.keys(s.mathsCours||{}).forEach(function(fid){ if(!s.files[fid]) return; var seen={}; (s.mathsCours[fid].items||[]).forEach(function(it){ if(!seen[it.section]){ seen[it.section]=1; secs.push({k:fid+"|"+it.section, l:it.section, f:s.files[fid]}); } }); });
+  if(!secs.length) return "";
+  return '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">Parties vues en classe ('+secs.filter(function(x){ return !s.quizOff[x.k]; }).length+'/'+secs.length+')</summary><div class="stack" style="gap:4px;margin-top:6px">'+secs.map(function(x){ var on=!s.quizOff[x.k]; return '<label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-qsec="'+esc(x.k)+'"'+(on?" checked":"")+'> '+esc(x.l||"(sans titre)")+' <span class="faint">· '+esc(x.f.chap||x.f.name)+'</span></label>'; }).join("")+'</div><p class="small muted">Décoche ce qui n\'a pas encore été vu : ces énoncés ne sortiront pas au quiz.</p></details>';
+}
+var QINT=[1,2,4,8,16,32];
+function quizSheet(){
+  var Q=S.quiz; if(!Q){ var ks=quizPick(8); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
+  var s=st(), h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Quiz de cours · '+Math.min(Q.i+1,Q.list.length)+'/'+Q.list.length+'</div><h2>'+(Q.i>=Q.list.length?"Terminé":"Énonce-le de tête")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
+  if(Q.i>=Q.list.length){
+    var r=Q.res, c=[0,0,0,0]; Object.keys(r).forEach(function(k){ c[r[k]]++; });
+    h+='<p>Parfait : <b>'+c[3]+'</b> · Correct : <b>'+c[2]+'</b> · Hésitant : <b>'+c[1]+'</b> · À revoir : <b>'+c[0]+'</b></p><p class="small muted">Les énoncés hésitants ou à revoir reviennent dès demain ; les autres, de plus en plus espacés.</p><button class="btn tint" data-a="close">Fermer</button></div>';
+    openSheet(h); S.quiz=null; return;
+  }
+  var k=Q.list[Q.i], fid=k.split("#")[0], it=(s.mathsCours[fid]||{items:[]}).items[+k.split("#")[1]];
+  if(!it){ Q.i++; return quizSheet(); }
+  h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(it.nom)+'</h3>';
+  h+=Q.show?'<div style="white-space:pre-wrap;line-height:1.55" class="qmath">'+esc(it.enonce)+'</div><p class="small faint" style="margin:8px 0 0">Énoncé recopié de ton cours (« '+esc((s.files[fid]||{}).name||"")+' »).</p>':'<p class="small muted">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
+  h+='</div>';
+  h+=Q.show?'<div class="grid g2" style="gap:8px">'+[[3,"Parfait"],[2,"Correct"],[1,"Hésitant"],[0,"À revoir"]].map(function(x){ return '<button class="btn'+(x[0]>=2?" tint":"")+'" data-a="qrate" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>':'<button class="btn primary" data-a="qshow">Voir l\'énoncé</button>';
+  openSheet(h+'</div>'); renderMath(layer);
+}
+function quizRate(v){
+  var Q=S.quiz, s=st(), k=Q.list[Q.i], q=s.quiz[k]||{l:-1,h:[]}, t=today();
+  var l=v===3?Math.min(5,q.l+2):v===2?Math.min(5,q.l+1):v===1?Math.max(0,q.l):0; if(l<0) l=0;
+  q.l=l; q.n=iso(addDays(t, v>=2?QINT[l]:1)); q.d=iso(t); q.h=(q.h||[]).concat([v]).slice(-8); s.quiz[k]=q;
+  Q.res[k]=v; if(v===0 && !Q.again[k]){ Q.again[k]=1; Q.list.push(k); }
+  Q.i++; Q.show=false; save(); quizSheet();
+}
+
+/* ---------- HGG : suivi des quinzaines ---------- */
+function hggState(){ var s=st(); s.hgg=s.hgg||{}; ["fait","done","prog","min"].forEach(function(k){ s.hgg[k]=s.hgg[k]||{}; }); return s.hgg; }
+function hggCurrent(){ var w=iso(addDays(today(),10)), b=iso(addDays(today(),-10)), Q=HGG_PROG.quinzaines, cur=Q.filter(function(q){ return q.debut<=w && q.fin>=b; });
+  var last=cur.length?cur[cur.length-1]:null, nx=Q.filter(function(q){ return q.debut>(last?last.fin:iso(today())); })[0];
+  if(nx){ nx=Object.assign({},nx,{next:true}); cur.push(nx); } return cur; }
+function driveLink(f){ return '<a href="https://drive.google.com/open?id='+esc(f.id)+'" target="_blank" rel="noopener">'+esc(f.titre)+'</a>'; }
+function hggAskCard(){
+  var H=hggState(), t=iso(today()), asked=H.ask===t, qs=hggCurrent();
+  var h='<section class="card'+(asked?"":" s-hgg")+'"><div class="card-h"><h2>Où en êtes-vous en classe ?</h2><span class="small muted">'+(asked?"à jour aujourd'hui":"question du jour")+'</span></div>';
+  h+='<p class="small muted" style="margin:0 0 8px">Coche les chapitres déjà traités en cours. Chaque chapitre traité devient du travail (fiche, exemples, problématiques) réparti uniformément sur tes créneaux d\'HGG d\'ici la fin de la quinzaine.</p>';
+  qs.forEach(function(q){
+    var n=q.chapitres.filter(function(c,i){ return H.fait["q"+q.n+"#"+i]; }).length;
+    h+=(q.next?'<details style="margin-top:8px"'+(n?" open":"")+'><summary class="group-h" style="cursor:pointer">Déjà commencée ? Quinzaine '+q.n+' · '+esc(q.theme)+' <span class="n">'+n+'/'+q.chapitres.length+'</span></summary>':'<div class="group-h" style="margin-top:8px">Quinzaine '+q.n+' · '+esc(q.theme)+' <span class="n">'+n+'/'+q.chapitres.length+'</span></div>')+'<div class="small faint" style="margin-bottom:4px">'+fmtDay(q.debut)+' → '+fmtDay(q.fin)+'</div><div class="stack" style="gap:2px">';
+    q.chapitres.forEach(function(c,i){ var k="q"+q.n+"#"+i, on=!!H.fait[k]; h+='<label style="display:flex;gap:10px;align-items:flex-start;padding:5px 0"><input type="checkbox" data-hggfait="'+k+'"'+(on?" checked":"")+' style="margin-top:3px"><span><span>'+esc(c.titre)+'</span>'+(c.profs&&c.profs.length?' <span class="small faint">· '+esc(c.profs.join(", "))+'</span>':'')+(on&&H.fait[k]!==true?' <span class="small muted">· coché le '+fmtDay(H.fait[k])+'</span>':'')+'</span></label>'; });
+    h+='</div>'+(q.next?'</details>':'');
+  });
+  if(!asked) h+='<button class="btn tint sm" data-a="hggask" style="margin-top:8px">C\'est à jour</button>';
+  return h+'</section>';
+}
+function hggWorkCard(){
+  var H=hggState(), list=[];
+  HGG_PROG.quinzaines.forEach(function(q){ q.chapitres.forEach(function(c,i){ var k="q"+q.n+"#"+i; if(H.fait[k]) list.push({k:k,q:q,c:c}); }); });
+  var h='<section class="card"><div class="card-h"><h2>Travail des chapitres</h2></div>';
+  if(!list.length) return h+'<div class="empty"><b>Aucun chapitre traité coché</b>Réponds à la question ci-dessus.</div></section>';
+  var todo=list.filter(function(x){ return !H.done[x.k]; }), mins=todo.reduce(function(a,x){ return a+Math.round((H.min[x.k]||120)*(1-(H.prog[x.k]||0)/100)); },0);
+  h+='<p class="small muted" style="margin:0 0 8px">'+plural(todo.length,"chapitre")+' à travailler · '+durTxt(mins)+' au total · 2 h par chapitre par défaut (ajustable).</p><div class="tasks">';
+  list.forEach(function(x){ var d=!!H.done[x.k], w=whenTxt("hgg|"+x.k), m=H.min[x.k]||120;
+    h+='<div class="task'+(d?" done":"")+'"><button class="check'+(d?" on":"")+'" data-a="hggdone" data-k="'+x.k+'" aria-label="Fait">'+(d?I.check:"")+'</button><div class="tt"><span>'+esc(x.c.titre)+'</span><div class="tm"><span class="meta">Q'+x.q.n+' · avant le '+fmtDay(x.q.fin)+'</span><span class="meta">'+durTxt(m)+'</span>'+(H.prog[x.k]&&!d?'<span class="meta">fait à '+H.prog[x.k]+' %</span>':'')+(d?'':w?'<span class="meta">prévu '+esc(w)+'</span>':'<span class="meta late">pas de créneau</span>')+'</div>'+(x.c.fichiers&&x.c.fichiers.length?'<div class="small" style="margin-top:4px">'+x.c.fichiers.map(driveLink).join(" · ")+'</div>':'')+'</div><span class="row" style="gap:2px"><button class="chip" data-a="hggmin" data-k="'+x.k+'" data-v="-30">−</button><button class="chip" data-a="hggmin" data-k="'+x.k+'" data-v="30">+</button></span></div>'; });
+  return h+'</div></section>';
+}
+function hggProgCard(){
+  var H=hggState();
+  return '<details class="card"><summary class="group-h" style="cursor:pointer">Programme de l\'année ('+HGG_PROG.quinzaines.length+' quinzaines, '+HGG_PROG.quinzaines.reduce(function(a,q){ return a+q.chapitres.length; },0)+' chapitres)</summary>'+HGG_PROG.quinzaines.map(function(q){ return '<div style="margin-top:10px"><b>Q'+q.n+' · '+esc(q.theme)+'</b> <span class="small faint">'+fmtDay(q.debut)+' → '+fmtDay(q.fin)+'</span><ul class="small" style="margin:4px 0;padding-left:18px">'+q.chapitres.map(function(c,i){ var k="q"+q.n+"#"+i; return '<li>'+esc(c.titre)+(H.done[k]?' ✓':H.fait[k]?' <span class="muted">(traité en classe)</span>':'')+(c.fichiers&&c.fichiers.length?' — '+c.fichiers.map(driveLink).join(", "):'')+'</li>'; }).join("")+'</ul></div>'; }).join("")+'</details>';
+}
+function mathsTodayCard(){
+  var t=iso(today()), sl=dayEvents(t).filter(function(e){ return e.kind==="work" && e.sub==="maths"; });
+  var h='<section class="card"><div class="card-h"><h2>Séance du jour</h2><button class="link-btn" data-go="agenda">Agenda</button></div>';
+  if(!sl.length) return h+'<div class="empty">Pas de créneau de maths aujourd\'hui.</div></section>';
+  return h+'<div class="strip">'+sl.map(function(e){ var r=roadFor(e,t).filter(function(x){ return !x.pause; }); return '<button class="slot s-maths" data-a="slot" data-d="'+t+'" data-id="'+esc(e.id)+'"><span class="h">'+hLabel(e.s)+'</span><span class="b"><b>'+esc(e.t)+'</b><span>'+r.slice(0,3).map(function(x){ return esc(x.lab); }).join(" · ")+(r.length>3?" …":"")+'</span></span></button>'; }).join("")+'</div></section>';
+}
+function planAlerts(){
+  var P=Plan.get(), u=P.unplaced.filter(function(x){ return x.ref.k==="task"; }), d=P.dropped;
+  if(!u.length && !d.length) return "";
+  var h='<section class="card" style="margin-bottom:14px">';
+  if(u.length) h+='<div class="group-h">Pas de place avant l\'échéance <span class="n">'+u.length+'</span></div><div class="small muted" style="margin-bottom:6px">Tes créneaux de la matière sont pleins d\'ici là : libère du temps, baisse une durée ou ajoute « ! » aux plus urgentes.</div>'+u.map(function(x){ return '<div class="row" style="gap:8px;padding:3px 0">'+tag(x.sub)+'<span>'+esc(x.lab)+'</span><span class="small muted">· reste '+durTxt(x.min)+(x.dl?' · avant le '+fmtDay(x.dl):'')+'</span></div>'; }).join("");
+  if(d.length) h+='<div class="group-h" style="margin-top:8px">Retirées du planning <span class="n">'+d.length+'</span></div><div class="small muted" style="margin-bottom:6px">Sans date ni priorité, elles ne rentrent pas dans les 14 prochains jours. Ajoute une date ou « ! » pour les replacer.</div>'+d.map(function(x){ return '<div class="row" style="gap:8px;padding:3px 0">'+tag(x.sub)+'<span>'+esc(x.lab)+'</span><span class="small muted">· '+durTxt(x.min)+'</span></div>'; }).join("");
+  return h+'</section>';
+}
 
 /* ---------- Échéances ---------- */
 function vEcheances(){
@@ -543,18 +748,64 @@ function addNoteSheet(ep){
 function vMethodo(){
   var m=S.methMode, eps=EPREUVES[m];
   var h=topbar("Méthodo")+'<div class="ag-head"><h1 class="large-title" style="margin:0">Méthodo</h1><div class="seg"><button class="'+(m==="ecrit"?"on":"")+'" data-a="methmode" data-m="ecrit">Écrit</button><button class="'+(m==="oral"?"on":"")+'" data-a="methmode" data-m="oral">Oral</button></div></div><p class="subtitle">À parcourir avant chaque échéance pour se remettre dans le bain.</p><div class="grid g3">';
-  eps.forEach(function(e){ var s=subj(e.sub), r=(st().ressentis[e.id]||[]).length; h+='<button class="subj '+s.cls+'" style="min-height:120px" data-a="methode" data-id="'+e.id+'"><div class="row" style="justify-content:space-between"><h3>'+esc(e.name)+'</h3><span class="tag '+s.cls+'">coef. '+(e.coefTxt||e.coef)+'</span></div><p>'+(r?plural(r,"ressenti"):"Méthode, avant l'épreuve, ressenti, conseils des profs")+'</p></button>'; });
+  eps.forEach(function(e){ var s=subj(e.sub), r=(st().ressentis[e.id]||[]).length; h+='<button class="subj '+s.cls+'" style="min-height:120px" data-a="methode" data-id="'+e.id+'"><div class="row" style="justify-content:space-between"><h3>'+esc(e.name)+'</h3><span class="tag '+s.cls+'">coef. '+(e.coefTxt||e.coef)+'</span></div><p>'+(r?plural(r,"ressenti"):(METHODO.epreuves[e.id]&&METHODO.epreuves[e.id].essentiel.length?"Synthèse de "+plural(METHODO.epreuves[e.id].sources.length,"document")+", pièges, conseils des profs":"Pas encore de document de méthode"))+'</p></button>'; });
   return h+'</div>';
 }
-function methodeSheet(id){
-  var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }), s=subj(e.sub), rs=st().ressentis[id]||[];
+/* échéances (DST + mes colles BJcolle) rattachées à une épreuve de la méthodo */
+var PALE_EP={"HGG":"e-hgg","Maths":"e-maths","Synthèse":"e-synth","Anglais":"e-ang","Allemand":"e-all"};
+var COLLE_EP={maths:"o-maths",hgg:"o-hgg",csh:"o-csh",ang:"o-ang",all:"o-all"};
+function paleEp(p){ return PALE_EP[p.t.replace(/^Concours blanc · /,"")] || (/dissert/i.test(p.t)?"e-dissert":/synth/i.test(p.t)?"e-synth":/maths/i.test(p.t)?"e-maths":/hgg/i.test(p.t)?"e-hgg":/angl/i.test(p.t)?"e-ang":/allem/i.test(p.t)?"e-all":null); }
+function echeances(from,to){
+  var out=[];
+  PALES.forEach(function(p){ var ep=paleEp(p); if(ep && p.date>=from && p.date<=to) out.push({key:"p|"+p.date+"|"+p.t, ep:ep, date:p.date, time:p.s, label:"DST de "+p.t.replace(/^Concours blanc · /,""), sub:p.sub}); });
+  if(typeof BJ!=="undefined") BJ.mine().forEach(function(c){ if((c.scope==="moi"||c.scope==="kore") && c.date>=from && c.date<=to && c.debut){ var ep=COLLE_EP[BJ.subOf(c)]; if(ep) out.push({key:"c|"+c.id, ep:ep, date:c.date, time:c.debut, label:"Colle de "+c.discipline+(c.colleur?" ("+c.colleur+")":""), sub:BJ.subOf(c)}); } });
+  return out.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
+}
+function epName(id){ var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }); return e?(id.charAt(0)==="e"?"Écrit de ":"Oral de ")+e.name:id; }
+function resDismissed(){ try{ return JSON.parse(localStorage.getItem("prepa.resdone")||"{}"); }catch(e){ return {}; } }
+function homeMethodoCards(){
+  var t=iso(today()), nm=nowMin(), h="";
+  var soon=echeances(t, iso(addDays(today(),3))).filter(function(x){ return x.date>t || toMin(x.time)>nm; });
+  var seen={};
+  soon.forEach(function(x){ if(seen[x.ep]) return; seen[x.ep]=1; var m=METHODO.epreuves[x.ep]||{}, dd=diffDays(x.date,t);
+    var ess=(m.essentiel||[]).slice(0,3);
+    h+='<section class="card '+subj(x.sub).cls+'" style="margin-top:14px"><div class="card-h"><h2>À relire avant ta '+esc(x.label.charAt(0).toLowerCase()+x.label.slice(1))+'</h2><span class="tag '+subj(x.sub).cls+'">'+(dd===0?"aujourd'hui "+hLabel(x.time):dd===1?"demain "+hLabel(x.time):"J-"+dd)+'</span></div>';
+    h+=ess.length?'<ul class="small" style="margin:4px 0 10px;padding-left:18px">'+ess.map(function(e){ return '<li style="margin:3px 0">'+esc(e)+'</li>'; }).join("")+'</ul>':'<p class="small muted">'+esc(m.manque||"Pas encore de fiche de méthode pour cette épreuve.")+'</p>';
+    var last=(st().ressentis[x.ep]||[]).slice(-1)[0]; if(last) h+='<p class="small muted" style="margin:0 0 10px"><b>Ton dernier ressenti</b> ('+fmtDay(last.date)+') : '+esc(last.t.length>160?last.t.slice(0,160)+"…":last.t)+'</p>';
+    h+='<button class="btn tint sm" data-a="methode" data-id="'+x.ep+'">Relire toute la synthèse</button></section>'; });
+  var dis=resDismissed();
+  echeances(iso(addDays(today(),-3)), t).filter(function(x){ return (x.date<t || toMin(x.time)+60<nm) && !dis[x.key] && !(st().ressentis[x.ep]||[]).some(function(r){ return r.ev===x.key || r.date>=x.date; }); }).slice(-2).forEach(function(x){
+    h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Comment s\'est passée ta '+esc(x.label.charAt(0).toLowerCase()+x.label.slice(1))+' ?</h2><span class="small muted">'+fmtDay(x.date)+'</span></div><p class="small muted" style="margin:0 0 10px">Note ton ressenti à chaud : il sera remis sous tes yeux avant la prochaine '+esc(epName(x.ep).toLowerCase())+'.</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="ressenti" data-id="'+x.ep+'" data-k="'+esc(x.key)+'" data-l="'+esc(x.label)+'">Noter mon ressenti</button><button class="btn sm" data-a="resskip" data-k="'+esc(x.key)+'">Plus tard</button></div></section>';
+  });
+  return h;
+}
+function docLink(id){ var d=(METHODO.documents||[]).find(function(x){ return x.id===id; }); return d?'<a href="'+esc(d.lien)+'" target="_blank" rel="noopener">'+esc(d.titre)+'</a>'+(d.dossier?' <span class="muted">· '+esc(d.dossier)+'</span>':''):''; }
+function methodeSheet(id,evKey,evLabel){
+  var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }), s=subj(e.sub), rs=st().ressentis[id]||[], m=METHODO.epreuves[id]||{};
+  var li=function(a){ return '<ul class="small" style="margin:6px 0 0;padding-left:18px">'+a.map(function(x){ return '<li style="margin:4px 0">'+esc(x)+'</li>'; }).join("")+'</ul>'; };
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+(id.charAt(0)==="e"?"Écrit":"Oral")+' · coef. '+(e.coefTxt||e.coef)+'</div><h2>'+esc(e.name)+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
-  h+='<section class="card flat"><div class="eyebrow">Méthode</div><p class="small muted" style="margin:6px 0 0">La synthèse complète de tes documents de méthodologie Drive sera rédigée ici (étape 11). Indique-moi le dossier qui les contient.</p></section>';
-  h+='<section class="card flat"><div class="eyebrow">Avant l\'épreuve</div><p class="small muted" style="margin:6px 0 0">Les cinq points essentiels, à relire en deux minutes.</p></section>';
-  h+='<section class="card flat"><div class="eyebrow">Mon ressenti</div><form id="res-form" style="margin-top:8px" class="stack"><textarea class="field" id="res-txt" placeholder="Ce qui a bloqué, la sensation, ce qui n\'a pas marché…"></textarea><button class="btn tint sm" type="submit" style="align-self:flex-start">Enregistrer</button></form>'+(rs.length?'<div class="notes-list" style="margin-top:8px">'+rs.slice().reverse().map(function(r){ return '<div class="it" style="display:block"><div class="small muted">'+fmtDay(r.date)+'</div><div style="white-space:pre-wrap">'+esc(r.t)+'</div></div>'; }).join("")+'</div>':'')+'</section>';
-  h+='<section class="card flat"><div class="eyebrow">Conseils des profs</div><p class="small muted" style="margin:6px 0 0">'+(id.charAt(0)==="o"?"Récupérés mot pour mot dans les commentaires BJcolle (méthode uniquement), dès que BJcolle sera branché.":"Saisis-les toi-même ou envoie la photo des commentaires de ta copie.")+'</p></section></div>';
+  var nx=echeances(iso(today()),"9999").filter(function(x){ return x.ep===id; })[0];
+  if(nx) h+='<p class="small" style="margin:0 0 4px"><span class="tag '+s.cls+'">Prochaine : '+esc(nx.label)+' · '+esc(relDay(nx.date).toLowerCase())+' '+hLabel(nx.time)+'</span></p>';
+  if(evKey) h+=resForm(evLabel);
+  if(m.essentiel&&m.essentiel.length) h+='<section class="card flat"><div class="eyebrow">L\'essentiel, à relire en deux minutes</div>'+li(m.essentiel)+'</section>';
+  if(m.temps) h+='<section class="card flat"><div class="eyebrow">Gestion du temps</div><p class="small" style="margin:6px 0 0;white-space:pre-wrap">'+esc(m.temps)+'</p></section>';
+  (m.sections||[]).forEach(function(x){ h+='<details class="card flat"><summary style="cursor:pointer;font-weight:600">'+esc(x.titre)+' <span class="small muted">('+x.points.length+')</span></summary>'+li(x.points)+'</details>'; });
+  if(m.pieges&&m.pieges.length) h+='<section class="card flat"><div class="eyebrow">Pièges à éviter</div>'+li(m.pieges)+'</section>';
+  if(m.conseils_profs&&m.conseils_profs.length) h+='<section class="card flat"><div class="eyebrow">Conseils des profs</div>'+m.conseils_profs.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.qui)+'</b></div><div class="small" style="white-space:pre-wrap">'+esc(c.texte)+'</div></div>'; }).join("")+'</section>';
+  if(id.charAt(0)==="o" && typeof BJ!=="undefined"){
+    var sub=e.sub, coms=BJ.mine().filter(function(c){ return BJ.subOf(c)===sub && c.commentaire; }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,4);
+    if(coms.length) h+='<section class="card flat"><div class="eyebrow">Commentaires de tes colleurs (BJcolle, mot pour mot)</div>'+coms.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.colleur||"")+'</b> <span class="muted">· '+fmtDay(c.date)+(c.note?' · '+esc(c.note):'')+'</span></div><div class="small" style="white-space:pre-wrap">'+esc(c.commentaire)+'</div></div>'; }).join("")+'</section>';
+  }
+  if(!m.essentiel||!m.essentiel.length) h+='<section class="card flat"><p class="small muted" style="margin:0">'+esc(m.manque||"Pas encore de document de méthode pour cette épreuve sur ton Drive.")+'</p></section>';
+  if(!evKey) h+=resForm(null);
+  if(rs.length) h+='<section class="card flat"><div class="eyebrow">Mes ressentis</div><div class="notes-list" style="margin-top:8px">'+rs.slice().reverse().map(function(r){ return '<div class="it" style="display:block"><div class="small muted">'+fmtDay(r.date)+(r.l?' · '+esc(r.l):'')+'</div><div style="white-space:pre-wrap">'+esc(r.t)+'</div></div>'; }).join("")+'</div></section>';
+  if(m.sources&&m.sources.length) h+='<section class="card flat"><div class="eyebrow">Sources (ton Drive)</div><ul class="small" style="margin:6px 0 0;padding-left:18px">'+m.sources.map(function(x){ var l=docLink(x); return l?'<li style="margin:3px 0">'+l+'</li>':''; }).join("")+'</ul></section>';
+  h+='</div>';
   openSheet(h);
-  document.getElementById("res-form").addEventListener("submit",function(ev){ ev.preventDefault(); var v=document.getElementById("res-txt").value.trim(); if(!v) return; (st().ressentis[id]=st().ressentis[id]||[]).push({date:iso(today()),t:v}); save(); methodeSheet(id); toast("Ressenti enregistré."); });
+  document.getElementById("res-form").addEventListener("submit",function(ev){ ev.preventDefault(); var v=document.getElementById("res-txt").value.trim(); if(!v) return; var r={date:iso(today()),t:v}; if(evKey){ r.ev=evKey; r.l=evLabel; } (st().ressentis[id]=st().ressentis[id]||[]).push(r); save(); methodeSheet(id); toast("Ressenti enregistré."); if(S.view==="home"||!S.view) render(); });
+}
+function resForm(label){
+  return '<section class="card flat"><div class="eyebrow">'+(label?"Mon ressenti · "+esc(label):"Noter un ressenti")+'</div><form id="res-form" style="margin-top:8px" class="stack"><textarea class="field" id="res-txt" placeholder="Ce qui a marché, ce qui a bloqué, la gestion du temps, ce que je change la prochaine fois…"></textarea><button class="btn tint sm" type="submit" style="align-self:flex-start">Enregistrer</button></form></section>';
 }
 
 /* ---------- Plus (téléphone) ---------- */
@@ -701,8 +952,12 @@ document.addEventListener("click",function(ev){
   if(a==="slot"){ openSlot(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
   if(a==="road"||a==="timer"||a==="partial"){
     var cur=layer.querySelector(".sheet"); var reopen=cur?cur.innerHTML:"";
-    var tid=b.getAttribute("data-task"), k=b.getAttribute("data-k");
-    if(a==="road"){
+    var tid=b.getAttribute("data-task"), k=b.getAttribute("data-k"), rf=b.getAttribute("data-ref");
+    if(rf && a!=="timer"){ var rk=rf.slice(0,rf.indexOf(":")), rid=rf.slice(rf.indexOf(":")+1);
+      if(a==="road"){ if(rk==="exo"){ if(s.mathsDone[rid]) delete s.mathsDone[rid]; else s.mathsDone[rid]=iso(today()); } else { var HH=hggState(); if(HH.done[rid]) delete HH.done[rid]; else HH.done[rid]=iso(today()); } delete S.timers[k]; }
+      else { hggState().prog[rid]=+b.getAttribute("data-v"); toast("Noté : le reste du chapitre sera replanifié."); }
+      save();
+    } else if(a==="road"){
       if(tid){ var tk=s.tasks.find(function(x){return x.id===tid;}); if(tk){ tk.done=!tk.done; if(S.timers[k]){ tk.spent=(tk.spent||0)+Math.round((Date.now()-S.timers[k])/60000); delete S.timers[k]; } } }
       else { s.slotDone[k]=!s.slotDone[k]; delete S.timers[k]; }
       save();
@@ -725,6 +980,19 @@ document.addEventListener("click",function(ev){
   if(a==="addnote"){ addNoteSheet(b.getAttribute("data-ep")); return; }
   if(a==="delnote"){ s.notes=s.notes.filter(function(n){return n.id!==b.getAttribute("data-id");}); save(); noteDetail(b.getAttribute("data-ep")); render(); return; }
   if(a==="methode"){ methodeSheet(b.getAttribute("data-id")); return; }
+  if(a==="ressenti"){ methodeSheet(b.getAttribute("data-id"),b.getAttribute("data-k"),b.getAttribute("data-l")); return; }
+  if(a==="fopen"){ Files.open(b.getAttribute("data-id")); return; }
+  if(a==="fdel"){ var fx=s.files[b.getAttribute("data-id")]; if(fx && confirmDel(fx)){ Files.remove(fx.id); Plan.invalidate(); render(); } return; }
+  if(a==="freanalyse"){ var fid=b.getAttribute("data-id"); Files.analyze(fid).then(function(){ toast("Analyse terminée."); Plan.invalidate(); window.__prepaRefresh(); },function(e){ toast("Analyse impossible : "+(e&&e.message||e)); window.__prepaRefresh(); }); render(); return; }
+  if(a==="exo"){ var ek=b.getAttribute("data-k"); if(s.mathsDone[ek]) delete s.mathsDone[ek]; else s.mathsDone[ek]=iso(today()); save(); render(); return; }
+  if(a==="exomin"){ var em=b.getAttribute("data-k").split("#"), eo=((s.mathsEx[em[0]]||{}).exos||[])[+em[1]]; if(eo){ eo.minutes=Math.max(5,(eo.minutes||30)+(+b.getAttribute("data-v"))); eo.perso=true; save(); render(); } return; }
+  if(a==="quiz"){ S.quiz=null; quizSheet(); return; }
+  if(a==="qshow"){ S.quiz.show=true; quizSheet(); return; }
+  if(a==="qrate"){ quizRate(+b.getAttribute("data-v")); return; }
+  if(a==="hggask"){ hggState().ask=iso(today()); save(); render(); return; }
+  if(a==="hggdone"){ var H2=hggState(), hk=b.getAttribute("data-k"); if(H2.done[hk]) delete H2.done[hk]; else H2.done[hk]=iso(today()); save(); render(); return; }
+  if(a==="hggmin"){ var H3=hggState(), mk=b.getAttribute("data-k"); H3.min[mk]=Math.max(30,(H3.min[mk]||120)+(+b.getAttribute("data-v"))); save(); render(); return; }
+  if(a==="resskip"){ var dz=resDismissed(); dz[b.getAttribute("data-k")]=1; try{ localStorage.setItem("prepa.resdone",JSON.stringify(dz)); }catch(e){} render(); return; }
 });
 document.addEventListener("input",function(ev){
   var r=ev.target.closest("[data-goal]"); if(!r) return;
@@ -737,6 +1005,9 @@ document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-
   else if(id==="bjf-annee"){ S.bjF.annee=ev.target.value; S.bjF.n=80; render(); }
   else if(id==="bjf-q"){ S.bjF.q=ev.target.value; S.bjF.n=80; render(); }
   else if(id==="bjcf-disc"){ S.bjCF.disc=ev.target.value; render(); }
+  else if(id==="m-chap"){ st().mathsCfg=st().mathsCfg||{}; st().mathsCfg.chap=ev.target.value.trim(); save(); render(); }
+  else if(ev.target.hasAttribute("data-hggfait")){ var H=hggState(), k=ev.target.getAttribute("data-hggfait"); if(ev.target.checked) H.fait[k]=iso(today()); else delete H.fait[k]; H.ask=iso(today()); save(); render(); }
+  else if(ev.target.hasAttribute("data-qsec")){ var qk=ev.target.getAttribute("data-qsec"); if(ev.target.checked) delete st().quizOff[qk]; else st().quizOff[qk]=true; save(); }
 });
 document.addEventListener("keydown",function(ev){ if(ev.key==="Escape" && layer.innerHTML){ closeSheet(); render(); } });
 window.addEventListener("scroll",function(){ var tb=document.getElementById("topbar"); if(tb) tb.classList.toggle("scrolled",window.scrollY>40); },{passive:true});
@@ -757,5 +1028,9 @@ function start(){
   render();
   if("serviceWorker" in navigator && location.protocol==="https:" && !window.claude){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }
 }
+function confirmDel(f){ return window.confirm("Supprimer « "+f.name+" » ?"+(f.kind==="cours"?" Ses énoncés sortiront des quiz.":"")); }
+window.__toast=toast;
+window.__prepa={go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
 })();
+

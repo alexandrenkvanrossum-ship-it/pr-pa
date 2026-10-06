@@ -29,7 +29,7 @@ function uid(p){ return (p||"x")+Date.now().toString(36)+Math.random().toString(
 /* ---------- stockage ---------- */
 var Store = (function(){
   var KEY="prepa.v1", mem=null;
-  function blank(){ return {tasks:[],notes:[],goals:{},ressentis:{},slotDone:{},seeded:false,cshSkip:0,news:null}; }
+  function blank(){ return {tasks:[],notes:[],goals:{},ressentis:{},slotDone:{},seeded:false,cshSkip:0,news:null,files:{},mathsEx:{},mathsCours:{},mathsDone:{},mathsCfg:{},quiz:{},quizOff:{},hgg:{fait:{},done:{},prog:{},min:{}}}; }
   function load(){
     if(mem) return mem;
     try{ var raw=localStorage.getItem(KEY); mem=raw?JSON.parse(raw):blank(); }catch(e){ mem=blank(); }
@@ -99,7 +99,9 @@ function parseTask(raw, now){
   if((km=n2.match(/^\s*(ref|reference)\b\s*:?\s*/))){ out.action="csh-oeuvre"; out.sub="csh"; out.type="Œuvre"; s=s.replace(/^\s*r[ée]f(?:[ée]rence)?\s*:?\s*/i," "); }
   else if((km=n2.match(/^\s*(ex|exemple|concept)\b\s*:?\s*/))){ out.action="hgg-fiche"; out.sub="hgg"; out.type=km[1]==="concept"?"Concept":"Exemple"; s=s.replace(/^\s*(ex(?:emple)?|concept)\s*:?\s*/i," "); }
   else if((km=n2.match(/^\s*civi\b\s*:?\s*/))){ out.action="civi"; out.type="CIVI"; s=s.replace(/^\s*civi\s*:?\s*/i," "); }
-  if(!out.action && /\b(rdv|rendez-vous|rendez vous|ne pas oublier|rappel|appeler|medecin|dentiste)\b/.test(n2)){ out.action="rappel"; out.sub=out.sub||"perso"; out.type="Rendez-vous"; }
+  var subjHit=SUBJ_WORDS.some(function(x){ return x[1].test(n2); }) || /\b(devoirs?|a rendre|exos?|exercices?|td|dm|texte|lecture|fiche|chapitre|cours|copie)\b/.test(n2);
+  if(!out.action && /\b(ne pas oublier|n'oublie pas|penser a|pense a|rappel)\b/.test(n2) && !out.time && subjHit && !/\b(rdv|rendez-vous|medecin|dentiste|appeler)\b/.test(n2)){ out.devoir=true; out.rappelDevoir=true; s=s.replace(/\b(ne pas oublier|n'oublie pas|penser à|pense à|penser a|pense a|rappel)\s*(de\s+|d'|:)?/i," "); }
+  if(!out.action && !out.devoir && /\b(rdv|rendez-vous|rendez vous|ne pas oublier|rappel|appeler|medecin|dentiste)\b/.test(n2)){ out.action="rappel"; out.sub=out.sub||"perso"; out.type="Rendez-vous"; }
   if(!out.action && /\bdm\b/.test(n2)){ out.action="dm"; }
 
   if(!out.sub){ for(var j=0;j<SUBJ_WORDS.length;j++){ if(SUBJ_WORDS[j][1].test(n2)){ out.sub=SUBJ_WORDS[j][0]; break; } } }
@@ -112,6 +114,9 @@ function parseTask(raw, now){
   if(out.dur!=null && !/\d\s*(min|mn|h)/.test(norm(raw))){ if(longHint) out.dur=Math.round(out.dur*1.5); if(shortHint) out.dur=Math.round(out.dur*0.6); }
   if(out.type==="Lecture" && /\b(texte|article|extrait|poeme)\b/.test(n2) && !/\d\s*(min|mn|h)/.test(norm(raw))) out.dur=longHint?15:10;
   if(out.action==="rappel" && !out.day && !out.due && out.time) out.day=iso(t0);
+  if(out.action!=="rappel" && (out.due || /\b(devoirs?|a rendre|a faire pour|pour (le )?(prochain )?cours|dm)\b/.test(n2))) out.devoir=true;
+  if(out.rappelDevoir && /\b(rendre|apporter|imprimer|envoyer|donner|signer|deposer)\b/.test(n2) && out.type==null){ out.memo=true; out.type="Rappel"; }
+  out.durEstimee=out.dur!=null && !/\d\s*(min|mn|h)\b/.test(norm(raw));
 
   if(out.action==="rappel") s=s.replace(/\bne pas oublier\s+(de\s+|le\s+|la\s+|les\s+|l')?/i," ").replace(/\brdv\b/i,"RDV");
   out.title=s.replace(/\(\s*\)/g,"").replace(/\s+/g," ").replace(/^[\s:,-]+|[\s:,-]+$/g,"").trim();

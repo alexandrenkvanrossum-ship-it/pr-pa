@@ -21,6 +21,7 @@ var Sync = (function(){
     m["state|slotDone"]=s.slotDone||{};
     m["state|meta"]={cshSkip:s.cshSkip||0,seeded:!!s.seeded};
     if(s.news) m["state|news"]=s.news;
+    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
     return m;
   }
   function applyDoc(s,kind,id,data,deleted){

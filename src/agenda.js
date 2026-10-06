@@ -87,22 +87,22 @@ function roadFor(ev,dISO){
   if(ev.actu){ push({lab:"Lecture de l'actualité (HGG et langues)",min:20}); return items; }
   if(ev.kind!=="work") return items;
   var subs=ev.subs||[ev.sub];
-  if(ev.sub==="maths" && ev.crit) push({lab:"Quiz de cours (partie vue en classe)",min:15,sub:"maths"});
+  if(ev.sub==="maths" && ev.crit) push({lab:"Quiz de cours (partie vue en classe)",min:15,sub:"maths",quiz:true});
   if(ev.rac) push({lab:"RAC d'anglais (objectif : 2h, puis 1h45)",min:110,sub:"ang"});
   if(ev.plan) push({lab:"Plan détaillé d'HGG (sujet de la semaine)",min:90,sub:"hgg"});
   if(ev.trad){ push({lab:"Traduction d'anglais",min:30,sub:"ang"}); push({lab:"Traduction d'allemand",min:30,sub:"all"}); }
   var pauseEvery=ev.crit?30:55, pauseLen=ev.crit?5:10, sinceP=0;
-  var wd=parseISO(dISO).getDay(), dmDay=(wd===4||wd===5||wd===0);
-  openTasks(subs).forEach(function(t){
+  var planned=(typeof Plan!=="undefined")? Plan.forSlot(dISO,ev) : [];
+  planned.forEach(function(p){
     if(used>=cap-5) return;
-    if(t.action==="dm" && !dmDay) return; /* DM : jeudi, vendredi, dimanche */
-    var left=cap-used, m=Math.min(t.action==="dm"?Math.min(t.dur||120,120):(t.dur||30),left);
-    if(m<10) return;
+    var m=Math.min(p.min, cap-used); if(m<5) return;
     if(sinceP+m>pauseEvery && items.length && used+pauseLen<cap){ push({lab:"Pause",min:pauseLen,pause:true}); sinceP=0; }
-    push({lab:t.title+(t.action==="dm"?" (une partie)":""),min:m,task:t.id,sub:t.sub,partial:m<(t.dur||30)}); sinceP+=m;
+    var o={lab:p.lab+(p.partial?" (une partie)":""),min:m,sub:p.sub,partial:p.partial,late:p.late,star:p.star,ref:p.ref};
+    if(p.ref&&p.ref.k==="task") o.task=p.ref.id;
+    push(o); sinceP+=m;
   });
   if(used<cap-10){
-    var fill={maths:"Exercices du chapitre en cours (banque d'exercices à importer)",hgg:ev.soir?"HGG : travail actif d'abord (plan, problématique), lecture de fiches à la fin":"HGG : fiches et exemples",csh:"Œuvre du jour (encart CSH)",ang:"Anki d'anglais et CIVI",all:"Anki d'allemand et CIVI"}[ev.sub]||"Travail libre";
+    var fill={maths:"Exercices du chapitre en cours (ajoute ton TD dans la page Maths pour un plan précis)",hgg:ev.soir?"HGG : travail actif d'abord (plan, problématique), lecture de fiches à la fin":"HGG : fiches et exemples",csh:"Œuvre du jour (encart CSH)",ang:"Anki d'anglais et CIVI",all:"Anki d'allemand et CIVI"}[ev.sub]||"Travail libre";
     if(sinceP>pauseEvery-10 && used+pauseLen<cap){ push({lab:"Pause",min:pauseLen,pause:true}); }
     push({lab:fill,min:cap-used,sub:ev.sub,filler:true});
   }

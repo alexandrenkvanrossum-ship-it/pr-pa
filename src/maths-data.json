@@ -1,0 +1,148 @@
+{
+  "chapitres": [
+    {
+      "n": 1,
+      "titre": "Révisions analyse",
+      "fichiers": [
+        {
+          "titre": "TD > Révisions analyse (dossier, vide côté Drive)",
+          "id": "1VO2ovwEJqPTT1NFOqBywfFOU2yNj689r",
+          "type": "dossier TD",
+          "mime": "application/vnd.google-apps.folder"
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "titre": "Intégrales généralisées",
+      "fichiers": [
+        {
+          "titre": "TD > Intégrales généralisées (dossier, vide côté Drive)",
+          "id": "11ZhrjY7K1jLuCXH7RqHJoqoSyWEAskqv",
+          "type": "dossier TD",
+          "mime": "application/vnd.google-apps.folder"
+        }
+      ]
+    }
+  ],
+  "en_cours": 2,
+  "evaluations": [
+    {
+      "titre": "DM 3 — Sujet 3.pdf (pour le 05/10/2026 ; probas : lois exponentielle/gamma, processus de Poisson, convexité, inégalité de Hoeffding)",
+      "id": "1ahrBdoIF2VNCZyWcMxkSjIJdoveaxhL6",
+      "type": "DM",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "DS1.pdf (DST 1, 26/09/2026 ; séries entières/fonctions génératrices, régularité, endomorphisme Δ sur R_d[X], v.a. discrètes)",
+      "id": "14GgwJq0bMHzV505aJ9MAfeNK1pVvYt5P",
+      "type": "DS",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "DS1_remarques.pdf",
+      "id": "13SHLEis4Mnqrf1y0yTHZVAk85eihdFj9",
+      "type": "corrigé/remarques",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "Rapport DST 1.pdf",
+      "id": "1a-Q97SELtR3sdc3hfHT43nmRdZ2A3o9S",
+      "type": "rapport",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "Notes_DS1_anonymisees.xlsx",
+      "id": "1Bw2gwZPJSeahGnL7RAEEVF6RUxKTadwv",
+      "type": "notes",
+      "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    },
+    {
+      "titre": "Corrigé DST 1 – Maths appro ECG2 (Google Doc perso, sur un autre sujet que DS1.pdf)",
+      "id": "1jXCwTtFVQ-BReRWjUTzuZh-MMikGr-MRxcBNyJQ9nCM",
+      "type": "corrigé",
+      "mime": "application/vnd.google-apps.document"
+    },
+    {
+      "titre": "DM et DS 2025/2026 > DS1.pdf (année précédente)",
+      "id": "1_QNHM-YMfr_QsMQiNbox5SuXtbIyDzYh",
+      "type": "DS (annale)",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "DM et DS 2025/2026 > Corrige_DS1.pdf",
+      "id": "1ftLYw7FxAJVt1CLdhAZWHmHaAv2K8DWw",
+      "type": "corrigé (annale)",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "DM et DS 2025/2026 > DS1_remarques.pdf",
+      "id": "1VgD8NMNCTh7X2GbxCe-nHLgt3ZmaoK8m",
+      "type": "corrigé/remarques (annale)",
+      "mime": "application/pdf"
+    }
+  ],
+  "informatique": [
+    {
+      "titre": "TP_1.pdf",
+      "id": "1Eq5m5elWi-00nBsDc4iiCkgRfalnliol",
+      "type": "TP",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "TP_2.pdf",
+      "id": "1CaJbin1rcq2ITrHGwYTJ3WatGCfYWV_q",
+      "type": "TP",
+      "mime": "application/pdf"
+    },
+    {
+      "titre": "TP_2_correction.pdf",
+      "id": "14srYpQzWSzeJ3SSpJsmHw3tYzeaT-6TV",
+      "type": "corrigé",
+      "mime": "application/pdf"
+    }
+  ],
+  "dossiers": [
+    {
+      "titre": "Maths EC2B 2026-2027 (partagé, fichiers déposés par r.filliat / filliaro)",
+      "id": "1FYWnSL0a-dxWN6TOjSAeFRR0vgbaf64V"
+    },
+    {
+      "titre": "Maths EC2B 2026-2027 > TD",
+      "id": "1WCuVPl8CpaRtW7DYTiZVRE6KNTJIT77J"
+    },
+    {
+      "titre": "Maths EC2B 2026-2027 > DM",
+      "id": "1JLou7D4SfUTZp9uS0NkifDj_X1gWYUvw"
+    },
+    {
+      "titre": "Maths EC2B 2026-2027 > DS",
+      "id": "1jtoYk_cbOJ90MCPPDKG0RRMsgHfYYYDK"
+    },
+    {
+      "titre": "Maths EC2B 2026-2027 > DM et DS 2025/2026",
+      "id": "1v3bBjvlfZUnz4dkbwEc3B7TXHPoSMwQm"
+    },
+    {
+      "titre": "Maths EC2B 2026-2027 > Informatique",
+      "id": "17jKW_dEQayazTsxtNd5zDF3ltZXokSKf"
+    },
+    {
+      "titre": "MATHS (perso)",
+      "id": "1wM7gfB4aCdTUE9UdmooL10F4pTYGyDTw"
+    },
+    {
+      "titre": "MATHS (perso) > MATHS > 2ÈME ANNÉE (annales + SDC, 2018-2019, 2019-2020)",
+      "id": "1sGeMWOv_VY-KiqP8eVPsU5UZ6GApHUAW"
+    },
+    {
+      "titre": "MATHS (perso) > MATHS > 1ÈRE ANNÉE (dont 2024-2025 - MAURY, cours chapitres 1–25)",
+      "id": "1eev87hD2UOdWhWYGxDukY4oeKVjXBLW-"
+    },
+    {
+      "titre": "A savoir faire avant chaque DST.docx (perso)",
+      "id": "1o5lU3UZduxjdzSCLtJtUgV3K54t9Ezye"
+    }
+  ],
+  "remarques": "Le Drive ne contient AUCUN cours de maths de 2e année : le dossier partagé « Maths EC2B 2026-2027 » est rangé par type (TD / DM / DS / Informatique / DM et DS 2025-2026), pas par chapitre. Seuls indices de chapitres : les deux sous-dossiers de TD « Révisions analyse » et « Intégrales généralisées » (créés le même jour, 11 sept., tous deux vides côté Drive) ; d'où « en_cours » = 2 par défaut, à confirmer. Le DM 3 (rendu 05/10) porte sur les probabilités (lois à densité, exponentielle, somme → loi gamma, Poisson, convexité, Markov/Hoeffding) : cela suggère que le cours a avancé vers les variables aléatoires, sans fichier de cours pour le confirmer. DM 1 et DM 2 absents du Drive. Aucun fichier Humbert, Fargier ou Besbes trouvé ; « Maury » = cours de 1re année 2024-2025 (dossier Cours, Chapitre 1 à 25), pas la 2e année. Fichiers déposés par les comptes r.filliat@ / filliaro@ (vraisemblablement le prof) ; dossier partagé créé par une élève (M. Maréchalle-Morel). DS commun ECG 2A/B."
+}

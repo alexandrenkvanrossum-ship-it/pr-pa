@@ -5,7 +5,8 @@ from PIL import Image, ImageDraw, ImageFont
 root = pathlib.Path(__file__).parent
 src = root / "src"
 css = (src / "styles.css").read_text()
-js = "\n".join((src / f).read_text() for f in ["data.js", "core.js", "sync.js", "bj.js", "agenda.js", "app.js"])
+inl = "".join("var %s=%s;\n" % (v, json.dumps(json.loads((src / f).read_text()), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")) for v, f in [("METHODO", "methodo-data.json"), ("HGG_PROG", "hgg-data.json"), ("MATHS_DRIVE", "maths-data.json")])
+js = inl + "\n".join((src / f).read_text() for f in ["data.js", "core.js", "sync.js", "bj.js", "files.js", "agenda.js", "plan.js", "app.js"] if (src / f).exists())
 js = js.replace('if(typeof module!=="undefined") module.exports={parseTask:parseTask, iso:iso, parseISO:parseISO, norm:norm};', "")
 
 head = """<title>Prépa ECG2</title>
@@ -13,6 +14,9 @@ head = """<title>Prépa ECG2</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <style>
 """ + css + "\n</style>\n"
 body = '<div id="root"></div>\n<script>\n' + js + "\n</script>\n"
@@ -22,7 +26,7 @@ body = '<div id="root"></div>\n<script>\n' + js + "\n</script>\n"
 (root / "preview" / "app.html").write_text(head + body)
 
 # PWA complète
-dist = root
+dist = root / "dist"
 dist.mkdir(exist_ok=True)
 pwa_head = """<!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
