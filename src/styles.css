@@ -314,3 +314,7 @@ label.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);marg
 .msg.a{align-self:flex-start;background:var(--surface);box-shadow:inset 0 0 0 .5px var(--line);border-bottom-left-radius:5px}
 .skel{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--fill),#E6E6EB,var(--fill));background-size:200% 100%;animation:sk 1.3s linear infinite}
 @keyframes sk{to{background-position:-200% 0}}
+
+/* méthodo : points clés repérables d'un coup d'œil */
+strong.hl{font-weight:700;color:var(--ink);background:linear-gradient(transparent 58%,rgba(255,196,0,.32) 58%);border-radius:2px;padding:0 1px}
+.meth li::marker{color:var(--ink-3)}

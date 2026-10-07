@@ -795,7 +795,7 @@ function homeMethodoCards(){
   soon.forEach(function(x){ if(seen[x.ep]) return; seen[x.ep]=1; var m=METHODO.epreuves[x.ep]||{}, dd=diffDays(x.date,t);
     var ess=(m.essentiel||[]).slice(0,3);
     h+='<section class="card '+subj(x.sub).cls+'" style="margin-top:14px"><div class="card-h"><h2>À relire avant ta '+esc(x.label.charAt(0).toLowerCase()+x.label.slice(1))+'</h2><span class="tag '+subj(x.sub).cls+'">'+(dd===0?"aujourd'hui "+hLabel(x.time):dd===1?"demain "+hLabel(x.time):"J-"+dd)+'</span></div>';
-    h+=ess.length?'<ul class="small" style="margin:4px 0 10px;padding-left:18px">'+ess.map(function(e){ return '<li style="margin:3px 0">'+esc(e)+'</li>'; }).join("")+'</ul>':'<p class="small muted">'+esc(m.manque||"Pas encore de fiche de méthode pour cette épreuve.")+'</p>';
+    h+=ess.length?'<ul class="small" style="margin:4px 0 10px;padding-left:18px">'+ess.map(function(e){ return '<li style="margin:3px 0">'+mtx(e)+'</li>'; }).join("")+'</ul>':'<p class="small muted">'+esc(m.manque||"Pas encore de fiche de méthode pour cette épreuve.")+'</p>';
     var last=(st().ressentis[x.ep]||[]).slice(-1)[0]; if(last) h+='<p class="small muted" style="margin:0 0 10px"><b>Ton dernier ressenti</b> ('+fmtDay(last.date)+') : '+esc(last.t.length>160?last.t.slice(0,160)+"…":last.t)+'</p>';
     h+='<button class="btn tint sm" data-a="methode" data-id="'+x.ep+'">Relire toute la synthèse</button></section>'; });
   var dis=resDismissed();
@@ -804,10 +804,11 @@ function homeMethodoCards(){
   });
   return h;
 }
+function mtx(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong class="hl">$1</strong>'); }
 function docLink(id){ var d=(METHODO.documents||[]).find(function(x){ return x.id===id; }); return d?'<a href="'+esc(d.lien)+'" target="_blank" rel="noopener">'+esc(d.titre)+'</a>'+(d.dossier?' <span class="muted">· '+esc(d.dossier)+'</span>':''):''; }
 function methodeSheet(id,evKey,evLabel){
   var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }), s=subj(e.sub), rs=st().ressentis[id]||[], m=METHODO.epreuves[id]||{};
-  var li=function(a){ return '<ul class="small" style="margin:6px 0 0;padding-left:18px">'+a.map(function(x){ return '<li style="margin:4px 0">'+esc(x)+'</li>'; }).join("")+'</ul>'; };
+  var li=function(a){ return '<ul class="small meth" style="margin:6px 0 0;padding-left:18px">'+a.map(function(x){ return '<li style="margin:5px 0">'+mtx(x)+'</li>'; }).join("")+'</ul>'; };
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+(id.charAt(0)==="e"?"Écrit":"Oral")+' · coef. '+(e.coefTxt||e.coef)+'</div><h2>'+esc(e.name)+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   var nx=echeances(iso(today()),"9999").filter(function(x){ return x.ep===id; })[0];
   if(nx) h+='<p class="small" style="margin:0 0 4px"><span class="tag '+s.cls+'">Prochaine : '+esc(nx.label)+' · '+esc(relDay(nx.date).toLowerCase())+' '+hLabel(nx.time)+'</span></p>';
@@ -816,7 +817,7 @@ function methodeSheet(id,evKey,evLabel){
   if(m.temps) h+='<section class="card flat"><div class="eyebrow">Gestion du temps</div><p class="small" style="margin:6px 0 0;white-space:pre-wrap">'+esc(m.temps)+'</p></section>';
   (m.sections||[]).forEach(function(x){ h+='<details class="card flat"><summary style="cursor:pointer;font-weight:600">'+esc(x.titre)+' <span class="small muted">('+x.points.length+')</span></summary>'+li(x.points)+'</details>'; });
   if(m.pieges&&m.pieges.length) h+='<section class="card flat"><div class="eyebrow">Pièges à éviter</div>'+li(m.pieges)+'</section>';
-  if(m.conseils_profs&&m.conseils_profs.length) h+='<section class="card flat"><div class="eyebrow">Conseils des profs</div>'+m.conseils_profs.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.qui)+'</b></div><div class="small" style="white-space:pre-wrap">'+esc(c.texte)+'</div></div>'; }).join("")+'</section>';
+  if(m.conseils_profs&&m.conseils_profs.length) h+='<section class="card flat"><div class="eyebrow">Conseils des profs</div>'+m.conseils_profs.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.qui)+'</b></div><div class="small meth" style="white-space:pre-wrap">'+mtx(c.texte)+'</div></div>'; }).join("")+'</section>';
   if(id.charAt(0)==="o" && typeof BJ!=="undefined"){
     var sub=e.sub, coms=BJ.mine().filter(function(c){ return BJ.subOf(c)===sub && c.commentaire; }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,4);
     if(coms.length) h+='<section class="card flat"><div class="eyebrow">Commentaires de tes colleurs (BJcolle, mot pour mot)</div>'+coms.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.colleur||"")+'</b> <span class="muted">· '+fmtDay(c.date)+(c.note?' · '+esc(c.note):'')+'</span></div><div class="small" style="white-space:pre-wrap">'+esc(c.commentaire)+'</div></div>'; }).join("")+'</section>';
