@@ -26,10 +26,12 @@ var Files = (function(){
     var p;
     if(f.kind==="cours"){
       var items=[], chap="";
-      var step=function(k){ return Sync.invoke({mode:"doc",kind:"cours",chap:f.chap,chunk:k,files:[{path:f.path,name:f.name,mime:f.mime,role:"cours"}]}).then(function(r){
+      var up={}, total=0;
+      var step=function(k){ return Sync.invoke({mode:"doc",kind:"cours",chap:f.chap,chunk:k,chunks:total||undefined,files:[{path:f.path,name:f.name,mime:f.mime,role:"cours",uri:up.uri,umime:up.umime}]}).then(function(r){
+        if(r.uri){ up.uri=r.uri; up.umime=r.umime; } total=total||r.chunks||1;
         items=items.concat((r.items||[]).filter(function(x){ return x && x.enonce; })); chap=chap||r.chapitre;
-        f.progress=Math.round((k+1)/r.chunks*100); Store.save(); emit(); if(onStep) onStep(f);
-        if(k+1<r.chunks) return step(k+1);
+        f.progress=Math.round((k+1)/total*100); Store.save(); emit(); if(onStep) onStep(f);
+        if(k+1<total && k<40) return step(k+1);
       }); };
       p=step(0).then(function(){ S().mathsCours[id]={chap:f.chap||chap, items:items, at:new Date().toISOString()}; f.n=items.length; });
     } else {

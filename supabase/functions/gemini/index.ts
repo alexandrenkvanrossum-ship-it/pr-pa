@@ -3,7 +3,6 @@
 // Mode « doc » : lit un fichier déposé dans le stockage « fichiers » (avec les droits de l'utilisateur)
 // et en extrait les exercices (avec une estimation du temps) ou les énoncés du cours.
 import { unzipSync, strFromU8 } from "npm:fflate@0.8.2";
-import { PDFDocument } from "npm:pdf-lib@1.17.1";
 const SUPA = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
@@ -126,8 +125,7 @@ Deno.serve(async (req) => {
 });
 
 /* ---------- mode « doc » ---------- */
-function encodeBase64(u8: Uint8Array) { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); }
-const PAGES = 6, CHARS = 18000;
+const PAGES = 8, CHARS = 18000;
 async function fetchFile(path: string, auth: string) {
   const r = await fetch(`${SUPA}/storage/v1/object/authenticated/fichiers/${path.split("/").map(encodeURIComponent).join("/")}`, { headers: { Authorization: auth, apikey: ANON } });
   if (!r.ok) throw new Error(`Fichier illisible (${r.status}) : ${path.split("/").pop()}`);
@@ -143,32 +141,36 @@ function officeText(buf: Uint8Array, name: string) {
   if (slides.length) return slides.map((k, i) => `[Diapo ${i + 1}]\n` + xmlText(strFromU8(z[k]))).join("\n");
   throw new Error("Format non reconnu : " + name);
 }
-// Transforme un fichier en morceaux envoyables à Gemini ; renvoie aussi le nombre total de morceaux.
-async function partsOf(f: any, auth: string, chunk: number | null) {
+// Envoie le fichier à Gemini (Files API) sans le transformer : peu de calcul côté fonction.
+async function geminiUpload(buf: ArrayBuffer, mime: string, name: string) {
+  const st = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
+    method: "POST",
+    headers: { "x-goog-api-key": KEY, "X-Goog-Upload-Protocol": "resumable", "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(buf.byteLength), "X-Goog-Upload-Header-Content-Type": mime, "Content-Type": "application/json" },
+    body: JSON.stringify({ file: { display_name: name.slice(0, 120) } }),
+  });
+  const url = st.headers.get("x-goog-upload-url");
+  if (!url) throw new Error("Envoi à Gemini refusé (" + st.status + ") : " + (await st.text()).slice(0, 200));
+  const up = await fetch(url, { method: "POST", headers: { "X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize" }, body: buf });
+  let f = (await up.json())?.file;
+  if (!f?.uri) throw new Error("Envoi à Gemini incomplet (" + up.status + ").");
+  for (let i = 0; i < 40 && f.state === "PROCESSING"; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    f = await (await fetch("https://generativelanguage.googleapis.com/v1beta/" + f.name, { headers: { "x-goog-api-key": KEY } })).json();
+  }
+  if (f.state === "FAILED") throw new Error("Gemini n'a pas pu lire ce fichier.");
+  return { uri: f.uri as string, mime: (f.mimeType as string) || mime };
+}
+// Prépare un fichier pour Gemini : PDF et images envoyés tels quels (Files API), Word/PowerPoint convertis en texte.
+async function partOf(f: any, auth: string) {
+  if (f.uri) return { part: { file_data: { mime_type: f.umime, file_uri: f.uri } }, uri: f.uri, umime: f.umime, text: null as string | null };
+  const name = String(f.name || ""), mime = String(f.mime || "");
   const buf = await fetchFile(f.path, auth);
-  const name = String(f.name || "");
-  const mime = String(f.mime || "");
-  if (/pdf/.test(mime) || /\.pdf$/i.test(name)) {
-    if (chunk == null) return { parts: [{ inline_data: { mime_type: "application/pdf", data: encodeBase64(buf) } }], chunks: 1, label: "" };
-    try {
-      const src = await PDFDocument.load(buf, { ignoreEncryption: true });
-      const n = src.getPageCount(), chunks = Math.max(1, Math.ceil(n / PAGES));
-      const from = chunk * PAGES, to = Math.min(n, from + PAGES);
-      const out = await PDFDocument.create();
-      const pages = await out.copyPages(src, Array.from({ length: to - from }, (_, i) => from + i));
-      pages.forEach((p) => out.addPage(p));
-      return { parts: [{ inline_data: { mime_type: "application/pdf", data: encodeBase64(await out.save()) } }], chunks, label: `pages ${from + 1} à ${to} sur ${n}` };
-    } catch (_) {
-      return { parts: [{ inline_data: { mime_type: "application/pdf", data: encodeBase64(buf) } }], chunks: 1, label: "" };
-    }
-  }
-  if (/^image\//.test(mime) || /\.(png|jpe?g|webp|heic)$/i.test(name)) {
-    return { parts: [{ inline_data: { mime_type: mime || "image/jpeg", data: encodeBase64(buf) } }], chunks: 1, label: "" };
-  }
-  const txt = /\.(docx|pptx)$/i.test(name) || /officedocument/.test(mime) ? officeText(buf, name) : new TextDecoder().decode(buf);
-  if (chunk == null) return { parts: [{ text: txt.slice(0, 120000) }], chunks: 1, label: "" };
-  const chunks = Math.max(1, Math.ceil(txt.length / CHARS));
-  return { parts: [{ text: txt.slice(chunk * CHARS, (chunk + 1) * CHARS) }], chunks, label: `partie ${chunk + 1} sur ${chunks}` };
+  if (/\.(docx|pptx)$/i.test(name) || /officedocument/.test(mime)) { const t = officeText(buf, name); return { part: null, uri: null, umime: null, text: t }; }
+  if (/^text\//.test(mime) || /\.txt$/i.test(name)) { const t = new TextDecoder().decode(buf); return { part: null, uri: null, umime: null, text: t }; }
+  const m = /\.pdf$/i.test(name) ? "application/pdf" : (mime || "application/pdf");
+  const u = await geminiUpload(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer, m, name);
+  return { part: { file_data: { mime_type: u.mime, file_uri: u.uri } }, uri: u.uri, umime: u.mime, text: null as string | null };
 }
 const EXO_SCHEMA = { type: "OBJECT", properties: {
   chapitre: { type: "STRING" },
@@ -179,7 +181,7 @@ const EXO_SCHEMA = { type: "OBJECT", properties: {
   }, required: ["num", "titre", "questions", "difficulte", "minutes", "classique", "base"] } },
 }, required: ["exercices"] };
 const COURS_SCHEMA = { type: "OBJECT", properties: {
-  chapitre: { type: "STRING" },
+  chapitre: { type: "STRING" }, pages_total: { type: "INTEGER" },
   items: { type: "ARRAY", items: { type: "OBJECT", properties: {
     type: { type: "STRING", enum: ["Définition", "Proposition", "Théorème", "Propriété", "Lemme", "Corollaire", "Méthode", "Formule", "Remarque"] },
     nom: { type: "STRING" }, enonce: { type: "STRING" }, section: { type: "STRING" },
@@ -192,25 +194,37 @@ async function analyseDoc(b: any, auth: string) {
   if (!files.length) throw new Error("Aucun fichier.");
   if (b.kind === "cours") {
     const chunk = Number(b.chunk ?? 0);
-    const p = await partsOf(files[0], auth, chunk);
+    const f = files[0];
+    const P = await partOf(f, auth);
+    let scope: string, parts: any[], chunks = Number(b.chunks ?? 0);
+    if (P.text != null) {
+      chunks = Math.max(1, Math.ceil(P.text.length / CHARS));
+      scope = `partie ${chunk + 1} sur ${chunks}`;
+      parts = [{ text: P.text.slice(chunk * CHARS, (chunk + 1) * CHARS) }];
+    } else {
+      const from = chunk * PAGES + 1, to = from + PAGES - 1;
+      scope = `UNIQUEMENT les pages ${from} à ${to} du PDF (ignore les autres pages ; si ces pages n'existent pas, renvoie une liste vide)`;
+      parts = [P.part];
+    }
     const j = await callGemini({
       contents: [{ role: "user", parts: [{ text:
-        "Voici un extrait (" + (p.label || "document entier") + ") d'un cours de mathématiques de prépa ECG2" + (b.chap ? ", chapitre « " + b.chap + " »" : "") + ". " +
+        "Voici un cours de mathématiques de prépa ECG2" + (b.chap ? ", chapitre « " + b.chap + " »" : "") + ". Traite " + scope + ". " +
         "Relève, dans l'ordre, chaque définition, proposition, propriété, théorème, lemme, corollaire, méthode et formule à connaître. " +
         "Pour chacun : type ; nom (numéro et nom tels qu'écrits, ex. « Théorème 4 (critère de Riemann) », sinon un intitulé court et neutre) ; " +
         "enonce : RECOPIE FIDÈLEMENT l'énoncé tel qu'il figure dans le document, sans le reformuler, le compléter ni le corriger, sans la démonstration, " +
         "les formules en LaTeX entre $…$ ; section : titre de la partie du cours. N'ajoute RIEN qui ne soit pas dans le document. " +
-        "Si un énoncé est coupé par la fin de l'extrait, recopie la partie visible." }, ...p.parts] }],
+        "Si un énoncé est coupé par la limite de l'extrait, recopie la partie visible. pages_total : nombre total de pages du document." }, ...parts] }],
       generationConfig: { temperature: 0.1, maxOutputTokens: 60000, responseMimeType: "application/json", responseSchema: COURS_SCHEMA },
     });
     const o = jsonOf(textOf(j));
-    return { chapitre: o.chapitre ?? "", items: o.items ?? [], chunk, chunks: p.chunks };
+    if (P.text == null && !chunks) chunks = Math.max(1, Math.ceil((Number(o.pages_total) || PAGES) / PAGES));
+    return { chapitre: o.chapitre ?? "", items: o.items ?? [], chunk, chunks: chunks || 1, uri: P.uri, umime: P.umime };
   }
   // exercices (TD, feuille, DM), avec le corrigé s'il est fourni
   const parts: any[] = [];
   for (const f of files) {
-    const p = await partsOf(f, auth, null);
-    parts.push({ text: `\n--- ${f.role === "corrige" ? "CORRIGÉ" : "ÉNONCÉ"} : « ${f.name} » ---` }, ...p.parts);
+    const p = await partOf(f, auth);
+    parts.push({ text: `\n--- ${f.role === "corrige" ? "CORRIGÉ" : "ÉNONCÉ"} : « ${f.name} » ---` }, p.text != null ? { text: p.text.slice(0, 120000) } : p.part);
   }
   const hasCorr = files.some((f) => f.role === "corrige");
   const j = await callGemini({

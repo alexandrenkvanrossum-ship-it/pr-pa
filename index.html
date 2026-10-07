@@ -690,7 +690,13 @@ var Sync = (function(){
   function invoke(body){
     if(!sb||!user||!sb.functions) return Promise.reject(new Error("signedout"));
     return sb.functions.invoke("gemini",{body:body}).then(function(r){
-      if(r.error){ var m=r.error.message||"Erreur"; if(r.error.context&&r.error.context.json) return r.error.context.json().then(function(j){ throw new Error(j.error||m); }); throw new Error(m); }
+      if(r.error){ var m=r.error.message||"Erreur", ctx=r.error.context;
+        if(ctx && ctx.text) return ctx.text().then(function(t){ var j=null; try{ j=JSON.parse(t); }catch(e){}
+          var msg=j&&(j.error||j.message||j.msg||j.code); if(msg&&typeof msg!=="string") msg=JSON.stringify(msg);
+          if(ctx.status===546||/WORKER_LIMIT|resource/i.test(t)) msg="Fonction à court de ressources (fichier trop lourd ?)"+(msg?" : "+msg:"");
+          if(ctx.status===504||/timeout|timed out/i.test(t)) msg="Délai dépassé"+(msg?" : "+msg:"");
+          throw new Error((msg||(t||"").slice(0,200)||m)+(ctx.status?" ["+ctx.status+"]":"")); },function(e){ if(e instanceof Error && e.message!==m) throw e; throw new Error(m); });
+        throw new Error(m); }
       if(r.data&&r.data.error) throw new Error(r.data.error);
       return r.data;
     });
@@ -791,10 +797,12 @@ var Files = (function(){
     var p;
     if(f.kind==="cours"){
       var items=[], chap="";
-      var step=function(k){ return Sync.invoke({mode:"doc",kind:"cours",chap:f.chap,chunk:k,files:[{path:f.path,name:f.name,mime:f.mime,role:"cours"}]}).then(function(r){
+      var up={}, total=0;
+      var step=function(k){ return Sync.invoke({mode:"doc",kind:"cours",chap:f.chap,chunk:k,chunks:total||undefined,files:[{path:f.path,name:f.name,mime:f.mime,role:"cours",uri:up.uri,umime:up.umime}]}).then(function(r){
+        if(r.uri){ up.uri=r.uri; up.umime=r.umime; } total=total||r.chunks||1;
         items=items.concat((r.items||[]).filter(function(x){ return x && x.enonce; })); chap=chap||r.chapitre;
-        f.progress=Math.round((k+1)/r.chunks*100); Store.save(); emit(); if(onStep) onStep(f);
-        if(k+1<r.chunks) return step(k+1);
+        f.progress=Math.round((k+1)/total*100); Store.save(); emit(); if(onStep) onStep(f);
+        if(k+1<total && k<40) return step(k+1);
       }); };
       p=step(0).then(function(){ S().mathsCours[id]={chap:f.chap||chap, items:items, at:new Date().toISOString()}; f.n=items.length; });
     } else {

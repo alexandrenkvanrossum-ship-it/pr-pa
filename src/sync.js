@@ -105,7 +105,13 @@ var Sync = (function(){
   function invoke(body){
     if(!sb||!user||!sb.functions) return Promise.reject(new Error("signedout"));
     return sb.functions.invoke("gemini",{body:body}).then(function(r){
-      if(r.error){ var m=r.error.message||"Erreur"; if(r.error.context&&r.error.context.json) return r.error.context.json().then(function(j){ throw new Error(j.error||m); }); throw new Error(m); }
+      if(r.error){ var m=r.error.message||"Erreur", ctx=r.error.context;
+        if(ctx && ctx.text) return ctx.text().then(function(t){ var j=null; try{ j=JSON.parse(t); }catch(e){}
+          var msg=j&&(j.error||j.message||j.msg||j.code); if(msg&&typeof msg!=="string") msg=JSON.stringify(msg);
+          if(ctx.status===546||/WORKER_LIMIT|resource/i.test(t)) msg="Fonction à court de ressources (fichier trop lourd ?)"+(msg?" : "+msg:"");
+          if(ctx.status===504||/timeout|timed out/i.test(t)) msg="Délai dépassé"+(msg?" : "+msg:"");
+          throw new Error((msg||(t||"").slice(0,200)||m)+(ctx.status?" ["+ctx.status+"]":"")); },function(e){ if(e instanceof Error && e.message!==m) throw e; throw new Error(m); });
+        throw new Error(m); }
       if(r.data&&r.data.error) throw new Error(r.data.error);
       return r.data;
     });
