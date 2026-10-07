@@ -60,7 +60,7 @@ function parseTask(raw, now){
   now = now || new Date();
   var t0=new Date(now); t0.setHours(0,0,0,0);
   var s=" "+raw.replace(/\s+/g," ")+" ";
-  var out={title:"",due:null,day:null,time:null,remind:15,prio:0,sub:null,type:null,dur:null,action:null,tokens:[]};
+  var out={vac:false,title:"",due:null,day:null,time:null,remind:15,prio:0,sub:null,type:null,dur:null,action:null,tokens:[]};
   function cut(re,fn){ var n=norm(s), m=n.match(re); if(!m) return false; if(fn(m)===false) return false; out.tokens.push(s.substr(m.index,m[0].length).trim()); s=s.slice(0,m.index)+" "+s.slice(m.index+m[0].length); return true; }
 
   cut(/\s(!{1,3})(?=\s)/, function(m){ out.prio=m[1].length; });
@@ -93,6 +93,8 @@ function parseTask(raw, now){
     if(m){ var d=rules[i][1](m); setDate(d, !!m[1]); out.tokens.push(s.substr(m.index,m[0].length).trim()); s=s.slice(0,m.index)+" "+s.slice(m.index+m[0].length); break; }
   }
 
+  /* liste des vacances : « vac : … », « pendant les vacances », « à la Toussaint »… */
+  cut(/\s(?:vac\s*:|(?:a faire\s+)?(?:pendant|pour|aux|durant)\s+(?:les\s+)?vacances(?:\s+de\s+(?:la\s+)?(?:toussaint|noel|fevrier|printemps|paques))?|(?:a|pour)\s+(?:la\s+)?toussaint|(?:a|pour)\s+noel|vacances)(?=\s|[,.;:])/, function(){ out.vac=true; });
   var n2=norm(s);
   /* actions reconnues par mot-clé */
   var km;

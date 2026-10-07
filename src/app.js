@@ -53,7 +53,7 @@ function seed(){
   s.seeded=true; save();
 }
 function taskFrom(p){
-  return {id:uid("t"),title:p.title,sub:p.sub||"perso",type:p.type,dur:p.dur,due:p.due,day:p.day,time:p.time,remind:p.remind,prio:p.prio,action:p.action,devoir:!!p.devoir,memo:!!p.memo,done:false,created:new Date().toISOString(),progress:0,spent:0};
+  return {id:uid("t"),title:p.title,sub:p.sub||"perso",type:p.type,dur:p.dur,due:p.due,day:p.day,time:p.time,remind:p.remind,prio:p.prio,action:p.action,devoir:!!p.devoir,memo:!!p.memo,vac:!!p.vac,done:false,created:new Date().toISOString(),progress:0,spent:0};
 }
 
 /* ---------- coquille ---------- */
@@ -115,7 +115,7 @@ function dayObjectives(dISO){
   var s=st(), out=[];
   var next=upcomingPales(1)[0];
   if(next){ var dd=diffDays(next.date,dISO); if(dd>=0 && dd<=7) out.push({t:"Préparer le DST de "+next.t.replace(/^Concours blanc · /,"")+" ("+relDay(next.date).toLowerCase()+")",sub:next.sub}); }
-  s.tasks.filter(function(t){ return !t.done && (t.day===dISO || (t.due && diffDays(t.due,dISO)<=2 && diffDays(t.due,dISO)>=0)); })
+  s.tasks.filter(function(t){ return !t.done && !t.vac && (t.day===dISO || (t.due && diffDays(t.due,dISO)<=2 && diffDays(t.due,dISO)>=0)); })
     .sort(function(a,b){ return (b.prio||0)-(a.prio||0); })
     .forEach(function(t){ if(out.length<3) out.push({t:t.title+(t.due?" (pour "+relDay(t.due).toLowerCase()+")":""),sub:t.sub}); });
   if(out.length<3){ dayEvents(dISO).filter(function(e){ return e.kind==="work"; }).forEach(function(e){ if(out.length<3 && !out.some(function(o){return o.sub===e.sub;})) out.push({t:e.t+" de "+hLabel(e.s)+" à "+hLabel(e.e),sub:e.sub}); }); }
@@ -125,8 +125,8 @@ function dueToday(dISO){
   var s=st(), out=[];
   paleOn(dISO).forEach(function(p){ out.push({when:hLabel(p.s),t:"DST · "+p.t,sub:p.sub}); });
   if(typeof BJ!=="undefined") BJ.mineOn(dISO).forEach(function(c){ var pr=colleurLine(c.colleur); out.push({when:hLabel(c.debut),t:"Colle de "+c.discipline+(c.colleur?" avec "+c.colleur:"")+(/^\d/.test(c.tirage||"")?" · tirage "+hLabel(c.tirage):"")+(c.salle?" · "+c.salle:"")+(pr?" — "+pr:""),sub:BJ.subOf(c)}); });
-  s.tasks.filter(function(t){ return !t.done && t.time && t.day===dISO; }).forEach(function(t){ out.push({when:hLabel(t.time),t:t.title+" · rappel "+t.remind+" min avant",sub:t.sub}); });
-  s.tasks.filter(function(t){ return !t.done && t.due===dISO; }).forEach(function(t){ out.push({when:"Pour auj.",t:t.title,sub:t.sub}); });
+  s.tasks.filter(function(t){ return !t.done && !t.vac && t.time && t.day===dISO; }).forEach(function(t){ out.push({when:hLabel(t.time),t:t.title+" · rappel "+t.remind+" min avant",sub:t.sub}); });
+  s.tasks.filter(function(t){ return !t.done && !t.vac && t.due===dISO; }).forEach(function(t){ out.push({when:"Pour auj.",t:t.title,sub:t.sub}); });
   return out;
 }
 function cshPick(){
@@ -152,6 +152,8 @@ function vHome(){
   h+='</section></div>';
 
   h+=homeMethodoCards();
+  var vt=inVacances(t), vl=st().tasks.filter(function(x){ return x.vac && !x.done; });
+  if(vl.length && (vt || (nextVac() && diffDays(nextVac().from,t)<=3))) h+='<section class="card s-hgg" style="margin-top:14px"><div class="card-h"><h2>'+(vt?"C'est les vacances":"Vacances dans "+plural(diffDays(nextVac().from,t),"jour"))+'</h2><span class="tag">'+plural(vl.length,"chose")+' à faire</span></div><p class="small muted" style="margin:0 0 10px">'+(vt?"Ta liste des vacances t'attend. Copie-la et envoie-la à Claude pour organiser ces deux semaines ensemble.":"Pense à finir d'y noter ce que tu veux faire ; on l'organisera ensemble dès le début des vacances.")+'</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="vaccopy">Copier pour Claude</button><button class="btn sm" data-go="todo">Voir la liste</button></div></section>';
   if(hasCSH(t)){
     h+='<div style="margin-top:14px">'+'<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Journée de CSH : ton œuvre du jour et son parcours d'étude t'attendent dans l'atelier."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>'+'</div>';
   }
@@ -171,7 +173,7 @@ function vHome(){
 }
 function todayTasks(){
   var t=iso(today());
-  return st().tasks.filter(function(x){ return !x.done && (x.day===t || (x.due && x.due<=iso(addDays(today(),2))) || (x.day && x.day<t)); });
+  return st().tasks.filter(function(x){ return !x.done && !x.vac && (x.day===t || (x.due && x.due<=iso(addDays(today(),2))) || (x.day && x.day<t)); });
 }
 
 /* ---------- To-Do ---------- */
@@ -186,11 +188,12 @@ function bindQuick(){
       var v=inp.value.trim(); btn.disabled=!v; if(!v){ box.innerHTML=""; cur=null; return; }
       cur=parseTask(v); if(f._sub) cur.sub=f._sub; if(f._g){ if(!cur.type&&f._g.type) cur.type=f._g.type; if(!cur.dur&&f._g.dur){ cur.dur=f._g.dur; cur.durEstimee=true; } }
       if(f._dur){ cur.dur=f._dur; cur.durEstimee=false; }
+      if(f._vac!=null) cur.vac=f._vac;
       box.innerHTML=parseChips(cur)+placeChip(cur);
       var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); };
     }
     var gT=null;
-    box.addEventListener("click",function(ev){ var d=ev.target.closest("[data-qdur]"); if(!d) return; ev.preventDefault(); f._dur=+d.getAttribute("data-qdur"); upd(); inp.focus(); });
+    box.addEventListener("click",function(ev){ var vb=ev.target.closest("[data-qvac]"); if(vb){ ev.preventDefault(); f._vac=!(cur&&cur.vac); upd(); inp.focus(); return; } var d=ev.target.closest("[data-qdur]"); if(!d) return; ev.preventDefault(); f._dur=+d.getAttribute("data-qdur"); upd(); inp.focus(); });
     inp.addEventListener("input",function(){ f._sub=null; f._g=null; upd(); clearTimeout(gT);
       var v=inp.value.trim();
       if(cur && !cur.sub && v.length>6 && typeof Sync!=="undefined" && Sync.user()){
@@ -203,8 +206,8 @@ function bindQuick(){
     f.addEventListener("submit",function(e){
       e.preventDefault(); if(!inp.value.trim()) return; upd();
       var t=taskFrom(cur); st().tasks.push(t); save(); if(typeof Plan!=="undefined") Plan.invalidate();
-      inp.value=""; f._sub=null; f._dur=null; f._g=null; box.innerHTML=""; btn.disabled=true;
-      toast(actionToast(t)+placeToast(t)); closeSheet(); render();
+      inp.value=""; f._sub=null; f._dur=null; f._g=null; f._vac=null; box.innerHTML=""; btn.disabled=true;
+      toast(t.vac?"Ajoutée à ta liste des vacances"+(nextVac()?" ("+nextVac().name+")":"")+".":actionToast(t)+placeToast(t)); closeSheet(); render();
     });
   });
 }
@@ -219,10 +222,12 @@ function parseChips(p){
   if(p.due) h+='<span class="chip">avant le '+fmtDay(p.due)+'</span>';
   if(p.day) h+='<span class="chip">'+fmtDay(p.day)+(p.time?' · '+hLabel(p.time):'')+'</span>';
   if(p.prio) h+='<span class="chip"><span class="prio">'+"!!!".slice(0,p.prio)+'</span>'+["","important","prioritaire","impératif"][p.prio]+'</span>';
-  var a=actionLabel(p); if(a) h+='<span class="chip act">→ '+esc(a)+'</span>';
+  h+='<button type="button" class="chip'+(p.vac?" on":"")+'" data-qvac="1" title="Ranger dans la liste des vacances">Vacances</button>';
+  var a=actionLabel(p); if(a && !p.vac) h+='<span class="chip act">→ '+esc(a)+'</span>';
   return h;
 }
 function placeChip(p){
+  if(p.vac) return '<span class="chip act">→ liste des vacances'+(nextVac()?" ("+nextVac().name+")":"")+'</span>';
   if(typeof Plan==="undefined" || !p.sub || p.sub==="perso" || p.time || p.memo || p.action==="rappel" || !p.title) return "";
   var t=taskFrom(p); t.id="preview"; var r=Plan.preview(t);
   if(r.unplaced) return '<span class="chip" style="background:var(--red-pale);color:var(--red)">pas de créneau '+subj(p.sub).short+' libre'+(p.due?" avant l'échéance":"")+'</span>';
@@ -259,16 +264,17 @@ function taskRows(list){
     if(t.day) meta.push('<span class="meta">'+relDay(t.day)+(t.time?" · "+hLabel(t.time):"")+'</span>');
     if(t.dur) meta.push('<span class="meta">'+durTxt(t.dur)+'</span>');
     if(t.progress && !t.done) meta.push('<span class="meta">fait à '+t.progress+' %</span>');
-    if(!t.done && !t.time && !t.memo && typeof Plan!=="undefined" && t.sub!=="perso"){ var wt=whenTxt("task|"+t.id); meta.push(wt?'<span class="meta">prévu '+esc(wt)+'</span>':'<span class="meta late">sans créneau</span>'); }
+    if(!t.done && !t.time && !t.memo && !t.vac && typeof Plan!=="undefined" && t.sub!=="perso"){ var wt=whenTxt("task|"+t.id); meta.push(wt?'<span class="meta">prévu '+esc(wt)+'</span>':'<span class="meta late">sans créneau</span>'); }
     return '<div class="task p'+(t.prio||0)+(t.done?" done":"")+'"><button class="check'+(t.done?" on":"")+'" data-a="toggle" data-id="'+t.id+'" aria-label="'+(t.done?"Rouvrir":"Terminer")+'">'+(t.done?I.check:"")+'</button>'+
       '<div class="tt"><span>'+esc(t.title)+'</span><div class="tm">'+tag(t.sub)+(t.type?'<span class="meta">'+esc(t.type)+'</span>':'')+meta.join("")+(t.prio?'<span class="prio">'+"!!!".slice(0,t.prio)+'</span>':'')+(t.example?'<span class="badge-ex">exemple</span>':'')+'</div></div>'+
-      '<button class="del" data-a="del" data-id="'+t.id+'" aria-label="Supprimer">'+I.trash+'</button></div>';
+      (t.vac&&!t.done?'<button class="chip" data-a="unvac" data-id="'+t.id+'" title="Sortir de la liste des vacances">Faire avant</button>':'')+'<button class="del" data-a="del" data-id="'+t.id+'" aria-label="Supprimer">'+I.trash+'</button></div>';
   }).join("");
 }
 function vTodo(){
   var s=st(), f=S.todoFilter, t=iso(today());
   var list=s.tasks.filter(function(x){ return f==="*"||x.sub===f; });
-  var open=list.filter(function(x){ return !x.done; }), done=list.filter(function(x){ return x.done; });
+  var vacs=list.filter(function(x){ return !x.done && x.vac; });
+  var open=list.filter(function(x){ return !x.done && !x.vac; }), done=list.filter(function(x){ return x.done; });
   function when(x){ return x.day||x.due||null; }
   var groups=[["En retard",open.filter(function(x){ return when(x)&&when(x)<t; })],["Aujourd'hui",open.filter(function(x){ return when(x)===t; })],
     ["Cette semaine",open.filter(function(x){ return when(x)&&when(x)>t&&diffDays(when(x),t)<=7; })],["Plus tard",open.filter(function(x){ return when(x)&&diffDays(when(x),t)>7; })],["Sans date",open.filter(function(x){ return !when(x); })]];
@@ -278,9 +284,10 @@ function vTodo(){
   h+='<div class="filters" style="margin:14px 0 6px">'+[["*","Tout"]].concat(SUBJECT_ORDER.concat(["perso"]).map(function(id){ return [id,subj(id).name]; })).map(function(x){ return '<button class="chip'+(f===x[0]?" on":"")+'" data-a="tfilter" data-f="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("")+'</div>';
   h+='<div class="stack">';
   groups.forEach(function(g){ if(!g[1].length) return; g[1].sort(function(a,b){ return (b.prio||0)-(a.prio||0)||String(when(a)).localeCompare(String(when(b))); }); h+='<section class="card"><div class="group-h">'+g[0]+' <span class="n">'+g[1].length+'</span></div><div class="tasks">'+taskRows(g[1])+'</div></section>'; });
+  h+=vacCard(vacs);
   if(!open.length) h+='<div class="card"><div class="empty"><b>Tout est fait</b>Ajoute une tâche avec la barre ci-dessus.</div></div>';
   if(done.length) h+='<details class="card"><summary class="group-h" style="cursor:pointer">Terminées <span class="n">'+done.length+'</span></summary><div class="tasks">'+taskRows(done)+'</div></details>';
-  h+='</div><div class="note-box" style="margin-top:14px">Exemples de saisie : « ne pas oublier le rdv Coirier 19h » · « réf Marivaux Les Fausses Confidences » · « ex : Golden Dome » · « DM maths pour lundi !!! » · « civi : élections à Berlin ». Les tâches marquées <span class="badge-ex">exemple</span> peuvent être supprimées.</div>';
+  h+='</div><div class="note-box" style="margin-top:14px">Exemples de saisie : « ne pas oublier le rdv Coirier 19h » · « réf Marivaux Les Fausses Confidences » · « ex : Golden Dome » · « DM maths pour lundi !!! » · « civi : élections à Berlin » · « vac : refaire les DS de 1re année ». Les tâches marquées <span class="badge-ex">exemple</span> peuvent être supprimées.</div>';
   return h;
 }
 
@@ -318,7 +325,7 @@ function vAgenda(){
   return h;
 }
 function timedTasks(x){
-  return st().tasks.filter(function(t){ return t.time && t.day===x && !t.done; }).map(function(t){ return {kind:"work",s:t.time,e:fromMin(Math.min(toMin(t.time)+(t.dur||45),H1)),t:t.title,sub:t.sub,id:"task-"+t.id,taskId:t.id}; });
+  return st().tasks.filter(function(t){ return t.time && t.day===x && !t.done && !t.vac; }).map(function(t){ return {kind:"work",s:t.time,e:fromMin(Math.min(toMin(t.time)+(t.dur||45),H1)),t:t.title,sub:t.sub,id:"task-"+t.id,taskId:t.id}; });
 }
 function slotKey(d,e,r,ix){ return d+"|"+e.id+"|"+(r.task||(r.ref?r.ref.k+":"+r.ref.id:r.lab))+"|"+ix; }
 function isDone(d,e,r,ix){ if(r.ref&&r.ref.k==="exo") return !!st().mathsDone[r.ref.id]; if(r.ref&&r.ref.k==="hgg") return !!hggState().done[r.ref.id]; if(r.task){ var t=st().tasks.find(function(x){return x.id===r.task;}); return t&&t.done; } return !!st().slotDone[slotKey(d,e,r,ix)]; }
@@ -352,13 +359,13 @@ function openSlot(dISO,id){
 function vMatieres(){
   var h=topbar("Matières")+'<h1 class="large-title">Matières</h1><p class="subtitle">Un espace par matière.</p><div class="grid g3">';
   SUBJECT_ORDER.forEach(function(id){
-    var s=subj(id), n=st().tasks.filter(function(t){ return !t.done && t.sub===id; }).length;
+    var s=subj(id), n=st().tasks.filter(function(t){ return !t.done && !t.vac && t.sub===id; }).length;
     h+='<button class="subj '+s.cls+'" data-go="matiere" data-p="'+id+'"><span class="ic">'+esc(s.ic)+'</span><div><h3>'+s.name+'</h3><p>'+esc(s.blurb)+'</p></div><div class="foot"><span class="tag '+s.cls+'">'+plural(n,"tâche")+'</span></div></button>';
   });
   return h+'</div>';
 }
 function vMatiere(id){
-  var s=subj(id), tasks=st().tasks.filter(function(t){ return !t.done && t.sub===id; });
+  var s=subj(id), tasks=st().tasks.filter(function(t){ return !t.done && !t.vac && t.sub===id; });
   var h=topbar(s.name)+'<button class="link-btn" data-go="matieres" style="display:inline-flex;align-items:center;gap:2px;margin-bottom:10px">'+I.left+' Matières</button>';
   h+='<section class="hero-subj '+s.cls+'"><h1>'+s.name+'</h1><p>'+esc(s.blurb)+'</p></section><div class="stack" style="margin-top:14px">';
   if(id==="hgg"){
@@ -383,6 +390,24 @@ function vMatiere(id){
   return h;
 }
 function modCard(t,d){ return '<section class="card"><div class="card-h"><h2>'+esc(t)+'</h2><span class="small faint">bientôt</span></div><p class="muted small" style="margin:0">'+esc(d)+'</p></section>'; }
+
+/* ---------- liste des vacances ---------- */
+function nextVac(){ var t=iso(today()); return VACANCES.filter(function(v){ return v.to>=t; }).sort(function(a,b){ return a.from.localeCompare(b.from); })[0]||null; }
+function vacCard(list){
+  var v=nextVac(), t=iso(today());
+  var h='<section class="card"><div class="card-h"><h2>Pour les vacances</h2><span class="small muted">'+(v?(inVacances(t)?"en cours · ":"")+esc(v.name)+" · "+fmtDay(v.from)+" → "+fmtDay(v.to):"prochaines vacances")+'</span></div>';
+  if(!list.length) return h+'<div class="empty"><b>Rien pour l\'instant</b>Ajoute une tâche en touchant « Vacances » sous la barre de saisie, ou en écrivant « vac : … » ou « … pendant les vacances ».</div></section>';
+  var by={}; list.forEach(function(x){ (by[x.sub]=by[x.sub]||[]).push(x); });
+  SUBJECT_ORDER.concat(["perso"]).forEach(function(id){ if(!by[id]) return; h+='<div class="group-h" style="margin-top:6px">'+esc(subj(id).name)+' <span class="n">'+by[id].length+'</span></div><div class="tasks">'+taskRows(by[id])+'</div>'; });
+  var tot=list.reduce(function(a,x){ return a+(x.dur||0); },0);
+  h+='<div class="row" style="justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="small muted">'+plural(list.length,"tâche")+(tot?" · environ "+durTxt(tot)+" estimées":"")+' · pas planifiées avant les vacances</span><button class="btn tint sm" data-a="vaccopy">Copier pour Claude</button></div>';
+  return h+'</section>';
+}
+function vacText(){
+  var v=nextVac(), l=st().tasks.filter(function(x){ return x.vac && !x.done; });
+  return "Organisons mes vacances"+(v?" de la "+v.name+" ("+fmtDay(v.from)+" → "+fmtDay(v.to)+")":"")+". Voici ma liste :\n"+l.map(function(x){ return "- ["+subj(x.sub).name+"] "+x.title+(x.dur?" ("+durTxt(x.dur)+")":"")+(x.prio?" "+"!!!".slice(0,x.prio):""); }).join("\n");
+}
+function sheetText(txt){ openSheet('<div class="sheet-h"><div class="ttl"><h2>Ta liste des vacances</h2><div class="small muted">Sélectionne et copie ce texte, puis colle-le à Claude.</div></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b"><textarea class="field" style="min-height:260px" readonly>'+esc(txt)+'</textarea></div>'); }
 
 /* ---------- Fichiers, maths, HGG (parties 2 et 3) ---------- */
 function whenTxt(key){ var w=typeof Plan!=="undefined"?Plan.whenOf(key):null; if(!w) return ""; var a=w[0]; return (a.d===iso(today())?"auj.":fmtDay(a.d))+" "+hLabel(a.s)+(w.length>1?" (+"+(w.length-1)+")":""); }
@@ -941,6 +966,8 @@ document.addEventListener("click",function(ev){
   if(a==="news-retry"){ newsErr=null; var c=document.getElementById("news-card"); if(c) c.innerHTML=newsHTML(); loadNews(true); return; }
   if(a==="syncnow"){ Sync.syncNow().then(function(){ toast("Synchronisé."); }); return; }
   if(a==="signout"){ Sync.signOut().then(function(){ closeSheet(); render(); toast("Déconnecté. Tes données restent sur cet appareil."); }); return; }
+  if(a==="unvac"){ var tv=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(tv){ tv.vac=false; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Remise dans la To-Do normale : elle sera planifiée."); } return; }
+  if(a==="vaccopy"){ var txt=vacText(); (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){ toast("Liste copiée : colle-la à Claude pour organiser tes vacances."); },function(){ sheetText(txt); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }
   if(a==="del"){ s.tasks=s.tasks.filter(function(x){return x.id!==b.getAttribute("data-id");}); save(); render(); toast("Tâche supprimée."); return; }
   if(a==="tfilter"){ S.todoFilter=b.getAttribute("data-f"); render(); return; }

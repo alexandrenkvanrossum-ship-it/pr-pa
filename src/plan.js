@@ -42,7 +42,7 @@ var Plan = (function(){
   function taskItems(s, t){
     var out=[];
     s.tasks.forEach(function(x){
-      if(x.done || x.time || x.memo || !x.sub || x.sub==="perso") return;
+      if(x.done || x.vac || x.time || x.memo || !x.sub || x.sub==="perso") return;
       var tot=x.dur||DEF[x.sub]||30, left=Math.round(tot*(1-(x.progress||0)/100)); if(left<5) return;
       var o={key:"task|"+x.id, ref:{k:"task",id:x.id}, lab:x.title, sub:x.sub, min:left, prio:x.prio||0, created:x.created||"", chunk:15, dm:x.action==="dm"};
       if(x.day){ o.day=x.day<t?t:x.day; o.late=x.day<t; o.cls=0; }
