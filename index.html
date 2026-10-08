@@ -808,7 +808,7 @@ var Files = (function(){
         f.progress=Math.round((k+1)/total*100); Store.save(); emit(); if(onStep) onStep(f);
         if(k+1<total && k<40) return step(k+1);
       }); };
-      p=step(0).then(function(){ S().mathsCours[id]={chap:f.chap||chap, items:items, at:new Date().toISOString()}; f.n=items.length; });
+      p=step(0).then(function(){ S().mathsCours[id]={chap:f.chap||chap, items:items, at:new Date().toISOString()}; f.n=items.length; setTimeout(titles,500); });
     } else {
       var corr=Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(x){ return x.kind==="corrige" && x.pair===id; });
       var list=[{path:f.path,name:f.name,mime:f.mime,role:"enonce"}].concat(corr.slice(0,2).map(function(x){ return {path:x.path,name:x.name,mime:x.mime,role:"corrige"}; }));
@@ -843,9 +843,31 @@ var Files = (function(){
     s.tasks=s.tasks.filter(function(t){ return t.file!==id || t.done; });
     Store.save(); emit();
   }
+  /* titres descriptifs des énoncés (« Définition de la fonction de répartition »…) pour les quiz */
+  var titling=null;
+  function titles(){
+    if(titling || !sb()) return titling||Promise.resolve();
+    var s=S(), todo=[];
+    Object.keys(s.mathsCours).forEach(function(fid){ (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(!it.titre) todo.push({fid:fid,i:i,it:it}); }); });
+    if(!todo.length) return Promise.resolve();
+    var batch=function(k){
+      var part=todo.slice(k,k+20); if(!part.length) return Promise.resolve();
+      var prompt="Pour chaque énoncé de cours de maths (prépa ECG2) ci-dessous, donne un titre court qui dit CE QUE l'énoncé définit ou affirme, sans en révéler le contenu, sur le modèle : « Définition de la fonction de répartition », « Théorème de transfert », « Propriété : linéarité de l'espérance », « Caractérisation de la loi par la fonction de répartition ». Utilise le nom du théorème s'il en a un. Réponds UNIQUEMENT par un tableau JSON [{\"n\":numéro,\"titre\":\"...\"}].\n\n"+
+        part.map(function(x,j){ return "["+j+"] "+x.it.type+" — "+x.it.nom+" — "+String(x.it.enonce).slice(0,350); }).join("\n");
+      return Sync.invoke({mode:"chat",context:"",messages:[{role:"user",text:prompt}]}).then(function(r){
+        var t=String(r&&r.text||""), a=t.indexOf("["), b=t.lastIndexOf("]"), arr=[];
+        try{ arr=JSON.parse(t.slice(a,b+1)); }catch(e){}
+        arr.forEach(function(o){ var x=part[+o.n]; if(x && o.titre) x.it.titre=String(o.titre).trim().slice(0,120); });
+        Store.save(); emit();
+        return batch(k+20);
+      });
+    };
+    titling=batch(0).then(function(){ titling=null; },function(){ titling=null; });
+    return titling;
+  }
   var ls=[]; function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
   function of(sub){ var s=S(); return Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(f){ return f.sub===sub; }).sort(function(a,b){ return b.at.localeCompare(a.at); }); }
-  return {upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
+  return {titles:titles, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
 })();
 
 /* Construction des journées : cours, blocs fixes, créneaux de travail proposés, pales. */
@@ -1638,7 +1660,13 @@ function quizPick(n){
   fresh.sort(function(a,b){ return (b.chap===cur)-(a.chap===cur); });
   var out=due.slice(0,n); return out.concat(fresh.slice(0,Math.max(0,Math.min(5,n-out.length)))).map(function(x){ return x.k; });
 }
+function quizTitle(it){
+  if(it.titre) return it.titre;
+  var m=String(it.nom||"").match(/\(([^)]+)\)/); if(m) return it.type+" : "+m[1];
+  return it.nom||it.type;
+}
 function quizCard(){
+  if(Sync.user() && !S.titled){ S.titled=true; setTimeout(function(){ Files.titles().then(function(){ window.__prepaRefresh(); }); },300); }
   var s=st(), pool=quizPool(), t=iso(today());
   var h='<section class="card"><div class="card-h"><h2>Quiz de cours</h2><span class="small muted">15 min en début de séance</span></div>';
   if(!pool.length) return h+'<div class="empty"><b>Pas encore de cours</b>Dépose ton cours (type « Cours ») : les définitions, propriétés et théorèmes sont relevés tels qu\'ils sont écrits.</div>'+quizSections()+'</section>';
@@ -1655,6 +1683,7 @@ function quizSections(){
 }
 var QINT=[1,2,4,8,16,32];
 function quizSheet(){
+  if(Sync.user() && !S.titled){ S.titled=true; Files.titles(); }
   var Q=S.quiz; if(!Q){ var ks=quizPick(8); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
   var s=st(), h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Quiz de cours · '+Math.min(Q.i+1,Q.list.length)+'/'+Q.list.length+'</div><h2>'+(Q.i>=Q.list.length?"Terminé":"Énonce-le de tête")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(Q.i>=Q.list.length){
@@ -1664,7 +1693,7 @@ function quizSheet(){
   }
   var k=Q.list[Q.i], fid=k.split("#")[0], it=(s.mathsCours[fid]||{items:[]}).items[+k.split("#")[1]];
   if(!it){ Q.i++; return quizSheet(); }
-  h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(it.nom)+'</h3>';
+  h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(quizTitle(it))+'</h3>'+(it.titre&&it.nom?'<div class="small faint" style="margin:-2px 0 6px">'+esc(it.nom)+'</div>':'');
   h+=Q.show?'<div style="white-space:pre-wrap;line-height:1.55" class="qmath">'+esc(it.enonce)+'</div><p class="small faint" style="margin:8px 0 0">Énoncé recopié de ton cours (« '+esc((s.files[fid]||{}).name||"")+' »).</p>':'<p class="small muted">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
   h+='</div>';
   h+=Q.show?'<div class="grid g2" style="gap:8px">'+[[3,"Parfait"],[2,"Correct"],[1,"Hésitant"],[0,"À revoir"]].map(function(x){ return '<button class="btn'+(x[0]>=2?" tint":"")+'" data-a="qrate" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>':'<button class="btn primary" data-a="qshow">Voir l\'énoncé</button>';

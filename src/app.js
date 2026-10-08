@@ -504,7 +504,13 @@ function quizPick(n){
   fresh.sort(function(a,b){ return (b.chap===cur)-(a.chap===cur); });
   var out=due.slice(0,n); return out.concat(fresh.slice(0,Math.max(0,Math.min(5,n-out.length)))).map(function(x){ return x.k; });
 }
+function quizTitle(it){
+  if(it.titre) return it.titre;
+  var m=String(it.nom||"").match(/\(([^)]+)\)/); if(m) return it.type+" : "+m[1];
+  return it.nom||it.type;
+}
 function quizCard(){
+  if(Sync.user() && !S.titled){ S.titled=true; setTimeout(function(){ Files.titles().then(function(){ window.__prepaRefresh(); }); },300); }
   var s=st(), pool=quizPool(), t=iso(today());
   var h='<section class="card"><div class="card-h"><h2>Quiz de cours</h2><span class="small muted">15 min en début de séance</span></div>';
   if(!pool.length) return h+'<div class="empty"><b>Pas encore de cours</b>Dépose ton cours (type « Cours ») : les définitions, propriétés et théorèmes sont relevés tels qu\'ils sont écrits.</div>'+quizSections()+'</section>';
@@ -521,6 +527,7 @@ function quizSections(){
 }
 var QINT=[1,2,4,8,16,32];
 function quizSheet(){
+  if(Sync.user() && !S.titled){ S.titled=true; Files.titles(); }
   var Q=S.quiz; if(!Q){ var ks=quizPick(8); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
   var s=st(), h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Quiz de cours · '+Math.min(Q.i+1,Q.list.length)+'/'+Q.list.length+'</div><h2>'+(Q.i>=Q.list.length?"Terminé":"Énonce-le de tête")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(Q.i>=Q.list.length){
@@ -530,7 +537,7 @@ function quizSheet(){
   }
   var k=Q.list[Q.i], fid=k.split("#")[0], it=(s.mathsCours[fid]||{items:[]}).items[+k.split("#")[1]];
   if(!it){ Q.i++; return quizSheet(); }
-  h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(it.nom)+'</h3>';
+  h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(quizTitle(it))+'</h3>'+(it.titre&&it.nom?'<div class="small faint" style="margin:-2px 0 6px">'+esc(it.nom)+'</div>':'');
   h+=Q.show?'<div style="white-space:pre-wrap;line-height:1.55" class="qmath">'+esc(it.enonce)+'</div><p class="small faint" style="margin:8px 0 0">Énoncé recopié de ton cours (« '+esc((s.files[fid]||{}).name||"")+' »).</p>':'<p class="small muted">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
   h+='</div>';
   h+=Q.show?'<div class="grid g2" style="gap:8px">'+[[3,"Parfait"],[2,"Correct"],[1,"Hésitant"],[0,"À revoir"]].map(function(x){ return '<button class="btn'+(x[0]>=2?" tint":"")+'" data-a="qrate" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>':'<button class="btn primary" data-a="qshow">Voir l\'énoncé</button>';

@@ -184,8 +184,8 @@ const COURS_SCHEMA = { type: "OBJECT", properties: {
   chapitre: { type: "STRING" }, pages_total: { type: "INTEGER" },
   items: { type: "ARRAY", items: { type: "OBJECT", properties: {
     type: { type: "STRING", enum: ["Définition", "Proposition", "Théorème", "Propriété", "Lemme", "Corollaire", "Méthode", "Formule", "Remarque"] },
-    nom: { type: "STRING" }, enonce: { type: "STRING" }, section: { type: "STRING" },
-  }, required: ["type", "nom", "enonce", "section"] } },
+    nom: { type: "STRING" }, titre: { type: "STRING" }, enonce: { type: "STRING" }, section: { type: "STRING" },
+  }, required: ["type", "nom", "titre", "enonce", "section"] } },
 }, required: ["items"] };
 
 async function analyseDoc(b: any, auth: string) {
@@ -211,6 +211,7 @@ async function analyseDoc(b: any, auth: string) {
         "Voici un cours de mathématiques de prépa ECG2" + (b.chap ? ", chapitre « " + b.chap + " »" : "") + ". Traite " + scope + ". " +
         "Relève, dans l'ordre, chaque définition, proposition, propriété, théorème, lemme, corollaire, méthode et formule à connaître. " +
         "Pour chacun : type ; nom (numéro et nom tels qu'écrits, ex. « Théorème 4 (critère de Riemann) », sinon un intitulé court et neutre) ; " +
+        "titre : ce que l'énoncé définit ou affirme, sans en révéler le contenu (ex. « Définition de la fonction de répartition », « Théorème de transfert », « Propriété : linéarité de l'espérance ») ; " +
         "enonce : RECOPIE FIDÈLEMENT l'énoncé tel qu'il figure dans le document, sans le reformuler, le compléter ni le corriger, sans la démonstration, " +
         "les formules en LaTeX entre $…$ ; section : titre de la partie du cours. N'ajoute RIEN qui ne soit pas dans le document. " +
         "Si un énoncé est coupé par la limite de l'extrait, recopie la partie visible. pages_total : nombre total de pages du document." }, ...parts] }],
