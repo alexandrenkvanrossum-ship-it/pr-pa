@@ -66,7 +66,7 @@ function dayEvents(dISO){
         if(toMin(w.e)>ce && toMin(w.e)-ce>=20){ var z={}; for(var k2 in w) z[k2]=w[k2]; z.s=fromMin(ce); z.id=w.id+"-z"; acc.push(z); }
         return acc;
       },[]);
-      add({kind:"exam",s:b.s,e:b.e,t:"Colle – "+c.discipline.replace(/ LV\d$/,"")+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
+      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
     });
   }
   ev.sort(function(a,b){ return toMin(a.s)-toMin(b.s); });

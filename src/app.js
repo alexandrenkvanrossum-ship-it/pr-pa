@@ -124,7 +124,7 @@ function dayObjectives(dISO){
 function dueToday(dISO){
   var s=st(), out=[];
   paleOn(dISO).forEach(function(p){ out.push({when:hLabel(p.s),t:"DST · "+p.t,sub:p.sub}); });
-  if(typeof BJ!=="undefined") BJ.mineOn(dISO).forEach(function(c){ var pr=colleurLine(c.colleur); out.push({when:hLabel(c.debut),t:"Colle de "+c.discipline+(c.colleur?" avec "+c.colleur:"")+(/^\d/.test(c.tirage||"")?" · tirage "+hLabel(c.tirage):"")+(c.salle?" · "+c.salle:"")+(pr?" — "+pr:""),sub:BJ.subOf(c)}); });
+  if(typeof BJ!=="undefined") BJ.mineOn(dISO).forEach(function(c){ var pr=colleurLine(c.colleur); out.push({when:hLabel(c.debut),t:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle de "+c.discipline)+(c.colleur?" avec "+c.colleur:"")+(/^\d/.test(c.tirage||"")?" · tirage "+hLabel(c.tirage):"")+(c.salle?" · "+c.salle:"")+(pr?" — "+pr:""),sub:BJ.subOf(c)}); });
   s.tasks.filter(function(t){ return !t.done && !t.vac && t.time && t.day===dISO; }).forEach(function(t){ out.push({when:hLabel(t.time),t:t.title+" · rappel "+t.remind+" min avant",sub:t.sub}); });
   s.tasks.filter(function(t){ return !t.done && !t.vac && t.due===dISO; }).forEach(function(t){ out.push({when:"Pour auj.",t:t.title,sub:t.sub}); });
   return out;
@@ -630,7 +630,7 @@ function colleurLine(name){
 }
 function bjColleRow(c,past){
   var d=parseISO(c.date), s=subj(BJ.subOf(c)), pr=colleurLine(c.colleur), n=diffDays(c.date,iso(today()));
-  return '<div class="ech'+(past?" off":"")+'"><div class="d '+s.cls+'"><b>'+d.getDate()+'</b><small>'+MON_S[d.getMonth()]+'</small></div><div style="min-width:0"><div class="w">'+esc(c.discipline)+(c.type?' <span class="tag">'+esc(c.type)+'</span>':'')+'</div><div class="small muted">'+DAYS[d.getDay()]+' · '+hLabel(c.debut||"00:00")+(/^\d/.test(c.tirage||"")?' · tirage '+hLabel(c.tirage):c.tirage?' · tirage anticipé':'')+(c.salle?' · '+esc(c.salle):'')+'</div>'+(c.colleur?'<div class="small"><button class="link-btn" data-go="bjcolleur" data-p="'+esc(BJ.colleurKey(c.colleur.split(/\s*\/\s*/)[0]))+'">'+esc(c.colleur)+'</button>'+(pr?' <span class="muted">· '+esc(pr)+'</span>':'')+'</div>':'')+(c.ordre&&c.ordre.length&&!past?'<div class="small faint">Passage '+(c.ordre.findIndex(function(x){return /VAN ROSSUM/i.test(x);})+1||"?")+' sur '+c.ordre.length+'</div>':'')+(past&&c.sujet?'<div class="small"><b>Sujet :</b> '+esc(c.sujet)+'</div>':'')+'</div><span class="cd'+(!past&&n<=1?" soon":"")+'">'+(past?(c.note||"—"):n===0?"aujourd'hui":n===1?"demain":"J-"+n)+'</span></div>';
+  return '<div class="ech'+(past?" off":"")+'"><div class="d '+s.cls+'"><b>'+d.getDate()+'</b><small>'+MON_S[d.getMonth()]+'</small></div><div style="min-width:0"><div class="w">'+esc(BJ.isEntretien(c)?"Entretien de personnalité":c.discipline)+(c.type?' <span class="tag">'+esc(c.type)+'</span>':'')+'</div><div class="small muted">'+DAYS[d.getDay()]+' · '+hLabel(c.debut||"00:00")+(/^\d/.test(c.tirage||"")?' · tirage '+hLabel(c.tirage):c.tirage?' · tirage anticipé':'')+(c.salle?' · '+esc(c.salle):'')+'</div>'+(c.colleur?'<div class="small"><button class="link-btn" data-go="bjcolleur" data-p="'+esc(BJ.colleurKey(c.colleur.split(/\s*\/\s*/)[0]))+'">'+esc(c.colleur)+'</button>'+(pr?' <span class="muted">· '+esc(pr)+'</span>':'')+'</div>':'')+(c.ordre&&c.ordre.length&&!past?'<div class="small faint">Passage '+(c.ordre.findIndex(function(x){return /VAN ROSSUM/i.test(x);})+1||"?")+' sur '+c.ordre.length+'</div>':'')+(past&&c.sujet?'<div class="small"><b>Sujet :</b> '+esc(c.sujet)+'</div>':'')+'</div><span class="cd'+(!past&&n<=1?" soon":"")+'">'+(past?(c.note||"—"):n===0?"aujourd'hui":n===1?"demain":"J-"+n)+'</span></div>';
 }
 function bjColles(){
   if(typeof BJ==="undefined") return "";
@@ -660,7 +660,7 @@ function vBjClasse(){
   if(F.colleur) h+='<div class="row" style="margin-bottom:10px"><span class="tag">Colleur : '+esc(F.colleur)+'</span><button class="link-btn" data-a="bjfclr">Retirer</button></div>';
   h+='<div class="small muted" style="margin-bottom:8px">'+list.length+' colle'+(list.length>1?"s":"")+' · '+list.filter(function(c){return c.sujet;}).length+' avec sujet</div>';
   h+='<div class="stack" style="gap:8px">'+list.slice(0,F.n).map(function(c){ var s=subj(BJ.subOf(c));
-    return '<section class="card" style="padding:12px 14px"><div class="row" style="justify-content:space-between;gap:8px"><span class="tag '+s.cls+'">'+esc(c.discipline)+'</span><span class="small muted">'+fmtLong(c.date)+' · '+hLabel(c.debut||"00:00")+'</span></div>'+(c.sujet?'<div style="font-weight:700;margin-top:6px">'+esc(c.sujet)+'</div>':'<div class="small faint" style="margin-top:6px">Sujet pas encore relevé</div>')+'<div class="small muted" style="margin-top:4px"><button class="link-btn" data-go="bjcolleur" data-p="'+esc(BJ.colleurKey((c.colleur||"").split(/\s*\/\s*/)[0]))+'">'+esc(c.colleur||"")+'</button> · '+esc(c.eleve||"")+(c.note?' · <b>'+esc(c.note)+'</b>':'')+'</div>'+(c.commentaire?'<details style="margin-top:6px"><summary class="small" style="cursor:pointer">Commentaire du colleur</summary><p class="small" style="white-space:pre-wrap;margin:6px 0 0">'+esc(c.commentaire)+'</p></details>':'')+'</section>'; }).join("")+'</div>';
+    return '<section class="card" style="padding:12px 14px"><div class="row" style="justify-content:space-between;gap:8px"><span class="tag '+s.cls+'">'+esc(BJ.isEntretien(c)?"Entretien (Fr.-Philo)":c.discipline)+'</span><span class="small muted">'+fmtLong(c.date)+' · '+hLabel(c.debut||"00:00")+'</span></div>'+(c.sujet?'<div style="font-weight:700;margin-top:6px">'+esc(c.sujet)+'</div>':'<div class="small faint" style="margin-top:6px">Sujet pas encore relevé</div>')+'<div class="small muted" style="margin-top:4px"><button class="link-btn" data-go="bjcolleur" data-p="'+esc(BJ.colleurKey((c.colleur||"").split(/\s*\/\s*/)[0]))+'">'+esc(c.colleur||"")+'</button> · '+esc(c.eleve||"")+(c.note?' · <b>'+esc(c.note)+'</b>':'')+'</div>'+(c.commentaire?'<details style="margin-top:6px"><summary class="small" style="cursor:pointer">Commentaire du colleur</summary><p class="small" style="white-space:pre-wrap;margin:6px 0 0">'+esc(c.commentaire)+'</p></details>':'')+'</section>'; }).join("")+'</div>';
   if(list.length>F.n) h+='<div style="text-align:center;margin-top:12px"><button class="btn sm" data-a="bjmore">Afficher plus</button></div>';
   return h;
 }
@@ -711,7 +711,7 @@ function bjSummary(nom){
 
 /* ---------- Notes ---------- */
 var BJ_EP={"Mathématiques":"o-maths","Histoire-Géographie":"o-hgg","Français-Philosophie":"o-csh","Anglais LV1":"o-ang","Allemand LV1":"o-all","Entretiens de personnalité":"o-entretien"};
-function bjNotes(id){ if(typeof BJ==="undefined") return []; return BJ.mine().filter(function(c){ return c.annee==="2026-2027" && c.note_num!=null && BJ_EP[c.discipline]===id; }).map(function(c){ return {id:"bj-"+c.id,ep:id,v:c.note_num,date:c.date,label:(c.type?c.type+" · ":"Colle · ")+(c.colleur||""),com:"",bj:true}; }); }
+function bjNotes(id){ if(typeof BJ==="undefined") return []; return BJ.mine().filter(function(c){ return c.annee==="2026-2027" && c.note_num!=null && (BJ.isEntretien(c)?"o-entretien":BJ_EP[c.discipline])===id; }).map(function(c){ return {id:"bj-"+c.id,ep:id,v:c.note_num,date:c.date,label:(c.type?c.type+" · ":BJ.isEntretien(c)?"Entretien · ":"Colle · ")+(c.colleur||""),com:"",bj:true}; }); }
 function notesOf(id){ return st().notes.filter(function(n){ return n.ep===id; }).concat(bjNotes(id)).sort(function(a,b){ return a.date.localeCompare(b.date); }); }
 function avg(list){ if(!list.length) return null; return list.reduce(function(a,n){ return a+n.v; },0)/list.length; }
 function f1(x){ return x==null?"–":(Math.round(x*10)/10).toFixed(1).replace(".",","); }
@@ -741,19 +741,39 @@ function vNotes(){
 }
 function noteDetail(id){
   var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }), s=subj(e.sub), ns=notesOf(id), a=avg(ns), last=ns.length?ns[ns.length-1].v:null, goal=st().goals[id];
-  function pos(v){ return (v/20*100)+"%"; }
-  var marks=[];
-  if(a!=null) marks.push('<span class="mk avg" style="left:'+pos(a)+'"><span>moy. '+f1(a)+'</span><i></i></span>');
-  if(last!=null) marks.push('<span class="mk last up" style="left:'+pos(last)+'"><span>dernière '+f1(last)+'</span><i></i></span>');
-  marks.push('<span class="mk bar up" style="left:'+pos(BARRE_HEC)+'"><span>barre HEC</span><i></i></span>');
-  if(goal!=null) marks.push('<span class="mk goal" style="left:'+pos(goal)+'"><span>objectif '+f1(goal)+'</span><i></i></span>');
+  var vals=ns.map(function(n){ return n.v; }).concat([BARRE_HEC]).concat(goal!=null?[goal]:[]);
+  var lo=Math.max(0,Math.min(8,Math.floor(Math.min.apply(null,vals)-1))), hi=20;
+  function pos(v){ return ((Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*100).toFixed(2)+"%"; }
+  var gap=(goal!=null&&a!=null)?goal-a:null;
+  function stat(lbl,val,col,sub){ return '<div class="nstat"><div class="nl"><i style="background:'+col+'"></i>'+lbl+'</div><div class="nv tab">'+val+'</div>'+(sub?'<div class="ns">'+sub+'</div>':'')+'</div>'; }
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+(id.charAt(0)==="e"?"Écrit":"Oral")+' · coef. '+(e.coefTxt||e.coef)+'</div><h2>'+esc(e.name)+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b '+s.cls+'">';
-  h+='<section class="card flat"><div class="eyebrow">Objectifs</div><div class="ruler"><div class="track"></div>'+[0,5,10,15,20].map(function(v){ return '<span class="tick" style="left:'+pos(v)+'">'+v+'</span>'; }).join("")+marks.join("")+'</div>';
-  h+='<label class="lbl" for="goal-range" style="margin-top:14px">Ton objectif : <b id="goal-val">'+(goal!=null?f1(goal):"à placer")+'</b></label><input id="goal-range" type="range" min="8" max="20" step="0.5" value="'+(goal!=null?goal:16)+'" data-goal="'+id+'" style="width:100%"></section>';
+  h+='<section class="card flat"><div class="nstats">'+
+    stat("Moyenne",f1(a),"var(--si)",ns.length?plural(ns.length,"note"):"aucune note")+
+    stat("Dernière",f1(last),"var(--ink-2)",ns.length?fmtDay(ns[ns.length-1].date):"")+
+    stat("Objectif",goal!=null?f1(goal):"–","var(--green)",gap==null?"à placer":gap<=0?"atteint":"encore "+f1(gap)+" pt")+
+    stat("Barre HEC",String(BARRE_HEC).replace(".",","),"var(--ink)",a==null?"":a>=BARRE_HEC?"au-dessus":"écart "+f1(BARRE_HEC-a)+" pt")+'</div>';
+  var ticks=[]; for(var tv=Math.ceil(lo/2)*2; tv<=hi; tv+=2) ticks.push(tv);
+  h+='<div class="nscale"><div class="trk">'+(a!=null?'<div class="fill" style="width:'+pos(a)+'"></div>':'')+'</div>'+
+    ns.map(function(n){ return '<span class="dot" style="left:'+pos(n.v)+'" title="'+f1(n.v)+' · '+esc(fmtDay(n.date))+'"></span>'; }).join("")+
+    '<span class="ln bar" style="left:'+pos(BARRE_HEC)+'" title="Barre HEC"></span>'+(goal!=null?'<span class="ln goal" style="left:'+pos(goal)+'" title="Objectif"></span>':'')+(a!=null?'<span class="ln avg" style="left:'+pos(a)+'" title="Moyenne"></span>':'')+
+    ticks.map(function(v){ return '<span class="tk" style="left:'+pos(v)+'">'+v+'</span>'; }).join("")+'</div>';
+  h+='<div class="nleg"><span><i class="d"></i>chaque note</span><span><i style="background:var(--si)"></i>moyenne</span><span><i style="background:var(--green)"></i>objectif</span><span><i style="background:var(--ink)"></i>barre HEC</span></div>';
+  if(ns.length>=2) h+=noteCurve(ns,goal);
+  h+='<label class="lbl" for="goal-range" style="margin-top:18px">Ton objectif : <b id="goal-val">'+(goal!=null?f1(goal):"à placer")+'</b></label><input id="goal-range" type="range" min="8" max="20" step="0.5" value="'+(goal!=null?goal:16)+'" data-goal="'+id+'" style="width:100%"></section>';
   h+='<section class="card flat"><div class="card-h"><h2>Notes</h2><button class="btn sm tint" data-a="addnote" data-ep="'+id+'">'+I.plus+' Ajouter</button></div>';
   h+=ns.length?'<div class="notes-list">'+ns.slice().reverse().map(function(n){ return '<div class="it"><div><div style="font-weight:600">'+esc(n.label||e.name)+(n.type?' · '+esc(n.type):'')+'</div><div class="small muted">'+fmtDay(n.date)+(n.com?' · '+esc(n.com):'')+'</div></div><div class="row"><span class="v">'+f1(n.v)+'</span><button class="del icon-btn" style="width:30px;height:30px;opacity:1" data-a="delnote" data-id="'+n.id+'" data-ep="'+id+'" aria-label="Supprimer la note">'+I.trash+'</button></div></div>'; }).join("")+'</div>':'<div class="empty">Aucune note pour l\'instant.</div>';
   h+='</section></div>';
   openSheet(h);
+}
+function noteCurve(ns,goal){
+  var W=320,H=110,pl=26,pr=8,pt=10,pb=18, vs=ns.map(function(n){ return n.v; }).concat(goal!=null?[goal]:[]);
+  var lo=Math.max(0,Math.floor(Math.min.apply(null,vs))-1), hi=Math.min(20,Math.ceil(Math.max.apply(null,vs))+1);
+  function X(i){ return pl+(ns.length===1?0:i/(ns.length-1)*(W-pl-pr)); } function Y(v){ return pt+(hi-v)/(hi-lo)*(H-pt-pb); }
+  var g='', d=ns.map(function(n,i){ return (i?"L":"M")+X(i).toFixed(1)+" "+Y(n.v).toFixed(1); }).join(" ");
+  for(var v=Math.ceil(lo); v<=hi; v+=(hi-lo>8?2:1)) g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" font-size="9.5" fill="var(--ink-3)">'+v+'</text>';
+  if(goal!=null) g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(goal)+'" y2="'+Y(goal)+'" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+  if(BARRE_HEC>=lo&&BARRE_HEC<=hi) g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(BARRE_HEC)+'" y2="'+Y(BARRE_HEC)+'" stroke="var(--ink)" stroke-width="1" stroke-dasharray="2 3" opacity=".55"/>';
+  return '<div class="eyebrow" style="margin-top:16px">Évolution</div><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;margin-top:6px" role="img" aria-label="Évolution des notes">'+g+'<path d="'+d+'" fill="none" stroke="var(--si)" stroke-width="2.2" stroke-linejoin="round"/>'+ns.map(function(n,i){ return '<circle cx="'+X(i)+'" cy="'+Y(n.v)+'" r="3.4" fill="var(--surface)" stroke="var(--si)" stroke-width="2"><title>'+f1(n.v)+' · '+fmtDay(n.date)+'</title></circle>'; }).join("")+'</svg>';
 }
 function addNoteSheet(ep){
   var all=EPREUVES.ecrit.map(function(e){return ["Écrit",e];}).concat(EPREUVES.oral.map(function(e){return ["Oral",e];}));
@@ -790,7 +810,7 @@ function paleEp(p){ return PALE_EP[p.t.replace(/^Concours blanc · /,"")] || (/d
 function echeances(from,to){
   var out=[];
   PALES.forEach(function(p){ var ep=paleEp(p); if(ep && p.date>=from && p.date<=to) out.push({key:"p|"+p.date+"|"+p.t, ep:ep, date:p.date, time:p.s, label:"DST de "+p.t.replace(/^Concours blanc · /,""), sub:p.sub}); });
-  if(typeof BJ!=="undefined") BJ.mine().forEach(function(c){ if((c.scope==="moi"||c.scope==="kore") && c.date>=from && c.date<=to && c.debut){ var ep=COLLE_EP[BJ.subOf(c)]; if(ep) out.push({key:"c|"+c.id, ep:ep, date:c.date, time:c.debut, label:"Colle de "+c.discipline+(c.colleur?" ("+c.colleur+")":""), sub:BJ.subOf(c)}); } });
+  if(typeof BJ!=="undefined") BJ.mine().forEach(function(c){ if((c.scope==="moi"||c.scope==="kore") && c.date>=from && c.date<=to && c.debut){ var ep=BJ.epOf(c); if(ep) out.push({key:"c|"+c.id, ep:ep, date:c.date, time:c.debut, label:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle de "+c.discipline)+(c.colleur?" ("+c.colleur+")":""), sub:BJ.subOf(c)}); } });
   return out.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
 }
 function epName(id){ var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }); return e?(id.charAt(0)==="e"?"Écrit de ":"Oral de ")+e.name:id; }
@@ -826,7 +846,7 @@ function methodeSheet(id,evKey,evLabel){
   if(m.pieges&&m.pieges.length) h+='<section class="card flat"><div class="eyebrow">Pièges à éviter</div>'+li(m.pieges)+'</section>';
   if(m.conseils_profs&&m.conseils_profs.length) h+='<section class="card flat"><div class="eyebrow">Conseils des profs</div>'+m.conseils_profs.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.qui)+'</b></div><div class="small meth" style="white-space:pre-wrap">'+mtx(c.texte)+'</div></div>'; }).join("")+'</section>';
   if(id.charAt(0)==="o" && typeof BJ!=="undefined"){
-    var sub=e.sub, coms=BJ.mine().filter(function(c){ return BJ.subOf(c)===sub && c.commentaire; }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,4);
+    var sub=e.sub, coms=BJ.mine().filter(function(c){ return BJ.epOf(c)===id && c.commentaire; }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,4);
     if(coms.length) h+='<section class="card flat"><div class="eyebrow">Commentaires de tes colleurs (BJcolle, mot pour mot)</div>'+coms.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.colleur||"")+'</b> <span class="muted">· '+fmtDay(c.date)+(c.note?' · '+esc(c.note):'')+'</span></div><div class="small" style="white-space:pre-wrap">'+esc(c.commentaire)+'</div></div>'; }).join("")+'</section>';
   }
   if(!m.essentiel||!m.essentiel.length) h+='<section class="card flat"><p class="small muted" style="margin:0">'+esc(m.manque||"Pas encore de document de méthode pour cette épreuve sur ton Drive.")+'</p></section>';
@@ -1065,7 +1085,7 @@ function start(){
 }
 function confirmDel(f){ return window.confirm("Supprimer « "+f.name+" » ?"+(f.kind==="cours"?" Ses énoncés sortiront des quiz.":"")); }
 window.__toast=toast;
-window.__prepa={go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
+window.__prepa={noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
 })();
 

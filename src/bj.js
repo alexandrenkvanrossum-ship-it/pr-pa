@@ -37,11 +37,15 @@ var BJ = (function(){
   var SUB={"Mathématiques":"maths","Histoire-Géographie":"hgg","Français-Philosophie":"csh","Anglais LV1":"ang","Anglais LV2":"ang","Allemand LV1":"all","Allemand LV2":"all"};
   var PREP={maths:30,hgg:30,csh:30,ang:20,all:20};
   function subOf(c){ return SUB[c.discipline]||"neutral"; }
+  /* colle de Français-Philosophie sans heure de tirage ni préparation = entretien de personnalité */
+  function isEntretien(c){ return !!c && (c.discipline==="Entretiens de personnalité" || (c.discipline==="Français-Philosophie" && !c.tirage)); }
+  function label(c){ return isEntretien(c)? "Entretien de personnalité" : String(c.discipline||"").replace(/ LV\d$/,""); }
+  function epOf(c){ if(isEntretien(c)) return "o-entretien"; return {maths:"o-maths",hgg:"o-hgg",csh:"o-csh",ang:"o-ang",all:"o-all"}[subOf(c)]||null; }
   function mine(){ return data.colles.filter(function(c){ return c.moi; }); }
   function mineOn(dISO){ return data.colles.filter(function(c){ return c.moi && c.date===dISO && (c.scope==="moi"||c.scope==="kore") && c.debut; }); }
   function upcoming(){ var t=iso(today()); return mine().filter(function(c){ return (c.scope==="moi"||c.scope==="kore") && c.date>=t; }).sort(function(a,b){ return (a.date+a.debut).localeCompare(b.date+b.debut); }); }
   function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
-    var s=subOf(c), prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : (PREP[s]||20);
+    var s=subOf(c), prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20);
     var start=toMin(c.debut)-prep-10, end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0);
     return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end))};
   }
@@ -60,5 +64,5 @@ var BJ = (function(){
   function ready(){ return !!(data.state && data.state.last_ok); }
 
   return {data:function(){ return data; }, load:load, checkNow:checkNow, markRead:markRead, on:function(f){ listeners.push(f); },
-    mine:mine, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
+    mine:mine, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
 })();
