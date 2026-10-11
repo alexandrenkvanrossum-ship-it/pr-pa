@@ -713,6 +713,10 @@ function bjSummary(nom){
 var BJ_EP={"Mathématiques":"o-maths","Histoire-Géographie":"o-hgg","Français-Philosophie":"o-csh","Anglais LV1":"o-ang","Allemand LV1":"o-all","Entretiens de personnalité":"o-entretien"};
 function bjNotes(id){ if(typeof BJ==="undefined") return []; return BJ.mine().filter(function(c){ return c.annee==="2026-2027" && c.note_num!=null && (BJ.isEntretien(c)?"o-entretien":BJ_EP[c.discipline])===id; }).map(function(c){ return {id:"bj-"+c.id,ep:id,v:c.note_num,date:c.date,label:(c.type?c.type+" · ":BJ.isEntretien(c)?"Entretien · ":"Colle · ")+(c.colleur||""),com:"",bj:true}; }); }
 function notesOf(id){ return st().notes.filter(function(n){ return n.ep===id; }).concat(bjNotes(id)).sort(function(a,b){ return a.date.localeCompare(b.date); }); }
+function epOfId(id){ return EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }); }
+/* langues : la courbe principale suit la note globale des DST (les exercices notés seuls n'y entrent pas) */
+function mainNotes(id){ var e=epOfId(id), ns=notesOf(id); if(!e||!e.types) return ns; var d=ns.filter(function(n){ return n.parts || !n.type; }); return d.length?d:ns; }
+function exNotes(id,ty){ return notesOf(id).filter(function(n){ return (n.parts&&n.parts[ty]!=null) || (!n.parts&&n.type===ty); }).map(function(n){ return {v:n.parts&&n.parts[ty]!=null?n.parts[ty]:n.v, date:n.date}; }); }
 function avg(list){ if(!list.length) return null; return list.reduce(function(a,n){ return a+n.v; },0)/list.length; }
 function f1(x){ return x==null?"–":(Math.round(x*10)/10).toFixed(1).replace(".",","); }
 function spark(list,col){
@@ -726,13 +730,13 @@ function spark(list,col){
 function vNotes(){
   var m=S.notesMode, eps=EPREUVES[m];
   var h=topbar("Notes")+'<div class="ag-head"><h1 class="large-title" style="margin:0">Notes</h1><div class="seg"><button class="'+(m==="ecrit"?"on":"")+'" data-a="notesmode" data-m="ecrit">Écrit</button><button class="'+(m==="oral"?"on":"")+'" data-a="notesmode" data-m="oral">Oral</button></div></div>';
-  var num=0, den=0; eps.forEach(function(e){ var a=avg(notesOf(e.id)); if(a!=null && e.coef){ num+=a*e.coef; den+=e.coef; } });
+  var num=0, den=0; eps.forEach(function(e){ var a=avg(mainNotes(e.id)); if(a!=null && e.coef){ num+=a*e.coef; den+=e.coef; } });
   var g=den?num/den:null;
   h+='<section class="card overall"><div><div class="eyebrow">Moyenne pondérée · coefficients HEC ('+(m==="ecrit"?"écrits /30":"oraux /36")+')</div><div class="big tab">'+f1(g)+'<small style="font-size:18px;color:var(--ink-3)"> /20</small></div></div><div style="text-align:right"><div class="eyebrow">Barre d\'admissibilité HEC 2026</div><div style="font-weight:800;font-size:22px;color:var(--red)" class="tab">15,29</div>'+(g!=null?'<div class="small '+(g>=BARRE_HEC?"":"muted")+'">'+(g>=BARRE_HEC?"Au-dessus de la barre":"Écart : "+f1(BARRE_HEC-g)+" pt")+'</div>':'')+'</div></section>';
   h+='<div class="row" style="justify-content:space-between;margin:16px 0 10px"><span class="small muted">'+(m==="ecrit"?"Depuis le début de la 1re année":"Depuis le début de la 2e année · colles importées de BJcolle")+'</span><button class="btn primary sm" data-a="addnote">'+I.plus+' Ajouter une note</button></div>';
   h+='<div class="grid g3">';
   eps.forEach(function(e){
-    var ns=notesOf(e.id), a=avg(ns), s=subj(e.sub), last=ns.length?ns[ns.length-1].v:null;
+    var ns=mainNotes(e.id), a=avg(ns), s=subj(e.sub), last=ns.length?ns[ns.length-1].v:null;
     var tr=ns.length>=2?(ns[ns.length-1].v>=avg(ns.slice(0,-1))?"↗":"↘"):"";
     h+='<button class="tile '+s.cls+'" data-a="notedetail" data-id="'+e.id+'"><div class="top"><span class="name">'+esc(e.name)+'</span><span class="coef">coef. '+(e.coefTxt||e.coef)+'</span></div><div class="avg tab">'+f1(a)+'<small> '+tr+'</small></div>'+spark(ns,"var(--si)")+'<div class="small muted">'+(ns.length?plural(ns.length,"note")+" · dernière "+f1(last):"Aucune note")+'</div></button>';
   });
@@ -740,7 +744,7 @@ function vNotes(){
   return h;
 }
 function noteDetail(id){
-  var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }), s=subj(e.sub), ns=notesOf(id), a=avg(ns), last=ns.length?ns[ns.length-1].v:null, goal=st().goals[id];
+  var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }), s=subj(e.sub), ns=mainNotes(id), all=notesOf(id), a=avg(ns), last=ns.length?ns[ns.length-1].v:null, goal=st().goals[id];
   var vals=ns.map(function(n){ return n.v; }).concat([BARRE_HEC]).concat(goal!=null?[goal]:[]);
   var lo=Math.max(0,Math.min(8,Math.floor(Math.min.apply(null,vals)-1))), hi=20;
   function pos(v){ return ((Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*100).toFixed(2)+"%"; }
@@ -758,14 +762,22 @@ function noteDetail(id){
     '<span class="ln bar" style="left:'+pos(BARRE_HEC)+'" title="Barre HEC"></span>'+(goal!=null?'<span class="ln goal" style="left:'+pos(goal)+'" title="Objectif"></span>':'')+(a!=null?'<span class="ln avg" style="left:'+pos(a)+'" title="Moyenne"></span>':'')+
     ticks.map(function(v){ return '<span class="tk" style="left:'+pos(v)+'">'+v+'</span>'; }).join("")+'</div>';
   h+='<div class="nleg"><span><i class="d"></i>chaque note</span><span><i style="background:var(--si)"></i>moyenne</span><span><i style="background:var(--green)"></i>objectif</span><span><i style="background:var(--ink)"></i>barre HEC</span></div>';
-  if(ns.length>=2) h+=noteCurve(ns,goal);
+  if(ns.length>=2) h+=noteCurve(ns,goal,e.types?"Évolution · note globale du DST":null);
+  if(e.types){
+    S.noteEx=S.noteEx||{}; var cur=S.noteEx[id]||e.types[0], xs=exNotes(id,cur);
+    h+='<details class="exsec"'+(S.noteEx[id]?" open":"")+'><summary>Par exercice <span class="small muted">'+e.types.map(function(t){ var a2=avg(exNotes(id,t)); return esc(t)+" "+f1(a2); }).join(" · ")+'</span></summary>';
+    h+='<div class="seg exseg" role="tablist">'+e.types.map(function(t){ return '<button class="'+(t===cur?"on":"")+'" data-a="noteex" data-ep="'+id+'" data-t="'+esc(t)+'" role="tab" aria-selected="'+(t===cur)+'">'+esc(t)+'</button>'; }).join("")+'</div>';
+    h+='<div class="small muted" style="margin:8px 0 0">'+(xs.length?esc(cur)+" : moyenne "+f1(avg(xs))+" sur "+plural(xs.length,"note")+" · dernière "+f1(xs[xs.length-1].v):"Pas encore de note en "+esc(cur)+".")+'</div>';
+    h+=xs.length>=2?noteCurve(xs,null,""):xs.length?'':'';
+    h+='</details>';
+  }
   h+='<label class="lbl" for="goal-range" style="margin-top:18px">Ton objectif : <b id="goal-val">'+(goal!=null?f1(goal):"à placer")+'</b></label><input id="goal-range" type="range" min="8" max="20" step="0.5" value="'+(goal!=null?goal:16)+'" data-goal="'+id+'" style="width:100%"></section>';
   h+='<section class="card flat"><div class="card-h"><h2>Notes</h2><button class="btn sm tint" data-a="addnote" data-ep="'+id+'">'+I.plus+' Ajouter</button></div>';
-  h+=ns.length?'<div class="notes-list">'+ns.slice().reverse().map(function(n){ return '<div class="it"><div><div style="font-weight:600">'+esc(n.label||e.name)+(n.type?' · '+esc(n.type):'')+'</div><div class="small muted">'+fmtDay(n.date)+(n.com?' · '+esc(n.com):'')+'</div></div><div class="row"><span class="v">'+f1(n.v)+'</span><button class="del icon-btn" style="width:30px;height:30px;opacity:1" data-a="delnote" data-id="'+n.id+'" data-ep="'+id+'" aria-label="Supprimer la note">'+I.trash+'</button></div></div>'; }).join("")+'</div>':'<div class="empty">Aucune note pour l\'instant.</div>';
+  h+=all.length?'<div class="notes-list">'+all.slice().reverse().map(function(n){ return '<div class="it"><div><div style="font-weight:600">'+esc(n.label||(n.parts?"DST":e.name))+(n.type?' · '+esc(n.type):'')+'</div><div class="small muted">'+fmtDay(n.date)+(n.parts?' · '+Object.keys(n.parts).map(function(k){ return esc(k)+" "+f1(n.parts[k]); }).join(" · "):'')+(n.com?' · '+esc(n.com):'')+'</div></div><div class="row"><span class="v">'+f1(n.v)+'</span><button class="del icon-btn" style="width:30px;height:30px;opacity:1" data-a="delnote" data-id="'+n.id+'" data-ep="'+id+'" aria-label="Supprimer la note">'+I.trash+'</button></div></div>'; }).join("")+'</div>':'<div class="empty">Aucune note pour l\'instant.</div>';
   h+='</section></div>';
   openSheet(h);
 }
-function noteCurve(ns,goal){
+function noteCurve(ns,goal,title){
   var W=320,H=110,pl=26,pr=8,pt=10,pb=18, vs=ns.map(function(n){ return n.v; }).concat(goal!=null?[goal]:[]);
   var lo=Math.max(0,Math.floor(Math.min.apply(null,vs))-1), hi=Math.min(20,Math.ceil(Math.max.apply(null,vs))+1);
   function X(i){ return pl+(ns.length===1?0:i/(ns.length-1)*(W-pl-pr)); } function Y(v){ return pt+(hi-v)/(hi-lo)*(H-pt-pb); }
@@ -773,7 +785,7 @@ function noteCurve(ns,goal){
   for(var v=Math.ceil(lo); v<=hi; v+=(hi-lo>8?2:1)) g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(Y(v)+3.5)+'" text-anchor="end" font-size="9.5" fill="var(--ink-3)">'+v+'</text>';
   if(goal!=null) g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(goal)+'" y2="'+Y(goal)+'" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="4 3"/>';
   if(BARRE_HEC>=lo&&BARRE_HEC<=hi) g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(BARRE_HEC)+'" y2="'+Y(BARRE_HEC)+'" stroke="var(--ink)" stroke-width="1" stroke-dasharray="2 3" opacity=".55"/>';
-  return '<div class="eyebrow" style="margin-top:16px">Évolution</div><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;margin-top:6px" role="img" aria-label="Évolution des notes">'+g+'<path d="'+d+'" fill="none" stroke="var(--si)" stroke-width="2.2" stroke-linejoin="round"/>'+ns.map(function(n,i){ return '<circle cx="'+X(i)+'" cy="'+Y(n.v)+'" r="3.4" fill="var(--surface)" stroke="var(--si)" stroke-width="2"><title>'+f1(n.v)+' · '+fmtDay(n.date)+'</title></circle>'; }).join("")+'</svg>';
+  return (title===""?'':'<div class="eyebrow" style="margin-top:16px">'+esc(title||"Évolution")+'</div>')+'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;margin-top:6px" role="img" aria-label="Évolution des notes">'+g+'<path d="'+d+'" fill="none" stroke="var(--si)" stroke-width="2.2" stroke-linejoin="round"/>'+ns.map(function(n,i){ return '<circle cx="'+X(i)+'" cy="'+Y(n.v)+'" r="3.4" fill="var(--surface)" stroke="var(--si)" stroke-width="2"><title>'+f1(n.v)+' · '+fmtDay(n.date)+'</title></circle>'; }).join("")+'</svg>';
 }
 function addNoteSheet(ep){
   var all=EPREUVES.ecrit.map(function(e){return ["Écrit",e];}).concat(EPREUVES.oral.map(function(e){return ["Oral",e];}));
@@ -784,14 +796,22 @@ function addNoteSheet(ep){
   h+='<button class="btn primary" type="submit">Enregistrer</button></form>';
   openSheet(h);
   var sel=document.getElementById("n-ep"), wrap=document.getElementById("n-type-wrap");
-  function types(){ var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){return x.id===sel.value;}); wrap.innerHTML=e&&e.types?'<label class="lbl" for="n-type">Type d\'exercice</label><select class="field" id="n-type">'+e.types.map(function(t){return '<option>'+t+'</option>';}).join("")+'</select>':''; }
+  var nv=document.getElementById("n-v");
+  function parts(){ var ty=document.getElementById("n-type"), pw=document.getElementById("n-parts"); if(!pw) return; var on=ty&&ty.value==="__dst"; pw.hidden=!on; nv.required=!on; nv.placeholder=on?"auto (moyenne)":"13,5"; document.querySelector('label[for="n-v"]').textContent=on?"Note globale /20":"Note /20"; }
+  function types(){ var e=epOfId(sel.value); wrap.innerHTML=e&&e.types?'<label class="lbl" for="n-type">Type</label><select class="field" id="n-type"><option value="__dst">DST complet (les 3 exercices)</option>'+e.types.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+' seul</option>';}).join("")+'</select><div id="n-parts" class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">'+e.types.map(function(t,i){ return '<div><label class="lbl" for="n-p'+i+'">'+esc(t)+'</label><input class="field tab" id="n-p'+i+'" inputmode="decimal" placeholder="/20"></div>'; }).join("")+'</div>':''; var ty=document.getElementById("n-type"); if(ty) ty.onchange=parts; parts(); if(!e||!e.types){ nv.required=true; nv.placeholder="13,5"; document.querySelector('label[for="n-v"]').textContent="Note /20"; } }
   sel.onchange=types; types();
   document.getElementById("note-form").addEventListener("submit",function(ev){
     ev.preventDefault();
-    var v=parseFloat(String(document.getElementById("n-v").value).replace(",","."));
-    if(isNaN(v)||v<0||v>20){ toast("Entre une note entre 0 et 20."); return; }
-    var ty=document.getElementById("n-type");
-    st().notes.push({id:uid("n"),ep:sel.value,v:v,date:document.getElementById("n-date").value,label:document.getElementById("n-label").value.trim(),com:document.getElementById("n-com").value.trim(),type:ty?ty.value:null});
+    var num=function(x){ var y=parseFloat(String(x||"").replace(",",".")); return isNaN(y)?null:y; };
+    var v=num(document.getElementById("n-v").value), ty=document.getElementById("n-type"), pr=null, e=epOfId(sel.value);
+    if(ty && ty.value==="__dst"){
+      pr={}; var got=[]; e.types.forEach(function(t,i){ var x=num(document.getElementById("n-p"+i).value); if(x!=null){ if(x<0||x>20){ got=null; return; } pr[t]=x; if(got) got.push(x); } });
+      if(got===null){ toast("Chaque note d'exercice doit être entre 0 et 20."); return; }
+      if(v==null && got.length) v=Math.round(got.reduce(function(a,b){ return a+b; },0)/got.length*10)/10;
+      if(!got.length) pr=null;
+    }
+    if(v==null||v<0||v>20){ toast("Entre une note entre 0 et 20."); return; }
+    st().notes.push({id:uid("n"),ep:sel.value,v:v,date:document.getElementById("n-date").value,label:document.getElementById("n-label").value.trim(),com:document.getElementById("n-com").value.trim(),type:ty&&ty.value!=="__dst"?ty.value:null,parts:pr});
     save(); closeSheet(); S.notesMode=sel.value.charAt(0)==="e"?"ecrit":"oral"; if(S.view==="notes") render(); toast("Note enregistrée.");
   });
 }
@@ -1047,6 +1067,7 @@ document.addEventListener("click",function(ev){
   if(a==="hggask"){ hggState().ask=iso(today()); save(); render(); return; }
   if(a==="hggdone"){ var H2=hggState(), hk=b.getAttribute("data-k"); if(H2.done[hk]) delete H2.done[hk]; else H2.done[hk]=iso(today()); save(); render(); return; }
   if(a==="hggmin"){ var H3=hggState(), mk=b.getAttribute("data-k"); H3.min[mk]=Math.max(30,(H3.min[mk]||120)+(+b.getAttribute("data-v"))); save(); render(); return; }
+  if(a==="noteex"){ S.noteEx=S.noteEx||{}; S.noteEx[b.getAttribute("data-ep")]=b.getAttribute("data-t"); var sh=layer.querySelector(".sheet"), sc=sh?sh.scrollTop:0; noteDetail(b.getAttribute("data-ep")); var sh2=layer.querySelector(".sheet"); if(sh2){ sh2.scrollTop=sc; sh2.style.animation="none"; } return; }
   if(a==="resskip"){ var dz=resDismissed(); dz[b.getAttribute("data-k")]=1; try{ localStorage.setItem("prepa.resdone",JSON.stringify(dz)); }catch(e){} render(); return; }
 });
 document.addEventListener("input",function(ev){
@@ -1085,7 +1106,7 @@ function start(){
 }
 function confirmDel(f){ return window.confirm("Supprimer « "+f.name+" » ?"+(f.kind==="cours"?" Ses énoncés sortiront des quiz.":"")); }
 window.__toast=toast;
-window.__prepa={noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
+window.__prepa={addNote:function(i){ addNoteSheet(i); },noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
 })();
 

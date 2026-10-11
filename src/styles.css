@@ -338,3 +338,8 @@ strong.hl{font-weight:700;color:var(--ink);background:linear-gradient(transparen
 .nleg span{display:inline-flex;align-items:center;gap:6px}
 .nleg i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .nleg i.d{border-radius:50%;background:var(--surface);border:2px solid var(--ink-2);width:8px;height:8px}
+
+.exsec{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.exsec summary{cursor:pointer;font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.exseg{margin-top:10px;display:flex;width:100%}
+.exseg button{flex:1}
