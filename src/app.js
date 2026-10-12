@@ -183,7 +183,7 @@ function vHome(){
   h+=evs.filter(function(e){ return e.kind!=="fixed" || e.anki || e.actu; }).map(function(e){
     var s=subj(e.sub), cls=(nm>=toMin(e.s)&&nm<toMin(e.e))?" now":(nm>=toMin(e.e)?" past":"");
     var sub=e.kind==="course"?"Cours":e.kind==="exam"?"Épreuve":e.kind==="fixed"?"Routine":"Feuille de route";
-    return '<button class="slot'+cls+' '+(e.kind==="exam"?"s-hgg":s.cls)+'" data-a="slot" data-d="'+t+'" data-id="'+esc(e.id)+'"><span class="h">'+hLabel(e.s)+'</span><span class="b"><b>'+esc(e.t)+'</b><span>'+sub+' · '+durTxt(toMin(e.e)-toMin(e.s))+'</span></span></button>';
+    return '<button class="slot'+cls+' '+(e.kind==="exam"?"s-exam":s.cls)+'" data-a="slot" data-d="'+t+'" data-id="'+esc(e.id)+'"><span class="h">'+hLabel(e.s)+'</span><span class="b"><b>'+esc(e.t)+'</b><span>'+sub+' · '+durTxt(toMin(e.e)-toMin(e.s))+'</span></span></button>';
   }).join("");
   h+='</div></section>';
   h+='<section class="stack"><div class="card"><div class="card-h"><h2>Tâches du jour</h2><button class="link-btn" data-go="todo">Tout voir</button></div>'+quickBox("home")+'<div class="tasks" style="margin-top:6px">'+taskRows(todayTasks())+'</div></div>';
@@ -341,7 +341,7 @@ function vAgenda(){
     h+='</div>';
   });
   h+='</div></div></div>';
-  h+='<div class="legend">'+SUBJECT_ORDER.map(function(id){ return tag(id); }).join("")+'<span class="tag s-neutral">Routine</span><span class="tag" style="--s:var(--red-pale);--si:var(--red)">DST</span></div>';
+  h+='<div class="legend">'+SUBJECT_ORDER.map(function(id){ return tag(id); }).join("")+'<span class="tag s-neutral">Routine</span><span class="tag s-exam" style="box-shadow:inset 0 0 0 1px #EE9AC4">DST · colles</span></div>';
   h+='<p class="small muted" style="margin-top:10px">Les cours sont hachurés. Les créneaux de travail suivent ta journée type ; touche un créneau pour ouvrir sa feuille de route. Touche « Modifier » dans un créneau pour changer son horaire, son titre ou sa matière (ce jour-là ou chaque semaine), ou le supprimer ; « + Créneau » en ajoute un.</p>';
   return h;
 }

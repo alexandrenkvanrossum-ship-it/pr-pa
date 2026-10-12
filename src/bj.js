@@ -6,7 +6,7 @@ var BJ = (function(){
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){ try{ localStorage.setItem(KEY, JSON.stringify({colles:data.colles.map(function(c){ var x={}; for(var k in c) if(k!=="commentaire"&&k!=="champs") x[k]=c[k]; return x; }), events:data.events, state:data.state, at:data.at})); }catch(e2){} } }
   function emit(){ listeners.forEach(function(f){ try{ f(); }catch(e){} }); }
   function sb(){ return (typeof Sync!=="undefined" && Sync.client && Sync.user())? Sync.client() : null; }
-  var COLS="id,scope,annee,discipline,date,debut,fin,duree,tirage,type,colleur,salle,eleve,moi,note,note_num,ordre,sujet,commentaire,detail_at";
+  var COLS="id,scope,annee,discipline,date,debut,fin,duree,tirage,type,colleur,salle,eleve,moi,note,note_num,ordre,sujet,commentaire,detail_at,updated_at";
   function load(){
     var c=sb(); if(!c||loading) return Promise.resolve();
     loading=true;
@@ -41,8 +41,10 @@ var BJ = (function(){
   function isEntretien(c){ return !!c && (c.discipline==="Entretiens de personnalité" || (c.discipline==="Français-Philosophie" && !c.tirage)); }
   function label(c){ return isEntretien(c)? "Entretien de personnalité" : String(c.discipline||"").replace(/ LV\d$/,""); }
   function epOf(c){ if(isEntretien(c)) return "o-entretien"; return {maths:"o-maths",hgg:"o-hgg",csh:"o-csh",ang:"o-ang",all:"o-all"}[subOf(c)]||null; }
-  function mine(){ return data.colles.filter(function(c){ return c.moi; }); }
-  function mineOn(dISO){ return data.colles.filter(function(c){ return c.moi && c.date===dISO && (c.scope==="moi"||c.scope==="kore") && c.debut; }); }
+  /* une de mes colles à venir que le robot n'a plus vue lors de son dernier passage réussi a été retirée de BJcolle */
+  function gone(c){ var ok=data.state&&data.state.last_ok; if(!ok||!c.updated_at||!(c.scope==="moi"||c.scope==="kore")) return false; if((c.date||"")<iso(today())) return false; return new Date(c.updated_at).getTime() < new Date(ok).getTime()-15*60000; }
+  function mine(){ return data.colles.filter(function(c){ return c.moi && !gone(c); }); }
+  function mineOn(dISO){ return data.colles.filter(function(c){ return c.moi && !gone(c) && c.date===dISO && (c.scope==="moi"||c.scope==="kore") && c.debut; }); }
   function upcoming(){ var t=iso(today()); return mine().filter(function(c){ return (c.scope==="moi"||c.scope==="kore") && c.date>=t; }).sort(function(a,b){ return (a.date+a.debut).localeCompare(b.date+b.debut); }); }
   function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
     var s=subOf(c), prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20);
@@ -64,5 +66,5 @@ var BJ = (function(){
   function ready(){ return !!(data.state && data.state.last_ok); }
 
   return {data:function(){ return data; }, load:load, checkNow:checkNow, markRead:markRead, on:function(f){ listeners.push(f); },
-    mine:mine, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
+    mine:mine, gone:gone, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
 })();

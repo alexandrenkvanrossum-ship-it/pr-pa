@@ -162,7 +162,10 @@ async function run(mode: string) {
   }
   // Disparition d'une de mes colles à venir
   const ids = new Set(rows.map((r) => r.id));
-  for (const a of avant) if (a.scope === "moi" && a.date >= t0 && !ids.has(a.id)) events.push({ kind: "annulee", titre: a.discipline + " retirée du planning", detail: quand(a.date, a.debut), colle_id: a.id });
+  const retirees = avant.filter((a) => (a.scope === "moi" || a.scope === "kore") && a.date && a.date >= t0 && !ids.has(a.id));
+  for (const a of retirees) events.push({ kind: "annulee", titre: a.discipline + " retirée du planning", detail: quand(a.date, a.debut) + (a.colleur ? " · " + a.colleur : ""), colle_id: a.id });
+  // on les supprime vraiment (seulement si la liste « Mes colles » a bien été lue, pour ne rien effacer sur une erreur de lecture)
+  if (retirees.length && mes.length) await db("bj_colles?owner=eq." + OWNER + "&id=in.(" + retirees.map((a) => encodeURIComponent(a.id)).join(",") + ")", { method: "DELETE", headers: { Prefer: "return=minimal" } });
   // Publication du planning de la semaine suivante
   const futurs = rows.filter((r) => r.scope === "moi" && r.date && r.date > t0 && !avantMap.has(r.id));
   if (st.dejaVu && futurs.length >= 2) events.push({ kind: "planning", titre: "Planning de colles publié", detail: futurs.map((r) => r.discipline + " " + quand(r.date!, r.debut!)).join(" · ") });

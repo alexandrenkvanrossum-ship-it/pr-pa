@@ -235,7 +235,14 @@ label.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);marg
 .ev span{color:var(--ink-2);font-size:11px;white-space:nowrap}
 .ev.course{border-left-width:0;background:repeating-linear-gradient(135deg,var(--s) 0 8px,color-mix(in srgb,var(--s) 70%,white) 8px 16px)}
 .ev.fixed{background:var(--fill);color:var(--ink-2);border-left-color:var(--ink-3)}
-.ev.exam{background:var(--red-pale);color:var(--red);border-left-color:var(--red)}
+.ev.exam{--s:#FDE6F1;--si:#B4236F;background:linear-gradient(180deg,#FDE6F1,#FBD9EA);color:#9E1C60;border:1.5px solid #EE9AC4;border-left:4px solid #C2187A;box-shadow:0 3px 10px rgba(194,24,122,.16);z-index:1}
+.ev.exam b{font-weight:800}
+.ev.exam span{color:#A0456F}
+.ev.exam::after{content:"Échéance";position:absolute;top:4px;right:5px;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#C2187A;color:#fff;border-radius:99px;padding:1px 6px}
+.ev.exam[style*="height:1"]::after,.ev.exam[style*="height:2"]::after{display:none}
+.s-exam{--s:#FDE6F1;--si:#B4236F}
+.slot.s-exam .b{box-shadow:inset 0 0 0 1.5px #EE9AC4,0 3px 10px rgba(194,24,122,.14)}
+.slot.s-exam .b b{color:#9E1C60}
 .ev:hover{filter:brightness(.98);z-index:2}
 .now-line{position:absolute;left:0;right:0;border-top:2px solid var(--red);z-index:4;pointer-events:none}
 .now-line::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--red)}
@@ -786,7 +793,7 @@ var BJ = (function(){
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){ try{ localStorage.setItem(KEY, JSON.stringify({colles:data.colles.map(function(c){ var x={}; for(var k in c) if(k!=="commentaire"&&k!=="champs") x[k]=c[k]; return x; }), events:data.events, state:data.state, at:data.at})); }catch(e2){} } }
   function emit(){ listeners.forEach(function(f){ try{ f(); }catch(e){} }); }
   function sb(){ return (typeof Sync!=="undefined" && Sync.client && Sync.user())? Sync.client() : null; }
-  var COLS="id,scope,annee,discipline,date,debut,fin,duree,tirage,type,colleur,salle,eleve,moi,note,note_num,ordre,sujet,commentaire,detail_at";
+  var COLS="id,scope,annee,discipline,date,debut,fin,duree,tirage,type,colleur,salle,eleve,moi,note,note_num,ordre,sujet,commentaire,detail_at,updated_at";
   function load(){
     var c=sb(); if(!c||loading) return Promise.resolve();
     loading=true;
@@ -821,8 +828,10 @@ var BJ = (function(){
   function isEntretien(c){ return !!c && (c.discipline==="Entretiens de personnalité" || (c.discipline==="Français-Philosophie" && !c.tirage)); }
   function label(c){ return isEntretien(c)? "Entretien de personnalité" : String(c.discipline||"").replace(/ LV\d$/,""); }
   function epOf(c){ if(isEntretien(c)) return "o-entretien"; return {maths:"o-maths",hgg:"o-hgg",csh:"o-csh",ang:"o-ang",all:"o-all"}[subOf(c)]||null; }
-  function mine(){ return data.colles.filter(function(c){ return c.moi; }); }
-  function mineOn(dISO){ return data.colles.filter(function(c){ return c.moi && c.date===dISO && (c.scope==="moi"||c.scope==="kore") && c.debut; }); }
+  /* une de mes colles à venir que le robot n'a plus vue lors de son dernier passage réussi a été retirée de BJcolle */
+  function gone(c){ var ok=data.state&&data.state.last_ok; if(!ok||!c.updated_at||!(c.scope==="moi"||c.scope==="kore")) return false; if((c.date||"")<iso(today())) return false; return new Date(c.updated_at).getTime() < new Date(ok).getTime()-15*60000; }
+  function mine(){ return data.colles.filter(function(c){ return c.moi && !gone(c); }); }
+  function mineOn(dISO){ return data.colles.filter(function(c){ return c.moi && !gone(c) && c.date===dISO && (c.scope==="moi"||c.scope==="kore") && c.debut; }); }
   function upcoming(){ var t=iso(today()); return mine().filter(function(c){ return (c.scope==="moi"||c.scope==="kore") && c.date>=t; }).sort(function(a,b){ return (a.date+a.debut).localeCompare(b.date+b.debut); }); }
   function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
     var s=subOf(c), prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20);
@@ -844,7 +853,7 @@ var BJ = (function(){
   function ready(){ return !!(data.state && data.state.last_ok); }
 
   return {data:function(){ return data; }, load:load, checkNow:checkNow, markRead:markRead, on:function(f){ listeners.push(f); },
-    mine:mine, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
+    mine:mine, gone:gone, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
 })();
 
 /* Fichiers déposés (stockage Supabase privé « fichiers ») et analyse par Gemini :
@@ -1432,7 +1441,7 @@ function vHome(){
   h+=evs.filter(function(e){ return e.kind!=="fixed" || e.anki || e.actu; }).map(function(e){
     var s=subj(e.sub), cls=(nm>=toMin(e.s)&&nm<toMin(e.e))?" now":(nm>=toMin(e.e)?" past":"");
     var sub=e.kind==="course"?"Cours":e.kind==="exam"?"Épreuve":e.kind==="fixed"?"Routine":"Feuille de route";
-    return '<button class="slot'+cls+' '+(e.kind==="exam"?"s-hgg":s.cls)+'" data-a="slot" data-d="'+t+'" data-id="'+esc(e.id)+'"><span class="h">'+hLabel(e.s)+'</span><span class="b"><b>'+esc(e.t)+'</b><span>'+sub+' · '+durTxt(toMin(e.e)-toMin(e.s))+'</span></span></button>';
+    return '<button class="slot'+cls+' '+(e.kind==="exam"?"s-exam":s.cls)+'" data-a="slot" data-d="'+t+'" data-id="'+esc(e.id)+'"><span class="h">'+hLabel(e.s)+'</span><span class="b"><b>'+esc(e.t)+'</b><span>'+sub+' · '+durTxt(toMin(e.e)-toMin(e.s))+'</span></span></button>';
   }).join("");
   h+='</div></section>';
   h+='<section class="stack"><div class="card"><div class="card-h"><h2>Tâches du jour</h2><button class="link-btn" data-go="todo">Tout voir</button></div>'+quickBox("home")+'<div class="tasks" style="margin-top:6px">'+taskRows(todayTasks())+'</div></div>';
@@ -1590,7 +1599,7 @@ function vAgenda(){
     h+='</div>';
   });
   h+='</div></div></div>';
-  h+='<div class="legend">'+SUBJECT_ORDER.map(function(id){ return tag(id); }).join("")+'<span class="tag s-neutral">Routine</span><span class="tag" style="--s:var(--red-pale);--si:var(--red)">DST</span></div>';
+  h+='<div class="legend">'+SUBJECT_ORDER.map(function(id){ return tag(id); }).join("")+'<span class="tag s-neutral">Routine</span><span class="tag s-exam" style="box-shadow:inset 0 0 0 1px #EE9AC4">DST · colles</span></div>';
   h+='<p class="small muted" style="margin-top:10px">Les cours sont hachurés. Les créneaux de travail suivent ta journée type ; touche un créneau pour ouvrir sa feuille de route. Touche « Modifier » dans un créneau pour changer son horaire, son titre ou sa matière (ce jour-là ou chaque semaine), ou le supprimer ; « + Créneau » en ajoute un.</p>';
   return h;
 }
