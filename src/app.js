@@ -163,6 +163,7 @@ function vHome(){
   var next=upcomingPales(1)[0];
   if(next) h+='<span class="tag '+subj(next.sub).cls+'">Prochain DST · '+esc(next.t)+' · '+(diffDays(next.date,t)===0?"aujourd'hui":"J-"+diffDays(next.date,t))+'</span>';
   h+='</div><p class="subtitle">'+(inVacances(t)?"Vacances de la "+inVacances(t).name+" : régime à définir.":"Voici l'essentiel de ta journée.")+'</p>';
+  h+=homeResAsk();
   h+='<div class="grid g2">';
   h+='<section class="card"><div class="card-h"><h2>Objectifs du jour</h2></div>';
   h+=objs.length?'<ol class="objs">'+objs.map(function(o,i){ return '<li><span class="n">'+(i+1)+'</span><span>'+esc(o.t)+'</span></li>'; }).join("")+'</ol>':'<div class="empty">Rien d\'imposé aujourd\'hui.</div>';
@@ -975,26 +976,31 @@ var COLLE_EP={maths:"o-maths",hgg:"o-hgg",csh:"o-csh",ang:"o-ang",all:"o-all"};
 function paleEp(p){ return PALE_EP[p.t.replace(/^Concours blanc · /,"")] || (/dissert/i.test(p.t)?"e-dissert":/synth/i.test(p.t)?"e-synth":/maths/i.test(p.t)?"e-maths":/hgg/i.test(p.t)?"e-hgg":/angl/i.test(p.t)?"e-ang":/allem/i.test(p.t)?"e-all":null); }
 function echeances(from,to){
   var out=[];
-  PALES.forEach(function(p){ var ep=paleEp(p); if(ep && p.date>=from && p.date<=to) out.push({key:"p|"+p.date+"|"+p.t, ep:ep, date:p.date, time:p.s, label:"DST de "+p.t.replace(/^Concours blanc · /,""), sub:p.sub}); });
-  if(typeof BJ!=="undefined") BJ.mine().forEach(function(c){ if((c.scope==="moi"||c.scope==="kore") && c.date>=from && c.date<=to && c.debut){ var ep=BJ.epOf(c); if(ep) out.push({key:"c|"+c.id, ep:ep, date:c.date, time:c.debut, label:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle de "+c.discipline)+(c.colleur?" ("+c.colleur+")":""), sub:BJ.subOf(c)}); } });
+  PALES.forEach(function(p){ var ep=paleEp(p); if(ep && p.date>=from && p.date<=to) out.push({key:"p|"+p.date+"|"+p.t, ep:ep, date:p.date, time:p.s, end:p.e, label:"DST de "+p.t.replace(/^Concours blanc · /,""), sub:p.sub}); });
+  if(typeof BJ!=="undefined") BJ.mine().forEach(function(c){ if((c.scope==="moi"||c.scope==="kore") && c.date>=from && c.date<=to && c.debut){ var ep=BJ.epOf(c); if(ep) out.push({key:"c|"+c.id, ep:ep, date:c.date, time:c.debut, end:c.fin||fromMin(toMin(c.debut)+(c.duree||20)), label:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle de "+c.discipline)+(c.colleur?" ("+c.colleur+")":""), sub:BJ.subOf(c)}); } });
   return out.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
 }
 function epName(id){ var e=EPREUVES.ecrit.concat(EPREUVES.oral).find(function(x){ return x.id===id; }); return e?(id.charAt(0)==="e"?"Écrit de ":"Oral de ")+e.name:id; }
 function resDismissed(){ try{ return JSON.parse(localStorage.getItem("prepa.resdone")||"{}"); }catch(e){ return {}; } }
+function lcFirst(l){ return /^[A-Z][a-zé]/.test(l)? l.charAt(0).toLowerCase()+l.slice(1) : l; }
+function homeResAsk(){
+  var t=iso(today()), nm=nowMin();
+  var dis=resDismissed(), hr="";
+  echeances(iso(addDays(today(),-3)), t).filter(function(x){ return (x.date<t || toMin(x.end||x.time)<=nm) && !dis[x.key] && !(st().ressentis[x.ep]||[]).some(function(r){ return r.ev===x.key || r.date>x.date; }); }).slice(-2).forEach(function(x){
+    hr+='<section class="card res-ask" style="margin:0 0 14px"><div class="card-h"><h2>Comment s\'est '+(/^DST/.test(x.label)?'passé ton ':'passée ta ')+esc(lcFirst(x.label))+' ?</h2><span class="small muted">'+fmtDay(x.date)+'</span></div><p class="small muted" style="margin:0 0 10px">Note ton ressenti à chaud : il sera remis sous tes yeux avant la prochaine '+esc(epName(x.ep).toLowerCase())+'.</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="ressenti" data-id="'+x.ep+'" data-k="'+esc(x.key)+'" data-l="'+esc(x.label)+'">Noter mon ressenti</button><button class="btn sm" data-a="resskip" data-k="'+esc(x.key)+'">Plus tard</button></div></section>';
+  });
+  return hr;
+}
 function homeMethodoCards(){
   var t=iso(today()), nm=nowMin(), h="";
   var soon=echeances(t, iso(addDays(today(),3))).filter(function(x){ return x.date>t || toMin(x.time)>nm; });
   var seen={};
   soon.forEach(function(x){ if(seen[x.ep]) return; seen[x.ep]=1; var m=methOf(x.ep), dd=diffDays(x.date,t);
     var ess=(m.essentiel||[]).slice(0,3);
-    h+='<section class="card '+subj(x.sub).cls+'" style="margin-top:14px"><div class="card-h"><h2>À relire avant ta '+esc(x.label.charAt(0).toLowerCase()+x.label.slice(1))+'</h2><span class="tag '+subj(x.sub).cls+'">'+(dd===0?"aujourd'hui "+hLabel(x.time):dd===1?"demain "+hLabel(x.time):"J-"+dd)+'</span></div>';
+    h+='<section class="card '+subj(x.sub).cls+'" style="margin-top:14px"><div class="card-h"><h2>À relire avant '+(/^DST/.test(x.label)?'ton ':'ta ')+esc(lcFirst(x.label))+'</h2><span class="tag '+subj(x.sub).cls+'">'+(dd===0?"aujourd'hui "+hLabel(x.time):dd===1?"demain "+hLabel(x.time):"J-"+dd)+'</span></div>';
     h+=ess.length?'<ul class="small" style="margin:4px 0 10px;padding-left:18px">'+ess.map(function(e){ return '<li style="margin:3px 0">'+mtx(e)+'</li>'; }).join("")+'</ul>':'<p class="small muted">'+esc(m.manque||"Pas encore de fiche de méthode pour cette épreuve.")+'</p>';
     var last=(st().ressentis[x.ep]||[]).slice(-1)[0]; if(last) h+='<p class="small muted" style="margin:0 0 10px"><b>Ton dernier ressenti</b> ('+fmtDay(last.date)+') : '+esc(last.t.length>160?last.t.slice(0,160)+"…":last.t)+'</p>';
     h+='<button class="btn tint sm" data-a="methode" data-id="'+x.ep+'">Relire toute la synthèse</button></section>'; });
-  var dis=resDismissed();
-  echeances(iso(addDays(today(),-3)), t).filter(function(x){ return (x.date<t || toMin(x.time)+60<nm) && !dis[x.key] && !(st().ressentis[x.ep]||[]).some(function(r){ return r.ev===x.key || r.date>=x.date; }); }).slice(-2).forEach(function(x){
-    h+='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Comment s\'est passée ta '+esc(x.label.charAt(0).toLowerCase()+x.label.slice(1))+' ?</h2><span class="small muted">'+fmtDay(x.date)+'</span></div><p class="small muted" style="margin:0 0 10px">Note ton ressenti à chaud : il sera remis sous tes yeux avant la prochaine '+esc(epName(x.ep).toLowerCase())+'.</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="ressenti" data-id="'+x.ep+'" data-k="'+esc(x.key)+'" data-l="'+esc(x.label)+'">Noter mon ressenti</button><button class="btn sm" data-a="resskip" data-k="'+esc(x.key)+'">Plus tard</button></div></section>';
-  });
   return h;
 }
 function mtx(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong class="hl">$1</strong>'); }
@@ -1280,6 +1286,7 @@ closeSheet=function(){ _close(); layer.removeAttribute("data-slot"); };
 /* ---------- démarrage ---------- */
 function start(){
   shell(); seed();
+  setInterval(function(){ if(document.visibilityState==="visible" && (S.view==="home"||S.view==="agenda") && window.__prepaRefresh) window.__prepaRefresh(); },30000);
   window.__prepaRefresh=function(){ var a=document.activeElement; if(layer.innerHTML || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return; render(); };
   if(typeof Sync!=="undefined"){ var bjLoaded=false; Sync.on(function(stt,user){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); if(user && !bjLoaded && typeof BJ!=="undefined"){ bjLoaded=true; BJ.load(); setInterval(function(){ if(document.visibilityState==="visible") BJ.load(); },10*60000); } }); Sync.init(); }
   if(typeof BJ!=="undefined") BJ.on(function(){ window.__prepaRefresh(); });
