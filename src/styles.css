@@ -381,3 +381,9 @@ button:active:not([disabled]),.ext:active,[data-go]:active{transform:scale(.97)}
 .tabbar .tab{transition:color .2s,transform .2s var(--snap)}
 .seg button{transition:background-color .25s var(--spring),color .2s,box-shadow .25s}
 html{scroll-behavior:auto}
+/* modification des contenus */
+.seg .segl{position:relative;padding:7px 10px;border-radius:8px;font-weight:600;font-size:13px;color:var(--ink);transition:background-color .25s var(--spring),box-shadow .25s}
+.seg .segl.on{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.tedit{cursor:pointer}
+.tedit:hover{text-decoration:underline;text-decoration-color:var(--line-strong,rgba(0,0,0,.2));text-underline-offset:3px}
+[data-a="editnote"]:hover{opacity:.85}

@@ -56,6 +56,7 @@ function dayEvents(dISO){
     add({kind:"fixed",s:"20:00",e:"20:40",t:"Dîner",sub:"neutral"});
     if(!vac || wd!==6) add({kind:"fixed",s:"23:00",e:"23:20",t:"Actualité",sub:"neutral",actu:true});
   }
+  ev=applyAgendaEdits(ev,dISO,wd);
   // Colles BJcolle : bloquées de 10 min avant la préparation à la fin du passage ; le travail qui chevauche est raccourci
   if(typeof BJ!=="undefined"){
     BJ.mineOn(dISO).forEach(function(c){
@@ -107,4 +108,22 @@ function roadFor(ev,dISO){
     push({lab:fill,min:cap-used,sub:ev.sub,filler:true});
   }
   return items;
+}
+
+/* Modifications de l'agenda faites dans l'app : chaque semaine (par jour de la semaine) puis ce jour-là seulement.
+   {hide:{id:true}, mod:{id:{s,e,t,sub}}, add:[{id,s,e,t,sub,kind}]} */
+function applyAgendaEdits(ev,dISO,wd){
+  var st=Store.get(), A=st.agendaEdits||{}, layers=[A["w"+wd], A[dISO]];
+  layers.forEach(function(L){
+    if(!L) return;
+    ev=ev.filter(function(e){ return !(L.hide&&L.hide[e.id]); }).map(function(e){
+      var m=L.mod&&L.mod[e.id]; if(!m) return e; var o={}; for(var k in e) o[k]=e[k];
+      ["s","e","t","sub"].forEach(function(k){ if(m[k]) o[k]=m[k]; });
+      if(m.sub && !(m.subs)) { if(o.subs && o.subs.indexOf(m.sub)<0) o.subs=null; }
+      if(o.subs===null) delete o.subs;
+      o.edited=true; return o;
+    });
+    (L.add||[]).forEach(function(x){ var o={}; for(var k in x) o[k]=x[k]; o.kind=o.kind||"work"; o.added=true; ev.push(o); });
+  });
+  return ev;
 }
