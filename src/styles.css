@@ -217,8 +217,6 @@ label.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);marg
 .ev.exam{--s:#FDE6F1;--si:#B4236F;background:linear-gradient(180deg,#FDE6F1,#FBD9EA);color:#9E1C60;border:1.5px solid #EE9AC4;border-left:4px solid #C2187A;box-shadow:0 3px 10px rgba(194,24,122,.16);z-index:1}
 .ev.exam b{font-weight:800}
 .ev.exam span{color:#A0456F}
-.ev.exam::after{content:"Échéance";position:absolute;top:4px;right:5px;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#C2187A;color:#fff;border-radius:99px;padding:1px 6px}
-.ev.exam[style*="height:1"]::after,.ev.exam[style*="height:2"]::after{display:none}
 .s-exam{--s:#FDE6F1;--si:#B4236F}
 .slot.s-exam .b{box-shadow:inset 0 0 0 1.5px #EE9AC4,0 3px 10px rgba(194,24,122,.14)}
 .slot.s-exam .b b{color:#9E1C60}
