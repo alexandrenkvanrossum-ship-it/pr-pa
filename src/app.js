@@ -29,7 +29,7 @@ var I = {
 /* ---------- utilitaires d'affichage ---------- */
 function subj(id){ return SUBJECTS[id]||{name:"Autre",short:"Autre",cls:"s-neutral"}; }
 function tag(id,label){ var s=subj(id); return '<span class="tag '+s.cls+'">'+esc(label||s.short)+'</span>'; }
-function toast(m){ var el=document.createElement("div"); el.className="toast"; el.setAttribute("role","status"); el.textContent=m; document.body.appendChild(el); setTimeout(function(){ el.remove(); },2600); }
+function toast(m){ document.querySelectorAll(".toast").forEach(function(t){ t.remove(); }); var el=document.createElement("div"); el.className="toast"; el.setAttribute("role","status"); el.textContent=m; document.body.appendChild(el); setTimeout(function(){ el.classList.add("out"); setTimeout(function(){ el.remove(); },260); },2600); }
 function save(){ Store.save(); }
 function st(){ return Store.get(); }
 function nowMin(){ var d=new Date(); return d.getHours()*60+d.getMinutes(); }
@@ -105,8 +105,28 @@ function render(){
     case "plus": html=vPlus(); break;
     default: html=vHome();
   }
-  app.innerHTML='<div class="inner page-enter">'+html+'</div>';
+  var key=S.view+"|"+(S.param||""), nav=key!==lastViewKey; lastViewKey=key;
+  if(!nav && window.morphdom && app.firstChild){ morphTo(app,'<div class="inner">'+html+'</div>'); }
+  else { S.navigating=true; app.innerHTML='<div class="inner page-enter">'+html+'</div>'; S.navigating=false; }
   setActive(); bindQuick(); bindUpload(); tickTimers();
+}
+/* ---------- rendu par différence : seuls les éléments modifiés changent (pas de clignotement, défilement et saisie conservés) ---------- */
+var lastViewKey=null, ENTER_SEL=".task,.road-it,.due,.ech,.it,.nstat,.slot";
+function morphTo(root,html,opts){
+  opts=opts||{};
+  var tpl=document.createElement(root.tagName); tpl.innerHTML=html;
+  var added=0;
+  window.morphdom(root,tpl,{childrenOnly:true,
+    getNodeKey:function(n){ return n.id || (n.getAttribute && n.getAttribute("data-key")) || undefined; },
+    onBeforeElUpdated:function(from,to){
+      if(from.isEqualNode(to)) return false;
+      if(from===document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(from.tagName)) return false;
+      if(from.tagName==="DETAILS" && !to.hasAttribute("data-keep")){ if(from.open) to.setAttribute("open",""); else to.removeAttribute("open"); }
+      if(from.classList && from.classList.contains("page-enter")) to.classList.add("page-enter");
+      return true;
+    },
+    onNodeAdded:function(n){ if(n.nodeType===1 && !opts.quiet && added<8 && n.matches && n.matches(ENTER_SEL)){ added++; n.classList.add("enter-item"); n.addEventListener("animationend",function(){ n.classList.remove("enter-item"); },{once:true}); } return n; }
+  });
 }
 
 /* ---------- objectifs et échéances du jour ---------- */
@@ -182,6 +202,7 @@ function quickBox(where){
 }
 function bindQuick(){
   document.querySelectorAll("form[data-quick]").forEach(function(f){
+    if(f._bound) return; f._bound=true;
     var inp=f.querySelector("input"), box=f.parentNode.querySelector(".parse"), btn=f.querySelector(".go");
     var cur=null;
     function upd(){
@@ -265,7 +286,7 @@ function taskRows(list){
     if(t.dur) meta.push('<span class="meta">'+durTxt(t.dur)+'</span>');
     if(t.progress && !t.done) meta.push('<span class="meta">fait à '+t.progress+' %</span>');
     if(!t.done && !t.time && !t.memo && !t.vac && typeof Plan!=="undefined" && t.sub!=="perso"){ var wt=whenTxt("task|"+t.id); meta.push(wt?'<span class="meta">prévu '+esc(wt)+'</span>':'<span class="meta late">sans créneau</span>'); }
-    return '<div class="task p'+(t.prio||0)+(t.done?" done":"")+'"><button class="check'+(t.done?" on":"")+'" data-a="toggle" data-id="'+t.id+'" aria-label="'+(t.done?"Rouvrir":"Terminer")+'">'+(t.done?I.check:"")+'</button>'+
+    return '<div class="task p'+(t.prio||0)+(t.done?" done":"")+'" data-key="tk-'+t.id+'"><button class="check'+(t.done?" on":"")+'" data-a="toggle" data-id="'+t.id+'" aria-label="'+(t.done?"Rouvrir":"Terminer")+'">'+(t.done?I.check:"")+'</button>'+
       '<div class="tt"><span>'+esc(t.title)+'</span><div class="tm">'+tag(t.sub)+(t.type?'<span class="meta">'+esc(t.type)+'</span>':'')+meta.join("")+(t.prio?'<span class="prio">'+"!!!".slice(0,t.prio)+'</span>':'')+(t.example?'<span class="badge-ex">exemple</span>':'')+'</div></div>'+
       (t.vac&&!t.done?'<button class="chip" data-a="unvac" data-id="'+t.id+'" title="Sortir de la liste des vacances">Faire avant</button>':'')+'<button class="del" data-a="del" data-id="'+t.id+'" aria-label="Supprimer">'+I.trash+'</button></div>';
   }).join("");
@@ -451,7 +472,7 @@ function filesCard(sub){
   return h+'</section>';
 }
 function bindUpload(){
-  var f=document.getElementById("up-form"); if(!f) return;
+  var f=document.getElementById("up-form"); if(!f||f._bound) return; f._bound=true;
   var fi=document.getElementById("up-file"), go=document.getElementById("up-go"), nm=document.getElementById("up-names");
   fi.addEventListener("change",function(){ go.disabled=!fi.files.length; nm.textContent=fi.files.length?Array.prototype.map.call(fi.files,function(x){ return x.name; }).join(", "):"Aucun fichier choisi"; });
   var kind=document.getElementById("up-kind");
@@ -892,10 +913,35 @@ function vPlus(){
 
 /* ---------- fenêtres ---------- */
 function openSheet(html){
-  layer.innerHTML='<div class="scrim" data-a="close"></div><div class="sheet" role="dialog" aria-modal="true">'+html+'</div>';
+  clearTimeout(sheetCloseT); var cur=layer.querySelector(".sheet:not(.closing)"), GRAB='<div class="grab" aria-hidden="true"></div>';
+  /* fiche déjà ouverte : mise à jour sur place, sans rejouer l'animation (les fiches à formulaire sont reconstruites pour leurs écouteurs) */
+  if(cur && window.morphdom && html.indexOf("<form")<0 && !cur.querySelector("form")){ morphTo(cur,GRAB+html,{quiet:true}); return; }
+  layer.innerHTML='<div class="scrim'+(cur?' still':'')+'" data-a="close"></div><div class="sheet'+(cur?' still':'')+'" role="dialog" aria-modal="true">'+GRAB+html+'</div>';
   var f=layer.querySelector(".sheet input:not([type=range]),.sheet button"); if(f && window.innerWidth>=600) try{ f.focus({preventScroll:true}); }catch(e){}
 }
-function closeSheet(){ layer.innerHTML=""; S.timers={}; }
+var sheetCloseT=null;
+function closeSheet(){
+  S.timers={}; var sh=layer.querySelector(".sheet"), sc=layer.querySelector(".scrim");
+  if(!sh || matchMedia("(prefers-reduced-motion: reduce)").matches){ layer.innerHTML=""; return; }
+  sh.classList.add("closing"); if(sc) sc.classList.add("closing"); sh.style.transform=""; 
+  var snap=layer.innerHTML; clearTimeout(sheetCloseT);
+  sheetCloseT=setTimeout(function(){ if(layer.querySelector(".sheet.closing")) layer.innerHTML=""; },260);
+}
+/* fiche glissée vers le bas pour la fermer (téléphone) */
+(function(){
+  var y0=null, t0=0, sh=null, dy=0;
+  document.addEventListener("pointerdown",function(e){
+    if(window.innerWidth>=600) return; var s=e.target.closest(".sheet"); if(!s||s.classList.contains("closing")) return;
+    var b=s.querySelector(".sheet-b"); if(!(e.target.closest(".grab,.sheet-h,.band") || (b && b.scrollTop<=0 && e.target.closest(".sheet-b") && e.pointerType==="touch"))) return;
+    if(e.target.closest("input,textarea,select,button,a,[data-a]") && !e.target.closest(".grab")) return;
+    sh=s; y0=e.clientY; t0=Date.now(); dy=0;
+  },{passive:true});
+  document.addEventListener("pointermove",function(e){ if(!sh||y0==null) return; dy=Math.max(0,e.clientY-y0); if(dy>4){ sh.style.transition="none"; sh.style.transform="translateY("+dy+"px)"; } },{passive:true});
+  function end(){ if(!sh) return; var v=dy/Math.max(1,Date.now()-t0); sh.style.transition="";
+    if(dy>120 || (dy>40 && v>0.6)){ sh.style.transform="translateY("+dy+"px)"; closeSheet(); setTimeout(function(){ if(typeof render==="function") render(); },10); }
+    else sh.style.transform=""; sh=null; y0=null; }
+  document.addEventListener("pointerup",end); document.addEventListener("pointercancel",end);
+})();
 function quickSheet(){
   openSheet('<div class="sheet-h"><div class="ttl"><h2>Nouvelle tâche</h2><div class="small muted">Écris naturellement : date, « pour », « ! », mots-clés réf, ex, civi, DM…</div></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">'+quickBox("sheet")+'</div>');
   bindQuick(); var i=document.getElementById("q-sheet"); if(i) i.focus();
