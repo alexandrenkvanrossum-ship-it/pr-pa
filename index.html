@@ -931,29 +931,29 @@ var Files = (function(){
   }
   /* titres descriptifs des énoncés (« Définition de la fonction de répartition »…) pour les quiz */
   var titling=null;
+  var TPROMPT="Pour chaque énoncé de cours de maths (prépa ECG2) ci-dessous, écris un TITRE court qui nomme ce que l'énoncé définit, ou le nom du théorème ou de la propriété ; s'il n'a pas de nom, ce qu'il permet de montrer ou ce qu'il caractérise. Modèles : « Définition de la somme de deux sous-espaces vectoriels », « Théorème du rang », « Caractérisation d'une somme directe », « Propriété : linéarité de l'espérance ». Ne recopie jamais un simple numéro (pas de « Définition 2.1.1 »). Ne révèle pas le contenu de l'énoncé. Réponds UNIQUEMENT avec une ligne par énoncé, au format exact : numéro|titre\n\n";
+  function askTitles(part){
+    var prompt=TPROMPT+part.map(function(x,j){ return j+"|"+x.it.type+" « "+x.it.nom+" » (partie : "+(x.it.section||"")+") : "+String(x.it.enonce).slice(0,300).replace(/\s+/g," "); }).join("\n");
+    return Sync.invoke({mode:"chat",context:"",messages:[{role:"user",text:prompt}]}).then(function(r){
+      var got=0;
+      String(r&&r.text||"").split(/\n/).forEach(function(l){ var m=l.replace(/^[\s*\-`]+/,"").match(/^\[?(\d+)\]?\s*[|:)\-–]\s*(.+)$/); if(!m) return; var x=part[+m[1]], t=m[2].replace(/^["«\s]+|["»\s]+$/g,"").trim(); if(x && t && !/^(d[ée]finition|th[ée]or[èe]me|propri[ée]t[ée]|proposition|lemme|corollaire)\s*[\d.]+$/i.test(t)){ x.it.titre=t.slice(0,120); got++; } });
+      part.forEach(function(x){ if(!x.it.titre) x.it.titreTry=(x.it.titreTry||0)+1; });
+      Store.save(); emit(); return got;
+    },function(){ part.forEach(function(x){ x.it.titreTry=(x.it.titreTry||0)+1; }); Store.save(); return 0; });
+  }
+  function missing(){ var s=S(), todo=[]; Object.keys(s.mathsCours).forEach(function(fid){ (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(!it.titre && (it.titreTry||0)<4) todo.push({fid:fid,i:i,it:it}); }); }); return todo; }
   function titles(){
     if(titling || !sb()) return titling||Promise.resolve();
-    var s=S(), todo=[];
-    Object.keys(s.mathsCours).forEach(function(fid){ (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(!it.titre) todo.push({fid:fid,i:i,it:it}); }); });
-    if(!todo.length) return Promise.resolve();
-    var batch=function(k){
-      var part=todo.slice(k,k+20); if(!part.length) return Promise.resolve();
-      var prompt="Pour chaque énoncé de cours de maths (prépa ECG2) ci-dessous, donne un titre court qui dit CE QUE l'énoncé définit ou affirme, sans en révéler le contenu, sur le modèle : « Définition de la fonction de répartition », « Théorème de transfert », « Propriété : linéarité de l'espérance », « Caractérisation de la loi par la fonction de répartition ». Utilise le nom du théorème s'il en a un. Réponds UNIQUEMENT par un tableau JSON [{\"n\":numéro,\"titre\":\"...\"}].\n\n"+
-        part.map(function(x,j){ return "["+j+"] "+x.it.type+" — "+x.it.nom+" — "+String(x.it.enonce).slice(0,350); }).join("\n");
-      return Sync.invoke({mode:"chat",context:"",messages:[{role:"user",text:prompt}]}).then(function(r){
-        var t=String(r&&r.text||""), a=t.indexOf("["), b=t.lastIndexOf("]"), arr=[];
-        try{ arr=JSON.parse(t.slice(a,b+1)); }catch(e){}
-        arr.forEach(function(o){ var x=part[+o.n]; if(x && o.titre) x.it.titre=String(o.titre).trim().slice(0,120); });
-        Store.save(); emit();
-        return batch(k+20);
-      });
-    };
+    var todo=missing(); if(!todo.length) return Promise.resolve();
+    var batch=function(k){ var part=todo.slice(k,k+8); if(!part.length) return Promise.resolve(); return askTitles(part).then(function(){ return batch(k+8); }); };
     titling=batch(0).then(function(){ titling=null; },function(){ titling=null; });
     return titling;
   }
+  /* un seul énoncé, tout de suite (affiché dans le quiz) */
+  function titleOne(fid,i){ var it=((S().mathsCours[fid]||{}).items||[])[i]; if(!it||it.titre||!sb()) return Promise.resolve(); return askTitles([{fid:fid,i:i,it:it}]); }
   var ls=[]; function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
   function of(sub){ var s=S(); return Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(f){ return f.sub===sub; }).sort(function(a,b){ return b.at.localeCompare(a.at); }); }
-  return {titles:titles, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
+  return {titles:titles, titleOne:titleOne, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
 })();
 
 /* Construction des journées : cours, blocs fixes, créneaux de travail proposés, pales. */
@@ -1915,10 +1915,12 @@ function quizPick(n){
 function quizTitle(it){
   if(it.titre) return it.titre;
   var m=String(it.nom||"").match(/\(([^)]+)\)/); if(m) return it.type+" : "+m[1];
-  return it.nom||it.type;
+  /* en attendant le titre : le type et le sujet de la partie du cours, jamais un simple numéro */
+  var sec=String(it.section||"").replace(/^[\dIVXivx.\s)–-]+/,"").trim();
+  return (it.type||"Énoncé")+(sec?" · "+sec.charAt(0).toLowerCase()+sec.slice(1):"");
 }
 function quizCard(){
-  if(Sync.user() && !S.titled){ S.titled=true; setTimeout(function(){ Files.titles().then(function(){ window.__prepaRefresh(); }); },300); }
+  if(Sync.user()) setTimeout(function(){ Files.titles().then(function(){ window.__prepaRefresh(); }); },300);
   var s=st(), pool=quizPool(), t=iso(today());
   var h='<section class="card"><div class="card-h"><h2>Quiz de cours</h2><span class="small muted">15 min en début de séance</span></div>';
   if(!pool.length) return h+'<div class="empty"><b>Pas encore de cours</b>Dépose ton cours (type « Cours ») : les définitions, propriétés et théorèmes sont relevés tels qu\'ils sont écrits.</div>'+quizSections()+'</section>';
@@ -1935,7 +1937,7 @@ function quizSections(){
 }
 var QINT=[1,2,4,8,16,32];
 function quizSheet(){
-  if(Sync.user() && !S.titled){ S.titled=true; Files.titles(); }
+  if(Sync.user()) Files.titles();
   var Q=S.quiz; if(!Q){ var ks=quizPick(8); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
   var s=st(), h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Quiz de cours · '+Math.min(Q.i+1,Q.list.length)+'/'+Q.list.length+'</div><h2>'+(Q.i>=Q.list.length?"Terminé":"Énonce-le de tête")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(Q.i>=Q.list.length){
@@ -1945,6 +1947,7 @@ function quizSheet(){
   }
   var k=Q.list[Q.i], fid=k.split("#")[0], it=(s.mathsCours[fid]||{items:[]}).items[+k.split("#")[1]];
   if(!it){ Q.i++; return quizSheet(); }
+  if(!it.titre && Sync.user() && !Q.asking){ Q.asking=k; Files.titleOne(fid,+k.split("#")[1]).then(function(){ var Q2=S.quiz; if(Q2 && Q2.list[Q2.i]===k && it.titre){ Q2.asking=null; quizSheet(); } else if(Q2) Q2.asking=null; }); }
   h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(quizTitle(it))+'</h3>'+(Q.show?'<div style="text-align:right;margin-top:-4px"><button class="link-btn" data-a="quizedit" data-k="'+esc(k)+'">Modifier l\'énoncé</button></div>':'')+(it.titre&&it.nom?'<div class="small faint" style="margin:-2px 0 6px">'+esc(it.nom)+'</div>':'');
   h+=Q.show?'<div style="white-space:pre-wrap;line-height:1.55" class="qmath">'+esc(it.enonce)+'</div><p class="small faint" style="margin:8px 0 0">Énoncé recopié de ton cours (« '+esc((s.files[fid]||{}).name||"")+' »).</p>':'<p class="small muted">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
   h+='</div>';

@@ -654,10 +654,12 @@ function quizPick(n){
 function quizTitle(it){
   if(it.titre) return it.titre;
   var m=String(it.nom||"").match(/\(([^)]+)\)/); if(m) return it.type+" : "+m[1];
-  return it.nom||it.type;
+  /* en attendant le titre : le type et le sujet de la partie du cours, jamais un simple numéro */
+  var sec=String(it.section||"").replace(/^[\dIVXivx.\s)–-]+/,"").trim();
+  return (it.type||"Énoncé")+(sec?" · "+sec.charAt(0).toLowerCase()+sec.slice(1):"");
 }
 function quizCard(){
-  if(Sync.user() && !S.titled){ S.titled=true; setTimeout(function(){ Files.titles().then(function(){ window.__prepaRefresh(); }); },300); }
+  if(Sync.user()) setTimeout(function(){ Files.titles().then(function(){ window.__prepaRefresh(); }); },300);
   var s=st(), pool=quizPool(), t=iso(today());
   var h='<section class="card"><div class="card-h"><h2>Quiz de cours</h2><span class="small muted">15 min en début de séance</span></div>';
   if(!pool.length) return h+'<div class="empty"><b>Pas encore de cours</b>Dépose ton cours (type « Cours ») : les définitions, propriétés et théorèmes sont relevés tels qu\'ils sont écrits.</div>'+quizSections()+'</section>';
@@ -674,7 +676,7 @@ function quizSections(){
 }
 var QINT=[1,2,4,8,16,32];
 function quizSheet(){
-  if(Sync.user() && !S.titled){ S.titled=true; Files.titles(); }
+  if(Sync.user()) Files.titles();
   var Q=S.quiz; if(!Q){ var ks=quizPick(8); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
   var s=st(), h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Quiz de cours · '+Math.min(Q.i+1,Q.list.length)+'/'+Q.list.length+'</div><h2>'+(Q.i>=Q.list.length?"Terminé":"Énonce-le de tête")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(Q.i>=Q.list.length){
@@ -684,6 +686,7 @@ function quizSheet(){
   }
   var k=Q.list[Q.i], fid=k.split("#")[0], it=(s.mathsCours[fid]||{items:[]}).items[+k.split("#")[1]];
   if(!it){ Q.i++; return quizSheet(); }
+  if(!it.titre && Sync.user() && !Q.asking){ Q.asking=k; Files.titleOne(fid,+k.split("#")[1]).then(function(){ var Q2=S.quiz; if(Q2 && Q2.list[Q2.i]===k && it.titre){ Q2.asking=null; quizSheet(); } else if(Q2) Q2.asking=null; }); }
   h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(quizTitle(it))+'</h3>'+(Q.show?'<div style="text-align:right;margin-top:-4px"><button class="link-btn" data-a="quizedit" data-k="'+esc(k)+'">Modifier l\'énoncé</button></div>':'')+(it.titre&&it.nom?'<div class="small faint" style="margin:-2px 0 6px">'+esc(it.nom)+'</div>':'');
   h+=Q.show?'<div style="white-space:pre-wrap;line-height:1.55" class="qmath">'+esc(it.enonce)+'</div><p class="small faint" style="margin:8px 0 0">Énoncé recopié de ton cours (« '+esc((s.files[fid]||{}).name||"")+' »).</p>':'<p class="small muted">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
   h+='</div>';

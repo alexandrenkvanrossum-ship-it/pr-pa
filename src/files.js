@@ -70,27 +70,27 @@ var Files = (function(){
   }
   /* titres descriptifs des énoncés (« Définition de la fonction de répartition »…) pour les quiz */
   var titling=null;
+  var TPROMPT="Pour chaque énoncé de cours de maths (prépa ECG2) ci-dessous, écris un TITRE court qui nomme ce que l'énoncé définit, ou le nom du théorème ou de la propriété ; s'il n'a pas de nom, ce qu'il permet de montrer ou ce qu'il caractérise. Modèles : « Définition de la somme de deux sous-espaces vectoriels », « Théorème du rang », « Caractérisation d'une somme directe », « Propriété : linéarité de l'espérance ». Ne recopie jamais un simple numéro (pas de « Définition 2.1.1 »). Ne révèle pas le contenu de l'énoncé. Réponds UNIQUEMENT avec une ligne par énoncé, au format exact : numéro|titre\n\n";
+  function askTitles(part){
+    var prompt=TPROMPT+part.map(function(x,j){ return j+"|"+x.it.type+" « "+x.it.nom+" » (partie : "+(x.it.section||"")+") : "+String(x.it.enonce).slice(0,300).replace(/\s+/g," "); }).join("\n");
+    return Sync.invoke({mode:"chat",context:"",messages:[{role:"user",text:prompt}]}).then(function(r){
+      var got=0;
+      String(r&&r.text||"").split(/\n/).forEach(function(l){ var m=l.replace(/^[\s*\-`]+/,"").match(/^\[?(\d+)\]?\s*[|:)\-–]\s*(.+)$/); if(!m) return; var x=part[+m[1]], t=m[2].replace(/^["«\s]+|["»\s]+$/g,"").trim(); if(x && t && !/^(d[ée]finition|th[ée]or[èe]me|propri[ée]t[ée]|proposition|lemme|corollaire)\s*[\d.]+$/i.test(t)){ x.it.titre=t.slice(0,120); got++; } });
+      part.forEach(function(x){ if(!x.it.titre) x.it.titreTry=(x.it.titreTry||0)+1; });
+      Store.save(); emit(); return got;
+    },function(){ part.forEach(function(x){ x.it.titreTry=(x.it.titreTry||0)+1; }); Store.save(); return 0; });
+  }
+  function missing(){ var s=S(), todo=[]; Object.keys(s.mathsCours).forEach(function(fid){ (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(!it.titre && (it.titreTry||0)<4) todo.push({fid:fid,i:i,it:it}); }); }); return todo; }
   function titles(){
     if(titling || !sb()) return titling||Promise.resolve();
-    var s=S(), todo=[];
-    Object.keys(s.mathsCours).forEach(function(fid){ (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(!it.titre) todo.push({fid:fid,i:i,it:it}); }); });
-    if(!todo.length) return Promise.resolve();
-    var batch=function(k){
-      var part=todo.slice(k,k+20); if(!part.length) return Promise.resolve();
-      var prompt="Pour chaque énoncé de cours de maths (prépa ECG2) ci-dessous, donne un titre court qui dit CE QUE l'énoncé définit ou affirme, sans en révéler le contenu, sur le modèle : « Définition de la fonction de répartition », « Théorème de transfert », « Propriété : linéarité de l'espérance », « Caractérisation de la loi par la fonction de répartition ». Utilise le nom du théorème s'il en a un. Réponds UNIQUEMENT par un tableau JSON [{\"n\":numéro,\"titre\":\"...\"}].\n\n"+
-        part.map(function(x,j){ return "["+j+"] "+x.it.type+" — "+x.it.nom+" — "+String(x.it.enonce).slice(0,350); }).join("\n");
-      return Sync.invoke({mode:"chat",context:"",messages:[{role:"user",text:prompt}]}).then(function(r){
-        var t=String(r&&r.text||""), a=t.indexOf("["), b=t.lastIndexOf("]"), arr=[];
-        try{ arr=JSON.parse(t.slice(a,b+1)); }catch(e){}
-        arr.forEach(function(o){ var x=part[+o.n]; if(x && o.titre) x.it.titre=String(o.titre).trim().slice(0,120); });
-        Store.save(); emit();
-        return batch(k+20);
-      });
-    };
+    var todo=missing(); if(!todo.length) return Promise.resolve();
+    var batch=function(k){ var part=todo.slice(k,k+8); if(!part.length) return Promise.resolve(); return askTitles(part).then(function(){ return batch(k+8); }); };
     titling=batch(0).then(function(){ titling=null; },function(){ titling=null; });
     return titling;
   }
+  /* un seul énoncé, tout de suite (affiché dans le quiz) */
+  function titleOne(fid,i){ var it=((S().mathsCours[fid]||{}).items||[])[i]; if(!it||it.titre||!sb()) return Promise.resolve(); return askTitles([{fid:fid,i:i,it:it}]); }
   var ls=[]; function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
   function of(sub){ var s=S(); return Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(f){ return f.sub===sub; }).sort(function(a,b){ return b.at.localeCompare(a.at); }); }
-  return {titles:titles, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
+  return {titles:titles, titleOne:titleOne, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
 })();
