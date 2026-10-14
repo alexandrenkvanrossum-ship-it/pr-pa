@@ -395,3 +395,20 @@ html{scroll-behavior:auto}
 
 .res-ask{background:linear-gradient(135deg,#FDE6F1,#FFF 70%);box-shadow:inset 0 0 0 1.5px #EE9AC4,var(--shadow);animation:itemin .4s var(--spring)}
 .res-ask h2{color:#9E1C60}
+
+/* quiz de cours : énoncé mis en page comme dans le cours */
+.qcard{padding:4px 2px 2px}
+.qtitle{font-family:var(--font-display);font-size:21px;line-height:1.25;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px}
+.thm{margin-top:12px;border-radius:14px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden;--tc:#2F6FA8;--tb:#EEF4FB}
+.thm-def{--tc:#2F6FA8;--tb:#EEF4FB}.thm-thm{--tc:#B23B2E;--tb:#FCEFED}.thm-prop{--tc:#6152D1;--tb:#F1EFFC}.thm-meth{--tc:#2F7A4F;--tb:#EAF5EE}.thm-rem{--tc:#7A6230;--tb:#F7F1E3}
+.thm-h{background:var(--tb);color:var(--tc);padding:9px 16px;font-size:14px;border-bottom:1px solid color-mix(in srgb,var(--tc) 18%,transparent)}
+.thm-b{padding:14px 18px 16px;border-left:3px solid var(--tc);font-size:16px;line-height:1.7}
+.thm-b p{margin:0 0 10px}
+.thm-b p:last-child{margin-bottom:0}
+.thm-b .enum{list-style:none;margin:6px 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
+.thm-b .enum li{display:grid;grid-template-columns:2.4em minmax(0,1fr);align-items:baseline;padding:6px 10px;border-radius:10px;background:var(--surface-2,#FAFAFC)}
+.thm-b .enum .lab{font-weight:700;color:var(--tc);font-family:var(--font-display)}
+.thm-b .dmath{display:block;text-align:center;margin:8px 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.thm-b .katex{font-size:1.05em}
+.thm-b .katex-display{margin:0}
+@media (max-width:599px){.thm-b{padding:12px 14px 14px;font-size:15.5px}.thm-b .enum li{grid-template-columns:2.1em minmax(0,1fr);padding:6px 8px}.thm-b .dmath .katex{font-size:.98em}}

@@ -213,7 +213,7 @@ async function analyseDoc(b: any, auth: string) {
         "Pour chacun : type ; nom (numéro et nom tels qu'écrits, ex. « Théorème 4 (critère de Riemann) », sinon un intitulé court et neutre) ; " +
         "titre : ce que l'énoncé définit ou affirme, sans en révéler le contenu (ex. « Définition de la fonction de répartition », « Théorème de transfert », « Propriété : linéarité de l'espérance ») ; " +
         "enonce : RECOPIE FIDÈLEMENT l'énoncé tel qu'il figure dans le document, sans le reformuler, le compléter ni le corriger, sans la démonstration, " +
-        "les formules en LaTeX entre $…$ ; section : titre de la partie du cours. N'ajoute RIEN qui ne soit pas dans le document. " +
+        "les formules en LaTeX entre $…$ ; garde la mise en page du cours : un retour à la ligne avant chaque point d'une énumération (i), (ii)… et les formules importantes isolées entre $$…$$ ; section : titre de la partie du cours. N'ajoute RIEN qui ne soit pas dans le document. " +
         "Si un énoncé est coupé par la limite de l'extrait, recopie la partie visible. pages_total : nombre total de pages du document." }, ...parts] }],
       generationConfig: { temperature: 0.1, maxOutputTokens: 60000, responseMimeType: "application/json", responseSchema: COURS_SCHEMA },
     });

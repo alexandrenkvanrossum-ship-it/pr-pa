@@ -651,6 +651,53 @@ function quizPick(n){
   fresh.sort(function(a,b){ return (b.chap===cur)-(a.chap===cur); });
   var out=due.slice(0,n); return out.concat(fresh.slice(0,Math.max(0,Math.min(5,n-out.length)))).map(function(x){ return x.k; });
 }
+/* ---------- mise en page d'un énoncé, façon cours : hypothèses, énumérations (i), (ii)…, formules centrées ---------- */
+function thmKind(t){ t=norm(t||""); return /defin/.test(t)?"def":/theor|corol|lemm/.test(t)?"thm":/method/.test(t)?"meth":/remar/.test(t)?"rem":"prop"; }
+function fmtEnonce(src){
+  var txt=String(src||"").replace(/\r/g,"").trim(), parts=[], re=/\$\$([\s\S]+?)\$\$|\$([^$]+?)\$/g, m, last=0;
+  while((m=re.exec(txt))){ if(m.index>last) parts.push({t:txt.slice(last,m.index)}); parts.push(m[1]!=null?{d:m[1]}:{m:m[2]}); last=re.lastIndex; }
+  if(last<txt.length) parts.push({t:txt.slice(last)});
+  /* indices écrits à plat dans le texte : F1, B2, Fp → F₁… (lettre majuscule isolée suivie d'un chiffre ou de p) */
+  var tok=[]; parts.forEach(function(p){ if(p.t==null){ tok.push(p); return; }
+    var t0=p.t.replace(/\.\s?\.\s?\./g,"…").replace(/\s+([:;?!])/g,"\u00a0$1");
+    /* F1, Bp → indices ; lettre majuscule isolée (E, F…) ; « soit n / soient p » → variables mathématiques */
+    var r2=/(\b[A-Z](?:\d{1,2}|p)\b)|((?:^|[\s(,;:])([B-HJ-Z])(?=[\s.,;:)]|$))|(\b(?:[Ss]oi(?:en)?t)\s+([a-z])\b)/g, a=0, k;
+    while((k=r2.exec(t0))){
+      var pre=t0.slice(a,k.index), math, lead="";
+      if(k[1]){ var mm=k[1].match(/^([A-Z])(.+)$/); math=mm[1]+"_{"+mm[2]+"}"; }
+      else if(k[2]){ lead=k[2].slice(0,k[2].length-1); math=k[3]; }
+      else { lead=k[4].slice(0,k[4].length-1); math=k[5]; }
+      tok.push({t:pre+lead}); tok.push({m:math}); a=r2.lastIndex; }
+    if(a<t0.length) tok.push({t:t0.slice(a)}); });
+  /* découpe en blocs : paragraphes, items d'énumération */
+  var ENUM=/(^|\s|:)\(((?:i{1,3}|iv|vi{0,3}|ix|x)|[a-h]|\d{1,2})\)\s+/g, LEAD=/(\s)(Alors|Dans ce cas|Les assertions suivantes sont équivalentes|Les propositions suivantes sont équivalentes|On a alors|De plus|Réciproquement|Si de plus)\b/g;
+  var stream=""; var store=[];
+  tok.forEach(function(p){ if(p.t!=null) stream+=p.t.replace(LEAD,"\n$2"); else { store.push(p); stream+="\u0000"+(store.length-1)+"\u0001"; } });
+  stream=stream.replace(ENUM,function(all,pre,lab){ return (pre===":"?":":"")+"\n\u0002"+lab+"\u0003"; });
+  function inline(x){ return x.split(/\u0000(\d+)\u0001/).map(function(seg,i){ if(i%2===0) return esc(seg); var p=store[+seg]; if(p.d!=null) return '<span class="dmath">$$'+esc(breakMath(p.d))+'$$</span>'; var long=p.m.length>48 || /\\(iff|implies|Longleftrightarrow|Longrightarrow)/.test(p.m); return long?'<span class="dmath">$$'+esc(breakMath(p.m))+'$$</span>':'$'+esc(p.m)+'$'; }).join(""); }
+  var out="", inList=false;
+  stream.split(/\n+/).forEach(function(line){ line=line.trim(); if(!line) return;
+    var it=line.match(/^\u0002([^\u0003]+)\u0003\s*([\s\S]*)$/);
+    if(it){ if(!inList){ out+='<ol class="enum">'; inList=true; } out+='<li><span class="lab">('+esc(it[1])+')</span><div>'+inline(it[2].replace(/[;,]\s*$/,""))+'</div></li>'; return; }
+    if(inList){ out+="</ol>"; inList=false; }
+    out+='<p>'+inline(line)+'</p>';
+  });
+  if(inList) out+="</ol>";
+  return out;
+}
+/* longue formule : un retour à la ligne avant ⟹ / ⟺ et après le quantificateur, alignés comme dans un cours */
+function breakMath(m){
+  if(m.length<40 || /\\begin\{/.test(m)) return m;
+  var depth=0, cuts=[], i, c;
+  for(i=0;i<m.length;i++){ c=m[i]; if(c==="{"||c==="(") depth++; else if(c==="}"||c===")") depth--; else if(depth===0){
+    var rest=m.slice(i); var op=rest.match(/^\\(implies|iff|Longrightarrow|Longleftrightarrow|Rightarrow|Leftrightarrow)(?![a-zA-Z])/);
+    if(op){ cuts.push({at:i,keep:true}); i+=op[0].length-1; continue; }
+    if(c==="," && /^\\(forall|exists)/.test(m.trim()) && !cuts.some(function(x){return x.q;})){ cuts.push({at:i+1,q:true}); } } }
+  if(!cuts.length) return m;
+  var lines=[], prev=0; cuts.forEach(function(x){ lines.push(m.slice(prev,x.at).trim()); prev=x.at; }); lines.push(m.slice(prev).trim());
+  lines=lines.filter(Boolean);
+  return "\\begin{gathered}"+lines.join(" \\\\ ")+"\\end{gathered}";
+}
 function quizTitle(it){
   if(it.titre) return it.titre;
   var m=String(it.nom||"").match(/\(([^)]+)\)/); if(m) return it.type+" : "+m[1];
@@ -687,8 +734,12 @@ function quizSheet(){
   var k=Q.list[Q.i], fid=k.split("#")[0], it=(s.mathsCours[fid]||{items:[]}).items[+k.split("#")[1]];
   if(!it){ Q.i++; return quizSheet(); }
   if(!it.titre && Sync.user() && !Q.asking){ Q.asking=k; Files.titleOne(fid,+k.split("#")[1]).then(function(){ var Q2=S.quiz; if(Q2 && Q2.list[Q2.i]===k && it.titre){ Q2.asking=null; quizSheet(); } else if(Q2) Q2.asking=null; }); }
-  h+='<div class="card flat"><div class="eyebrow">'+esc(it.type)+' · '+esc(it.section||"")+'</div><h3 style="margin:6px 0">'+esc(quizTitle(it))+'</h3>'+(Q.show?'<div style="text-align:right;margin-top:-4px"><button class="link-btn" data-a="quizedit" data-k="'+esc(k)+'">Modifier l\'énoncé</button></div>':'')+(it.titre&&it.nom?'<div class="small faint" style="margin:-2px 0 6px">'+esc(it.nom)+'</div>':'');
-  h+=Q.show?'<div style="white-space:pre-wrap;line-height:1.55" class="qmath">'+esc(it.enonce)+'</div><p class="small faint" style="margin:8px 0 0">Énoncé recopié de ton cours (« '+esc((s.files[fid]||{}).name||"")+' »).</p>':'<p class="small muted">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
+  var tk=thmKind(it.type);
+  h+='<div class="qcard"><div class="eyebrow">'+esc(String(it.section||"").replace(/^[\dIVX.\s]+/,"").trim()||it.type)+'</div><h3 class="qtitle">'+esc(quizTitle(it))+'</h3>';
+  if(Q.show){
+    h+='<div class="thm thm-'+tk+'"><div class="thm-h"><b>'+esc(it.type||"Énoncé")+(it.nom&&!new RegExp("^"+(it.type||"x")+"$","i").test(it.nom)?' '+esc(String(it.nom).replace(new RegExp("^"+(it.type||"")+"\\s*","i"),"")):'')+'</b></div><div class="thm-b qmath">'+fmtEnonce(it.enonce)+'</div></div>';
+    h+='<div class="row" style="justify-content:space-between;margin-top:10px"><span class="small faint">Recopié de « '+esc((s.files[fid]||{}).name||"ton cours")+' »</span><button class="link-btn" data-a="quizedit" data-k="'+esc(k)+'">Modifier</button></div>';
+  } else h+=(it.nom?'<div class="small faint" style="margin:2px 0 10px">'+esc(it.nom)+'</div>':'')+'<p class="small muted" style="margin:0">Énonce-le à voix haute ou sur une feuille, avec les hypothèses exactes, puis vérifie.</p>';
   h+='</div>';
   h+=Q.show?'<div class="grid g2" style="gap:8px">'+[[3,"Parfait"],[2,"Correct"],[1,"Hésitant"],[0,"À revoir"]].map(function(x){ return '<button class="btn'+(x[0]>=2?" tint":"")+'" data-a="qrate" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>':'<button class="btn primary" data-a="qshow">Voir l\'énoncé</button>';
   openSheet(h+'</div>'); renderMath(layer);
