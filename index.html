@@ -1340,10 +1340,10 @@ var WORK = {
   3:[{s:"13:00",e:"14:00",t:"Midi · CSH ou langues",subs:["csh","ang","all"],sub:"csh"},
      {s:"17:15",e:"20:00",t:"Maths",sub:"maths",crit:true},
      {s:"20:40",e:"22:45",t:"HGG",sub:"hgg",soir:true}],
+  /* jeudi : DDL (dîner de ligne) de 19 h 30 à 21 h 30 */
   4:[{s:"13:00",e:"15:00",t:"Trinôme maths (jeu. ou ven.)",sub:"maths"},
-     {s:"15:00",e:"16:00",t:"CSH",sub:"csh"},
-     {s:"16:00",e:"20:00",t:"Maths",sub:"maths",crit:true},
-     {s:"20:40",e:"22:45",t:"HGG",sub:"hgg",soir:true}],
+     {s:"15:00",e:"19:00",t:"Maths",sub:"maths",crit:true},
+     {s:"21:45",e:"22:45",t:"CSH",sub:"csh"}],
   5:[{s:"13:00",e:"14:00",t:"Traductions anglais + allemand",subs:["ang","all"],sub:"ang",trad:true},
      {s:"14:00",e:"16:00",t:"CSH",sub:"csh"},
      {s:"16:00",e:"20:00",t:"Maths",sub:"maths",crit:true},
@@ -1379,7 +1379,8 @@ function dayEvents(dISO){
     if(wd===6 && pales.length) add({kind:"fixed",s:"13:00",e:"13:25",t:"Anki (facultatif)",sub:"neutral",anki:true});
   }
   if(!(wd===6 && pales.length)){
-    add({kind:"fixed",s:"20:00",e:"20:40",t:"Dîner",sub:"neutral"});
+    if(wd===4 && !vac) add({kind:"fixed",s:"19:30",e:"21:30",t:"DDL",sub:"neutral",ddl:true});
+    else add({kind:"fixed",s:"20:00",e:"20:40",t:"Dîner",sub:"neutral"});
     if(!vac || wd!==6) add({kind:"fixed",s:"23:00",e:"23:20",t:"Actualité",sub:"neutral",actu:true});
   }
   ev=applyAgendaEdits(ev,dISO,wd);
