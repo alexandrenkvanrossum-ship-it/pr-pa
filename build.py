@@ -38,7 +38,7 @@ pwa_head = """<!doctype html>
 <meta name="apple-mobile-web-app-title" content="Prépa">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon-64.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 """
 (dist / "index.html").write_text(pwa_head + head + "</head><body>\n" + body + "</body></html>\n")
@@ -58,28 +58,20 @@ self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.a
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r;}).catch(()=>caches.match(e.request)));});
 """)
 
-# Icônes : carré arrondi bleu, coche blanche
+# Icônes : la chouette diplômée sous les étoiles (src/icon.svg, src/icon-maskable.svg)
+import io, cairosvg
 icons = dist / "icons"
 icons.mkdir(exist_ok=True)
-def icon(size, maskable=False):
-    s = 4
-    im = Image.new("RGBA", (size * s, size * s), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    W = size * s
-    if maskable:
-        d.rectangle([0, 0, W, W], fill=(10, 122, 255))
-    else:
-        d.rounded_rectangle([0, 0, W - 1, W - 1], radius=int(W * 0.225), fill=(10, 122, 255))
-    k = 0.62 if maskable else 1.0
-    c = W / 2
-    pts = [(c - 0.24 * W * k, c + 0.01 * W * k), (c - 0.06 * W * k, c + 0.19 * W * k), (c + 0.26 * W * k, c - 0.17 * W * k)]
-    d.line(pts, fill="white", width=int(0.085 * W * k), joint="curve")
-    for p in (pts[0], pts[2]):
-        r = 0.0425 * W * k
-        d.ellipse([p[0] - r, p[1] - r, p[0] + r, p[1] + r], fill="white")
-    return im.resize((size, size), Image.LANCZOS)
-icon(180).save(icons / "icon-180.png")
-icon(192).save(icons / "icon-192.png")
-icon(512).save(icons / "icon-512.png")
-icon(512, True).save(icons / "icon-512-maskable.png")
+def render(svg, size):
+    return Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(), output_width=size * 4, output_height=size * 4))).convert("RGBA").resize((size, size), Image.LANCZOS)
+def rounded(im):
+    W = im.size[0]; m = Image.new("L", (W * 4, W * 4), 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, W * 4 - 1, W * 4 - 1], radius=int(W * 4 * 0.225), fill=255)
+    im.putalpha(m.resize((W, W), Image.LANCZOS)); return im
+svg = (src / "icon.svg").read_text(); svgm = (src / "icon-maskable.svg").read_text()
+render(svg, 180).convert("RGB").save(icons / "icon-180.png")   # iOS arrondit lui-même
+rounded(render(svg, 192)).save(icons / "icon-192.png")
+rounded(render(svg, 512)).save(icons / "icon-512.png")
+render(svgm, 512).convert("RGB").save(icons / "icon-512-maskable.png")
+rounded(render(svg, 64)).save(icons / "favicon-64.png")
 print("ok", len(head + body) // 1024, "Ko")
