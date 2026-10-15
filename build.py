@@ -37,8 +37,8 @@ pwa_head = """<!doctype html>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Prépa">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="icon" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png?v=2">
+<link rel="icon" href="icons/favicon-64.png?v=2">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 """
 (dist / "index.html").write_text(pwa_head + head + "</head><body>\n" + body + "</body></html>\n")
@@ -47,9 +47,9 @@ pwa_head = """<!doctype html>
     "start_url": "./", "scope": "./", "display": "standalone",
     "background_color": "#F5F5F7", "theme_color": "#F5F5F7",
     "icons": [
-        {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-        {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
-        {"src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+        {"src": "icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png"},
+        {"src": "icons/icon-512.png?v=2", "sizes": "512x512", "type": "image/png"},
+        {"src": "icons/icon-512-maskable.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
     ]
 }, ensure_ascii=False, indent=2))
 (dist / "sw.js").write_text("""const C='prepa-v1';
