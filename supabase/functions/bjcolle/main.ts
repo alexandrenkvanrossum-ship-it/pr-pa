@@ -177,7 +177,11 @@ async function run(mode: string) {
   const ilYa = (j: number) => new Date(Date.now() - j * 864e5).toISOString().slice(0, 10);
   const recents: any[] = await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&date=gte." + ilYa(21) + "&or=(detail_at.is.null,sujet.is.null,commentaire.is.null,detail_at.lt." + new Date(Date.now() - 6 * 3600e3).toISOString() + ")&select=id,href,moi,discipline,colleur,date,sujet&order=date.desc&limit=" + DETAILS_PAR_PASSAGE) || [];
   const reste = DETAILS_PAR_PASSAGE - recents.length;
-  const anciens: any[] = reste > 0 ? await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&detail_at=is.null&select=id,href,moi,discipline,colleur,date,sujet&order=date.desc&limit=" + reste) || [] : [];
+  // les sujets de maths d'abord (pièces jointes à relever, y compris sur les feuilles déjà lues), puis le reste
+  const sel = "&select=id,href,moi,discipline,colleur,date,sujet&order=date.desc&limit=";
+  const maths: any[] = reste > 0 ? await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&discipline=eq.Math%C3%A9matiques&or=(detail_at.is.null,champs->_pj.is.null)" + sel + reste) || [] : [];
+  const reste2 = reste - maths.length;
+  const anciens: any[] = maths.concat(reste2 > 0 ? await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&detail_at=is.null" + sel + reste2) || [] : []).filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i && !recents.some((x) => x.id === c.id));
   const details: any[] = []; let nouveauxSujets = 0;
   for (const c of [...recents, ...anciens]) {
     try {

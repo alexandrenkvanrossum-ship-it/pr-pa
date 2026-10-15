@@ -75,7 +75,12 @@ function parseDetail(html) {
   if (n) o.note = decode(n[1]).trim();
   o.absent = /name=["']ABS_ELEVE["'][^>]*\bchecked\b/i.test(html);
   const re = /<legend[^>]*>([\s\S]*?)<\/legend>([\s\S]*?)<\/fieldset>/gi; let m;
-  while ((m = re.exec(html))) { const k = text(m[1]); const v = text(m[2]); if (k) o.champs[k] = v; }
+  while ((m = re.exec(html))) {
+    const k = text(m[1]); const v = text(m[2]); if (k) o.champs[k] = v;
+    // pièces jointes (sujets en PDF) : liens publics pj_doc/…
+    if (/^Pi[eè]ces jointes/i.test(k)) { const a = /<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi; let x; o.pj = o.pj || []; while ((x = a.exec(m[2]))) o.pj.push({ n: text(x[2]), u: decode(x[1]).replace(/^\.?\//, "") }); }
+  }
+  o.pj = o.pj || []; o.champs._pj = o.pj;
   o.sujet = o.champs["Sujet"] || "";
   const ck = Object.keys(o.champs).find((k) => /^Commentaire/i.test(k)); o.commentaire = ck ? o.champs[ck] : "";
   const dur = (o.commentaire.match(/Durée de l'exposé\s*:\s*([^\n.]+)/i) || [])[1]; if (dur) o.dureeExpose = dur.trim();
@@ -280,7 +285,11 @@ async function run(mode: string) {
   const ilYa = (j: number) => new Date(Date.now() - j * 864e5).toISOString().slice(0, 10);
   const recents: any[] = await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&date=gte." + ilYa(21) + "&or=(detail_at.is.null,sujet.is.null,commentaire.is.null,detail_at.lt." + new Date(Date.now() - 6 * 3600e3).toISOString() + ")&select=id,href,moi,discipline,colleur,date,sujet&order=date.desc&limit=" + DETAILS_PAR_PASSAGE) || [];
   const reste = DETAILS_PAR_PASSAGE - recents.length;
-  const anciens: any[] = reste > 0 ? await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&detail_at=is.null&select=id,href,moi,discipline,colleur,date,sujet&order=date.desc&limit=" + reste) || [] : [];
+  // les sujets de maths d'abord (pièces jointes à relever, y compris sur les feuilles déjà lues), puis le reste
+  const sel = "&select=id,href,moi,discipline,colleur,date,sujet&order=date.desc&limit=";
+  const maths: any[] = reste > 0 ? await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&discipline=eq.Math%C3%A9matiques&or=(detail_at.is.null,champs->_pj.is.null)" + sel + reste) || [] : [];
+  const reste2 = reste - maths.length;
+  const anciens: any[] = maths.concat(reste2 > 0 ? await db("bj_colles?owner=eq." + OWNER + "&href=not.is.null&detail_at=is.null" + sel + reste2) || [] : []).filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i && !recents.some((x) => x.id === c.id));
   const details: any[] = []; let nouveauxSujets = 0;
   for (const c of [...recents, ...anciens]) {
     try {

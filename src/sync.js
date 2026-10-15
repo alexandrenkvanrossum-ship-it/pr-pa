@@ -21,7 +21,9 @@ var Sync = (function(){
     m["state|slotDone"]=s.slotDone||{};
     m["state|meta"]={cshSkip:s.cshSkip||0,seeded:!!s.seeded};
     if(s.news) m["state|news"]=s.news;
-    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg","methEdits","agendaEdits"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
+    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg","methEdits","agendaEdits","ann","colleSujets","trin"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
+    /* analyses des sujets de colle : un document par sujet (pour ne pas renvoyer tout à chaque changement) */
+    Object.keys(s.colleEx||{}).forEach(function(k){ m["colle|"+k]=s.colleEx[k]; });
     return m;
   }
   function applyDoc(s,kind,id,data,deleted){
@@ -29,6 +31,8 @@ var Sync = (function(){
       var arr=kind==="task"?s.tasks:s.notes, i=arr.findIndex(function(x){ return x.id===id; });
       if(deleted){ if(i>=0) arr.splice(i,1); return; }
       if(i>=0) arr[i]=data; else arr.push(data);
+    } else if(kind==="colle"){
+      s.colleEx=s.colleEx||{}; if(deleted) delete s.colleEx[id]; else s.colleEx[id]=data;
     } else if(kind==="state"){
       if(deleted) return;
       if(id==="meta"){ s.cshSkip=data.cshSkip||0; s.seeded=s.seeded||!!data.seeded; }

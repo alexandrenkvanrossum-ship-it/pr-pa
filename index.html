@@ -434,6 +434,64 @@ html{scroll-behavior:auto}
 .thm-b .katex-display{margin:0}
 @media (max-width:599px){.thm-b{padding:12px 14px 14px;font-size:15.5px}.thm-b .enum li{grid-template-columns:2.1em minmax(0,1fr);padding:6px 8px}.thm-b .dmath .katex{font-size:.98em}}
 
+/* ---------- Maths : annales, sujets de colle, trinôme ---------- */
+.alist{display:flex;flex-direction:column}
+.arow{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:.5px solid var(--line);min-width:0}
+.arow:last-child{border-bottom:0}
+.arow.isdone .abody b{color:var(--ink-3);text-decoration:line-through}
+.eptile{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font:800 11.5px/1 var(--font-display,inherit);letter-spacing:-.02em;color:#fff;background:var(--c)}
+.abody{flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:3px;color:var(--ink)}
+.abody b{font-size:15px;font-weight:600;line-height:1.3}
+.ameta{font-size:12.5px;color:var(--ink-2);line-height:1.35}
+.apills{display:flex;flex-wrap:wrap;gap:5px}
+.apills .chip{font-size:11.5px;padding:2px 8px}
+.chip.chm{background:var(--maths);color:var(--maths-ink)}
+.chip.warn{background:#FFF0E0;color:#B85A00}
+.chip.vio{background:#F1EFFC;color:#6152D1}
+.chip.blu{background:var(--blue-pale);color:var(--blue)}
+.ascore{flex:none;min-width:30px;text-align:center;font-weight:700;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.ascore.hi{color:var(--green)}
+.achk{flex:none;width:28px;height:28px;border-radius:50%;border:1.8px solid var(--line-strong,rgba(60,60,67,.3));background:conic-gradient(#FFB020 var(--p,0%),transparent 0);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;padding:0;transition:transform .2s var(--spring,ease),background-color .2s}
+.achk:not(.doing){background:transparent}
+.achk.done{background:var(--green);border-color:var(--green)}
+.achk.redo{background:#6152D1;border-color:#6152D1}
+.achk:active{transform:scale(.88)}
+.icon-btn.sm{width:30px;height:30px;font-size:15px;flex:none}
+.trin-h{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.trin-h b{font-size:16px;font-family:var(--font-display,inherit)}
+.trin-next{margin-top:12px;border-top:.5px solid var(--line);padding-top:10px}
+.trin-next summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--blue);list-style:none}
+.trin-next summary::-webkit-details-marker{display:none}
+.trin-next[open] summary{margin-bottom:8px}
+.aweek{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.aweek div{background:var(--surface-2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column}
+.aweek b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--font-display,inherit)}
+.aweek span{font-size:12px;color:var(--ink-2)}
+.seg.wide{display:flex;width:100%}
+.seg.wide button{flex:1;padding:6px 4px;white-space:nowrap}
+.field.sm{padding:7px 10px;font-size:13.5px;width:auto;max-width:100%;border-radius:10px}
+.afilters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chips-x{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+.chips-x::-webkit-scrollbar{display:none}
+.chips-x .chip{padding:6px 12px;font-size:13px}
+.anote{border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.4;background:var(--fill)}
+.anote.green{background:var(--green-pale)} .anote.blue{background:var(--blue-pale)} .anote.orange{background:#FFF0E0} .anote.red{background:var(--red-pale)}
+.akv{display:flex;flex-direction:column;margin-top:10px;background:var(--surface-2);border-radius:12px}
+.akv>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:.5px solid var(--line);font-size:14px;flex-wrap:wrap}
+.akv>div:last-child{border-bottom:0}
+.stepper{display:inline-flex;align-items:center;gap:10px}
+.stepper button{width:32px;height:30px;border-radius:9px;border:0;background:var(--fill);font-size:18px;font-weight:600;color:var(--ink)}
+.stepper b{min-width:54px;text-align:center;font-variant-numeric:tabular-nums}
+.arange{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:14px}
+.arange input{width:100%;accent-color:#FFB020}
+.adl{display:grid;grid-template-columns:minmax(90px,30%) 1fr;gap:8px 12px;margin:6px 0 0;font-size:14px;line-height:1.4}
+.adl dt{color:var(--ink-2)} .adl dd{margin:0}
+.arm{margin:6px 0 0;padding-left:18px;font-size:14px;line-height:1.45;display:flex;flex-direction:column;gap:5px}
+.ddot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:1px;background:#999}
+.ddot.d-f{background:var(--green)} .ddot.d-m{background:#F08C00} .ddot.d-d{background:#E03131} .ddot.d-td{background:#9C36B5}
+.stars{color:#F5A623;letter-spacing:-1px} .stars i{font-style:normal;color:var(--line-strong,#ccc)} .stars.red{color:#E03131}
+.sheet-b>*{flex-shrink:0}
+
 </style>
 </head><body>
 <div id="root"></div>
@@ -583,7 +641,7 @@ function uid(p){ return (p||"x")+Date.now().toString(36)+Math.random().toString(
 /* ---------- stockage ---------- */
 var Store = (function(){
   var KEY="prepa.v1", mem=null;
-  function blank(){ return {tasks:[],notes:[],goals:{},ressentis:{},slotDone:{},seeded:false,cshSkip:0,news:null,files:{},mathsEx:{},mathsCours:{},mathsDone:{},mathsCfg:{},quiz:{},quizOff:{},hgg:{fait:{},done:{},prog:{},min:{}},methEdits:{},agendaEdits:{}}; }
+  function blank(){ return {tasks:[],notes:[],goals:{},ressentis:{},slotDone:{},seeded:false,cshSkip:0,news:null,files:{},mathsEx:{},mathsCours:{},mathsDone:{},mathsCfg:{},quiz:{},quizOff:{},hgg:{fait:{},done:{},prog:{},min:{}},methEdits:{},agendaEdits:{},ann:{},colleSujets:{},colleEx:{},trin:{}}; }
   function load(){
     if(mem) return mem;
     try{ var raw=localStorage.getItem(KEY); mem=raw?JSON.parse(raw):blank(); }catch(e){ mem=blank(); }
@@ -705,7 +763,9 @@ var Sync = (function(){
     m["state|slotDone"]=s.slotDone||{};
     m["state|meta"]={cshSkip:s.cshSkip||0,seeded:!!s.seeded};
     if(s.news) m["state|news"]=s.news;
-    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg","methEdits","agendaEdits"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
+    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg","methEdits","agendaEdits","ann","colleSujets","trin"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
+    /* analyses des sujets de colle : un document par sujet (pour ne pas renvoyer tout à chaque changement) */
+    Object.keys(s.colleEx||{}).forEach(function(k){ m["colle|"+k]=s.colleEx[k]; });
     return m;
   }
   function applyDoc(s,kind,id,data,deleted){
@@ -713,6 +773,8 @@ var Sync = (function(){
       var arr=kind==="task"?s.tasks:s.notes, i=arr.findIndex(function(x){ return x.id===id; });
       if(deleted){ if(i>=0) arr.splice(i,1); return; }
       if(i>=0) arr[i]=data; else arr.push(data);
+    } else if(kind==="colle"){
+      s.colleEx=s.colleEx||{}; if(deleted) delete s.colleEx[id]; else s.colleEx[id]=data;
     } else if(kind==="state"){
       if(deleted) return;
       if(id==="meta"){ s.cshSkip=data.cshSkip||0; s.seeded=s.seeded||!!data.seeded; }
@@ -969,6 +1031,289 @@ var Files = (function(){
   var ls=[]; function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
   function of(sub){ var s=S(); return Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(f){ return f.sub===sub; }).sort(function(a,b){ return b.at.localeCompare(a.at); }); }
   return {titles:titles, titleOne:titleOne, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
+})();
+
+/* Annales de maths approfondies (base de BJAPP, d'après le répertoire Major Prépa) et sujets de colle de BJcolle.
+   - Ann : 984 exercices (écrits 2000-2026, oraux HEC/ESCP, DS de Ginette), faisabilité selon le calendrier
+     des chapitres, pertinence sur 100, suivi par exercice.
+   - Colles : sujets de colle de maths (PDF déposés sur BJcolle), programme de colle par quinzaine,
+     deux sujets proposés chaque vendredi pour le trinôme du vendredi suivant. */
+var Ann = (function(){
+  var EPS = {
+    EML:{s:"emlyon",n:"emlyon",m:"EM",c:"pink",full:"Maths emlyon"},
+    EDHEC:{s:"EDHEC",n:"EDHEC",m:"ED",c:"green",full:"Maths EDHEC"},
+    ECRI:{s:"Ecricome",n:"Ecricome",m:"EC",c:"teal",full:"Maths Ecricome"},
+    HE:{s:"Maths I",n:"Maths I HEC/ESSEC",m:"I",c:"indigo",full:"Maths I HEC/ESSEC (depuis 2019)"},
+    M2:{s:"Maths II",n:"Maths II HEC/ESCP",m:"II",c:"red",full:"Maths II HEC/ESCP"},
+    HEC:{s:"HEC ≤ 2018",n:"HEC",m:"H",c:"brown",full:"Maths I HEC (2000 à 2018)"},
+    ESSEC:{s:"ESSEC ≤ 2018",n:"ESSEC",m:"S",c:"yellow",full:"Maths I ESSEC (2000 à 2018)"},
+    OH:{s:"Oral HEC",n:"Oral HEC",m:"OH",c:"blue",full:"Oral de maths HEC"},
+    OE:{s:"Oral ESCP",n:"Oral ESCP",m:"OE",c:"purple",full:"Oral de maths ESCP"},
+    DS:{s:"DS Ginette",n:"DS Ginette",m:"G",c:"gray",full:"Devoirs de Ginette"}
+  };
+  var EP_ORDER=["EML","EDHEC","ECRI","HE","M2","HEC","ESSEC"], OEP_ORDER=["OH","OE"];
+  var LBL={e1:"Exercice 1",e2:"Exercice 2",e3:"Exercice 3",p:"Problème",p1:"Problème 1",p2:"Problème 2",p3:"Problème 3",p4:"Problème 4",s:"Sujet complet",ex:"Exercice principal",qsp:"Question sans préparation",sj:"Exercice",ds:"Devoir"};
+  var DIFF={f:{n:"Facile",c:"green",o:1},m:{n:"Moyen",c:"orange",o:2},d:{n:"Difficile",c:"red",o:3},td:{n:"Très difficile",c:"purple",o:4}};
+  var DOM={A:{n:"Analyse",g:"∫"},L:{n:"Algèbre",g:"λ"},P:{n:"Probabilités",g:"Ω"}};
+  /* chapitres : 1re année, puis 2e année avec les dates de la progression (corrigeables à la main) */
+  var CHL=[
+    {id:"A1",n:"Suites et séries",y:1,d:"A"},{id:"A2",n:"Fonctions, DL, Taylor",y:1,d:"A"},{id:"A3",n:"Intégration",y:1,d:"A"},
+    {id:"L1",n:"Algèbre linéaire, polynômes",y:1,d:"L"},{id:"P1",n:"Probabilités discrètes",y:1,d:"P"},
+    {id:"C0",k:0,n:"Intégrales généralisées",y:2,d:"A",a:"2026-09-07",b:"2026-09-25",demo:"IPP et changement de variable sur intervalle quelconque"},
+    {id:"C1",k:1,n:"Variables aléatoires à densité",y:2,d:"P",a:"2026-09-21",b:"2026-10-16",demo:"Positivité de l'espérance, König-Huygens, V(aX+b), stabilité affine, convergence de Γ(x)"},
+    {id:"C2",k:2,n:"Compléments d'algèbre linéaire",y:2,d:"L",a:"2026-10-12",b:"2026-11-06",demo:"Invariance de la trace par changement de base"},
+    {id:"C3",k:3,n:"Diagonalisation",y:2,d:"L",a:"2026-11-02",b:"2026-11-20",demo:"Valeurs propres des matrices triangulaires, famille libre de vecteurs propres, somme directe des sous-espaces propres, projecteurs diagonalisables"},
+    {id:"C4",k:4,n:"Variables aléatoires discrètes",y:2,d:"P",a:"2026-11-16",b:"2026-12-04",demo:"Loi d'une somme indépendante, stabilité binomiale/Poisson, Huygens pour la covariance, V(X+Y)"},
+    {id:"C5",k:5,n:"Algèbre bilinéaire",y:2,d:"L",a:"2026-11-30",b:"2027-01-08",demo:"Cauchy-Schwarz et cas d'égalité, complétion en b.o.n., (F⊥)⊥ = F, théorème de minimisation"},
+    {id:"C6",k:6,n:"Endomorphismes symétriques",y:2,d:"L",a:"2027-01-04",b:"2027-01-15",demo:"Projecteur orthogonal ⇔ symétrique, orthogonalité des sous-espaces propres, stabilité de l'orthogonal"},
+    {id:"C7",k:7,n:"Fonctions de plusieurs variables",y:2,d:"A",a:"2027-01-18",b:"2027-02-05",demo:"Bornes atteintes, Schwarz, conditions d'ordre 1 et 2"},
+    {id:"C8",k:8,n:"Optimisation sous contraintes linéaires",y:2,d:"A",a:"2027-02-01",b:"2027-02-12",demo:"Condition ∇f(a) ∈ Vect(∇gᵢ(a))"},
+    {id:"C9",k:9,n:"Convergences de suites de VA",y:2,d:"P",a:"2027-02-08",b:"2027-02-28",demo:"Markov, Bienaymé-Tchebychev, loi faible des grands nombres"},
+    {id:"C10",k:10,n:"Estimation",y:2,d:"P",a:"2027-02-24",b:"2027-03-12",demo:"Intervalles de confiance pour une Bernoulli (deux méthodes)"}
+  ];
+  var CH={}; CHL.forEach(function(c){ CH[c.id]=c; });
+  var CH2=CHL.filter(function(c){ return c.y===2; });
+  /* programme de colle de maths : un nouveau toutes les deux semaines (date = lundi où il commence) */
+  var PROG=[
+    {d:"2026-09-21",n:"Colle 1",t:"Révisions d'analyse et intégrales généralisées",main:["C0"],prev:["A1","A2","A3"]},
+    {d:"2026-10-05",n:"Colle 2",t:"Variables aléatoires à densité",main:["C1"],prev:["C0"]},
+    {d:"2026-11-02",n:"Colle 3",t:"Algèbre linéaire : 1re année et compléments (+ densités)",main:["C2","L1"],prev:["C1"]},
+    {d:"2026-11-16",n:"Colle 4",t:"Algèbre linéaire et réduction",main:["C3"],prev:["C2","L1"]},
+    {d:"2026-11-30",n:"Colle 5",t:"Variables et vecteurs aléatoires discrets",main:["C4"],prev:["C3"]},
+    {d:"2026-12-14",n:"Pas de colle",t:"Concours blanc",main:["C4"],prev:["C3","C5"]},
+    {d:"2027-01-04",n:"Colle 6",t:"Espaces euclidiens et endomorphismes symétriques",main:["C5","C6"],prev:["C3"]},
+    {d:"2027-02-01",n:"Colle 7",t:"Fonctions de plusieurs variables, extrema (avec contraintes)",main:["C7","C8"],prev:["C6"]},
+    {d:"2027-02-15",n:"Colle 8",t:"Convergences, estimation",main:["C9","C10"],prev:["C7"]}
+  ];
+
+  var D=null, ITEMS=[], BY={}, SUBJ={}, OY=[], IDX={}, loading=null, ls=[];
+  var CACHE="prepa-annales", PATH=function(){ return Sync.user().id+"/annales/annales.json"; };
+  function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
+  function setData(o){
+    D=o; ITEMS=o.items||[]; OY=o.oy||[]; BY={}; SUBJ={};
+    (o.subjects||[]).forEach(function(s){ SUBJ[s.sid]=s; });
+    ITEMS.forEach(function(it){ BY[it.id]=it; it.tg=it.tg||[]; it.hp=it.hp||[];
+      IDX[it.id]=norm([EPS[it.ep]?EPS[it.ep].n:"",it.ep,it.y,it.sub||"",it.dsn||"",LBL[it.lb]||"",it.th,it.no||"",(it.hp||[]).map(function(h){ return h.n; }).join(" "),it.nt||"",it.rd?"super classique":"",it.tg.map(function(t){ return CH[t]?CH[t].n:""; }).join(" "),DIFF[it.di]?DIFF[it.di].n:""].join(" "));
+    });
+  }
+  /* la base est rangée dans ton espace privé « fichiers » (pas dans le dépôt public) */
+  function load(){
+    if(D) return Promise.resolve(D);
+    if(window.__ANN_DATA){ setData(window.__ANN_DATA); return Promise.resolve(D); }
+    if(loading) return loading;
+    loading=(window.caches?caches.open(CACHE).then(function(c){ return c.match("annales.json"); }).then(function(r){ return r?r.json():null; }).catch(function(){ return null; }):Promise.resolve(null)).then(function(j){
+      if(j){ setData(j); emit(); return D; }
+      if(typeof Sync==="undefined"||!Sync.user()) throw new Error("Connecte-toi pour charger les annales.");
+      return Sync.client().storage.from("fichiers").download(PATH()).then(function(r){
+        if(r.error) throw new Error("Base d'annales introuvable dans ton espace.");
+        return r.data.text();
+      }).then(function(t){
+        var o=JSON.parse(t); setData(o); emit();
+        if(window.caches) caches.open(CACHE).then(function(c){ c.put("annales.json",new Response(t,{headers:{"content-type":"application/json"}})); }).catch(function(){});
+        return D;
+      });
+    }).catch(function(e){ loading=null; throw e; });
+    return loading;
+  }
+  function S(){ var s=Store.get(); s.ann=s.ann||{}; s.ann.it=s.ann.it||{}; s.ann.ov=s.ann.ov||{}; s.ann.days=s.ann.days||{}; return s.ann; }
+
+  /* ---------- chapitres et faisabilité ---------- */
+  function T(){ return iso(today()); }
+  function chStatus(id,date){
+    date=date||T(); var c=CH[id]; if(!c||c.y===1) return "seen";
+    var o=S().ov[id]; if(o===true) return "seen"; if(o===false) return date>=c.a?"cur":"future";
+    if(date>c.b) return "seen"; if(date>=c.a) return "cur"; return "future";
+  }
+  function curChapters(date){ return CH2.filter(function(c){ return chStatus(c.id,date)==="cur"; }).map(function(c){ return c.id; }); }
+  function defaultFocus(date){ var p=progAt(date||T()); if(p) return p.main.slice(0,1); var cur=curChapters(date); return cur.length?[cur[cur.length-1]]:["C0"]; }
+  function focusNow(){ return S().focus?[S().focus]:defaultFocus(); }
+  function feas(it,date){
+    if(it.ex) return {k:"hp"};
+    var t2=it.tg.filter(function(t){ return CH[t]&&CH[t].y===2; });
+    var miss=t2.filter(function(t){ return chStatus(t,date)==="future"; }), cur=t2.filter(function(t){ return chStatus(t,date)==="cur"; });
+    if(!miss.length) return {k:cur.length?"cur":"ok",cur:cur};
+    var last=miss.map(function(t){ return CH[t]; }).sort(function(a,b){ return a.b<b.b?-1:1; }).pop();
+    return {k:(it.pa||it.lv===1)?"part":"later",miss:miss,last:last};
+  }
+  function feasText(it){
+    var f=feas(it);
+    if(f.k==="hp") return {c:"red",s:"Hors programme ECG",l:"Repose sur une notion hors programme : masqué des recommandations."};
+    if(f.k==="ok") return {c:"green",s:"Faisable maintenant",l:"Tous les chapitres nécessaires sont vus."};
+    if(f.k==="cur") return {c:"blue",s:"Chapitre en cours",l:"Utilise "+f.cur.map(function(t){ return CH[t].n; }).join(", ")+", que tu travailles en ce moment."};
+    var when=f.last?"après « "+f.last.n+" » (vers le "+fmtDay(f.last.b)+")":"plus tard";
+    if(f.k==="part") return {c:"orange",s:"Partiellement faisable",l:"Une partie se fait déjà ; le reste "+when+"."};
+    return {c:"gray",s:"À garder pour plus tard",l:"Faisable "+when+"."};
+  }
+  /* pertinence sur 100 : intérêt 40 %, lien avec le chapitre 30 %, programme actuel 15 %, accessibilité 15 % */
+  function score(it,focus,date){
+    if(it.ex) return 0;
+    var I=it.st?it.st/3:0.55, txt=norm((it.nt||"")+" "+((SUBJ[it.sid]||{}).vi||""));
+    if(/classique|a faire absolument/.test(txt)) I=Math.min(1,I+0.1);
+    if(it.rd) I=1.12; if(it.k==="d") I=1.05;
+    var E=it.y>=2023?1:(it.y>=2014?0.85:0.7), f=feas(it,date);
+    var F=f.k==="later"?0.1:(f.k==="part"?0.35:0.6);
+    if(focus&&focus.length&&f.k!=="later"&&it.tg.some(function(t){ return focus.indexOf(t)>=0; })) F=1;
+    var Dd=({f:1,m:0.9,d:0.7,td:0.5})[it.di]; if(Dd==null) Dd=0.7;
+    var s=100*(0.40*I+0.30*F+0.15*E+0.15*Dd)-Math.min(15,5*(it.hp||[]).length);
+    if(it.lb==="s") s-=8; else if(["M2","HE","HEC","ESSEC"].indexOf(it.ep)>=0) s-=6;
+    return Math.max(0,Math.min(100,Math.round(s)));
+  }
+  function doms(it){ var s={}; String(it.dm||"").split("").forEach(function(ch){ if(ch==="A") s.A=1; if(ch==="L"||ch==="B") s.L=1; if(ch==="P") s.P=1; if(ch==="T"){ s.A=s.L=s.P=1; } }); return Object.keys(s); }
+  function statusOf(id){ var r=S().it[id]; return r&&r.s||"todo"; }
+  function recommend(focus,n,o){
+    o=o||{}; var date=o.date||T(), ex=o.exclude||{};
+    var cand=ITEMS.filter(function(it){ return !it.ex&&!ex[it.id]&&statusOf(it.id)!=="done"&&(o.allowFull||it.lb!=="s")&&(!it.k||(it.k==="o"&&o.orals)||(it.k==="d"&&o.ds))&&(!o.maxT||(it.tm||0)<=o.maxT)&&(!o.minT||(it.tm||0)>=o.minT); })
+      .map(function(it){ return {it:it,f:feas(it,date),s:score(it,focus,date)}; }).filter(function(x){ return x.f.k==="ok"||x.f.k==="cur"; });
+    var inF=function(x){ return focus.length&&x.it.tg.some(function(t){ return focus.indexOf(t)>=0; }); };
+    cand.sort(function(a,b){ return (inF(b)-inF(a))||(b.s-a.s); });
+    return cand.slice(0,n).map(function(x){ return x.it; });
+  }
+  /* recherche et filtres (Grange) */
+  function search(q,f){
+    f=f||{}; var words=norm(q||"").split(/\s+/).filter(Boolean), focus=(f.chs&&f.chs.length)?f.chs:focusNow();
+    var kind=f.mode==="oral"?"o":f.mode==="ds"?"d":undefined;
+    var L=ITEMS.filter(function(it){
+      if(it.k!==kind) return false; if(it.ex&&!f.hp) return false;
+      if(f.eps&&f.eps.length&&f.eps.indexOf(it.ep)<0) return false;
+      if(f.chs&&f.chs.length&&!it.tg.some(function(t){ return f.chs.indexOf(t)>=0; })) return false;
+      if(f.dur){ var t=it.tm||0; if(f.dur==="long"?t<180:t>+f.dur) return false; }
+      if(f.diff&&f.diff.length&&f.diff.indexOf(it.di)<0) return false;
+      if(f.stars===4?!it.rd:(f.stars&&(it.st||0)<f.stars)) return false;
+      if(f.feas){ var k=feas(it).k; if(f.feas==="now"&&!(k==="ok"||k==="cur")) return false; }
+      if(f.stat){ var s=statusOf(it.id), r=S().it[it.id]; if(f.stat==="fav"?!(r&&r.f):s!==f.stat) return false; }
+      if(words.length){ var h=IDX[it.id]; if(!words.every(function(w){ return h.indexOf(w)>=0; })) return false; }
+      return true;
+    });
+    var sc={}; L.forEach(function(it){ sc[it.id]=score(it,focus); });
+    var by={score:function(a,b){ return sc[b.id]-sc[a.id]||b.y-a.y; },recent:function(a,b){ return b.y-a.y||a.ep.localeCompare(b.ep); },easy:function(a,b){ return ((DIFF[a.di]||{o:5}).o-(DIFF[b.di]||{o:5}).o)||sc[b.id]-sc[a.id]; }}[f.sort||"score"];
+    L.sort(by); return {L:L,sc:sc};
+  }
+  /* suivi */
+  function rec(id){ return S().it[id]||null; }
+  function patch(id,p){ var r=Object.assign({s:"todo"},S().it[id]||{},p); if(r.s==="todo"&&r.n==null&&!r.t&&!r.c&&!r.f) delete S().it[id]; else S().it[id]=r; Store.save(); emit(); }
+  function setStatus(id,s){
+    var r=Object.assign({s:"todo"},S().it[id]||{}), prev=r.s;
+    if(s==="done"&&prev!=="done"){ r.d=T(); r.dc=(r.dc||0)+1; if(prev==="redo") r.r=(r.r||0)+1; }
+    if(s==="doing"&&r.p==null) r.p=25; r.s=s; if(s==="redo") r.rd=T();
+    S().it[id]=r; patch(id,{});
+  }
+  function addTime(id,m){ var d=S().days[T()]||(S().days[T()]={m:0}); d.m+=m; patch(id,{t:((rec(id)||{}).t||0)+m}); }
+  function weekStats(){
+    var mon=iso(mondayOf(today())), end=iso(addDays(mondayOf(today()),6)), ex=0, min=0, eps={};
+    Object.keys(S().it).forEach(function(id){ var r=S().it[id]; if(r.d&&r.d>=mon&&r.d<=end&&(r.s==="done"||r.s==="redo")&&BY[id]){ ex++; eps[BY[id].ep]=1; } });
+    Object.keys(S().days).forEach(function(d){ if(d>=mon&&d<=end) min+=S().days[d].m||0; });
+    return {ex:ex,min:min,eps:Object.keys(eps).length};
+  }
+
+  /* ---------- programme de colle ---------- */
+  function progAt(date){ var p=null; PROG.forEach(function(x){ if(x.d<=date) p=x; }); var o=(Store.get().ann||{}).progOv; if(o&&o.from<=date&&(!o.to||date<=o.to)) return Object.assign({},p||{},o.p); return p; }
+
+  function title(it){ if(it.k==="d") return "DS "+(it.sub||"")+", "+(it.dsn||""); if(it.k==="o") return EPS[it.ep].n+" "+it.y+", "+(it.sub||""); return EPS[it.ep].n+" "+it.y+(it.sub?" ("+it.sub+")":"")+(LBL[it.lb]?", "+LBL[it.lb].toLowerCase():""); }
+  function dur(t){ if(!t) return ""; if(t<60) return t+" min"; var h=Math.floor(t/60), m=t%60; return h+" h"+(m?" "+(m<10?"0":"")+m:""); }
+  return {load:load, ready:function(){ return !!D; }, on:function(f){ ls.push(f); }, items:function(){ return ITEMS; }, get:function(id){ return BY[id]; }, subj:function(sid){ return SUBJ[sid]||{}; }, oy:function(){ return OY; },
+    EPS:EPS, EP_ORDER:EP_ORDER, OEP_ORDER:OEP_ORDER, LBL:LBL, DIFF:DIFF, DOM:DOM, CHL:CHL, CH:CH, CH2:CH2, PROG:PROG,
+    chStatus:chStatus, focusNow:focusNow, defaultFocus:defaultFocus, feas:feas, feasText:feasText, score:score, doms:doms, recommend:recommend, search:search,
+    statusOf:statusOf, rec:rec, patch:patch, setStatus:setStatus, addTime:addTime, weekStats:weekStats, progAt:progAt, title:title, dur:dur, state:S};
+})();
+
+/* ---------- sujets de colle de maths (BJcolle) ---------- */
+var Colles = (function(){
+  var BASE="https://www.bjcolle.fr/", running={}, queue=[], busy=false, ls=[];
+  function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
+  function key(u){ var h=0; for(var i=0;i<u.length;i++){ h=(h*31+u.charCodeAt(i))|0; } return "k"+(h>>>0).toString(36); }
+  function st(){ var s=Store.get(); s.colleSujets=s.colleSujets||{}; s.colleEx=s.colleEx||{}; s.trin=s.trin||{}; return s; }
+  function isPdf(p){ return /\.pdf$/i.test(p.u||"")||/\.pdf$/i.test(p.n||""); }
+  /* toutes les feuilles de colle de maths avec un sujet en PDF : relevé initial + ce que le robot ajoute */
+  function all(){
+    var s=st(), m={};
+    function add(o){ (o.pj||[]).filter(isPdf).forEach(function(p){ var u=/^https?:/.test(p.u)?p.u:BASE+String(p.u).replace(/^\.?\//,""); var k=key(u); var x=m[k]; if(!x) x=m[k]={k:k,u:u,n:p.n,d:o.d,c:o.c,a:o.a,dates:[]}; if(o.d&&x.dates.indexOf(o.d)<0) x.dates.push(o.d); if(o.d<x.d) x.d=o.d; }); }
+    Object.keys(s.colleSujets).forEach(function(k){ add(s.colleSujets[k]); });
+    /* même PDF déposé pour chaque élève du groupe : on fusionne colleur + semaine + nom de fichier */
+    var g={};
+    Object.keys(m).forEach(function(k){ var x=m[k], w=iso(mondayOf(parseISO(x.d))), gk=norm(x.c)+"|"+w+"|"+norm(x.n).replace(/[^a-z0-9]/g,""); if(!g[gk]||(s.colleEx[k]&&!s.colleEx[g[gk].k])) g[gk]=x; });
+    return Object.keys(g).map(function(k){ var x=g[k]; x.ex=s.colleEx[x.k]||null; x.cur=x.a==="2026-2027"||x.d>="2026-08-15"; return x; }).sort(function(a,b){ return b.d.localeCompare(a.d); });
+  }
+  /* chapitres d'un sujet : ceux relevés par l'analyse, sinon le programme de colle de la semaine (année en cours) */
+  function chapters(x){
+    if(x.ex&&x.ex.exercices){ var m={}; x.ex.exercices.forEach(function(e){ (e.chapitres||[]).forEach(function(c){ if(Ann.CH[c]) m[c]=1; }); }); var l=Object.keys(m); if(l.length) return l; }
+    if(x.cur){ var p=Ann.progAt(x.d); if(p) return p.main.slice(); }
+    return [];
+  }
+  function chLabel(id){ var c=Ann.CH[id]; return c?(c.y===2?"Ch. "+c.k+" "+c.n:c.n+" (1A)"):id; }
+
+  /* ---------- trinôme du vendredi ---------- */
+  function inVac(d){ return (typeof VACANCES!=="undefined"?VACANCES:[]).some(function(v){ return d>=v.from&&d<=v.to; }); }
+  /* chaque vendredi, on prépare le vendredi suivant (hors vacances) */
+  function target(){
+    var t=today(), back=(t.getDay()-5+7)%7, lastFri=addDays(t,-back), d=addDays(lastFri,7);
+    for(var i=0;i<8&&inVac(iso(d));i++) d=addDays(d,7);
+    return iso(d);
+  }
+  function scoreFor(chs,p){ var s=0; chs.forEach(function(c){ if(p.main.indexOf(c)>=0) s+=3; else if(p.prev.indexOf(c)>=0) s+=1; else s-=1; }); return s; }
+  function usedBefore(tg){ var u={}, T=st().trin; Object.keys(T).forEach(function(d){ if(d!==tg) (T[d].picks||[]).forEach(function(p){ u[p.ref]=1; }); }); return u; }
+  function candidates(tg){
+    var p=Ann.progAt(tg); if(!p) return [];
+    var used=usedBefore(tg), out=[];
+    all().forEach(function(x){ var chs=chapters(x), s=scoreFor(chs,p); if(chs.length&&s>0) out.push({kind:"colle",ref:x.k,s:s+(x.ex?1:0)-(used[x.k]?5:0)+(x.cur?0.5:0),x:x}); });
+    if(Ann.ready()) Ann.items().forEach(function(it){ if(it.k==="o"&&it.lb!=="qsp"&&!it.ex){ var s=scoreFor(it.tg.filter(function(t){ return Ann.CH[t]; }),p); if(s>=3) out.push({kind:"ann",ref:it.id,s:s-2+(it.st||0)*0.3-(used[it.id]?5:0)}); } });
+    return out.sort(function(a,b){ return b.s-a.s; });
+  }
+  function pick(tg,force){
+    var T=st().trin, cur=T[tg];
+    if(cur&&cur.picks&&cur.picks.length>=2&&!force) return cur;
+    var c=candidates(tg); if(!c.length) return cur||null;
+    var keep=(cur&&cur.picks||[]).filter(function(p){ return p.keep; });
+    var picks=keep.slice();
+    /* d'abord deux sujets de colle si possible, sinon des exercices d'oral */
+    var pool=c.filter(function(x){ return !picks.some(function(p){ return p.ref===x.ref; })&&!(cur&&cur.skip&&cur.skip[x.ref]); });
+    var top=pool.slice(0,6); top.sort(function(){ return Math.random()-0.5; }); top.sort(function(a,b){ return Math.round(b.s)-Math.round(a.s); });
+    while(picks.length<2&&top.length){ var x=top.shift(); picks.push({kind:x.kind,ref:x.ref}); }
+    T[tg]={picks:picks,at:new Date().toISOString(),skip:(cur&&cur.skip)||{},done:(cur&&cur.done)||{}};
+    Store.save(); return T[tg];
+  }
+  function swap(tg,i){ var T=st().trin, cur=T[tg]; if(!cur) return; var old=cur.picks[i]; cur.skip=cur.skip||{}; if(old) cur.skip[old.ref]=1; cur.picks.forEach(function(p,j){ p.keep=j!==i; }); cur.picks.splice(i,1); var r=pick(tg,true); r.picks.forEach(function(p){ delete p.keep; }); Store.save(); emit(); }
+  function toggleDone(tg,ref){ var cur=st().trin[tg]; if(!cur) return; cur.done=cur.done||{}; if(cur.done[ref]) delete cur.done[ref]; else cur.done[ref]=iso(today()); Store.save(); emit(); }
+
+  /* ---------- analyse des PDF par Gemini (énoncés, chapitres) ---------- */
+  function chList(){ return Ann.CHL.map(function(c){ return c.id+" = "+c.n+(c.y===1?" (1re année)":""); }).join(" ; "); }
+  function analyze(k){
+    if(running[k]) return running[k];
+    var x=all().find(function(y){ return y.k===k; }); if(!x) return Promise.resolve(null);
+    running[k]=Sync.invoke({mode:"doc",kind:"colle",chapitres:chList(),files:[{url:x.u,name:x.n,mime:"application/pdf"}]}).then(function(r){
+      st().colleEx[k]={question_cours:r.question_cours||"",exercices:(r.exercices||[]).filter(function(e){ return e&&e.enonce; }),at:new Date().toISOString()};
+      Store.save(); delete running[k]; emit(); return st().colleEx[k];
+    },function(e){ st().colleEx[k]={err:String(e&&e.message||e).slice(0,200),at:new Date().toISOString(),exercices:null}; Store.save(); delete running[k]; emit(); throw e; });
+    return running[k];
+  }
+  /* file d'attente en arrière-plan : propositions d'abord, puis l'année en cours, puis l'archive */
+  function pump(){
+    if(busy||typeof Sync==="undefined"||!Sync.user()) return;
+    var s=st(), tg=target(), cur=s.trin[tg], want=(cur&&cur.picks||[]).filter(function(p){ return p.kind==="colle"; }).map(function(p){ return p.ref; });
+    var L=all().filter(function(x){ var e=s.colleEx[x.k]; return !e||(e.err&&Date.now()-new Date(e.at)>864e5); });
+    L.sort(function(a,b){ return (want.indexOf(b.k)>=0)-(want.indexOf(a.k)>=0)||(b.cur-a.cur)||b.d.localeCompare(a.d); });
+    var x=L[0]; if(!x) return; busy=true;
+    analyze(x.k).catch(function(){}).then(function(){ busy=false; pumped++; if(pumped<12) setTimeout(pump,4000); });
+  }
+  var pumped=0;
+  /* nouveaux sujets relevés par le robot (pièces jointes des feuilles de colle de maths) */
+  var refreshed=0;
+  /* relevé initial (toutes les feuilles de colle de maths lues une fois), rangé dans ton espace privé */
+  function importOnce(){
+    var s=st(); if(s.colleImport) return Promise.resolve();
+    return Sync.client().storage.from("fichiers").download(Sync.user().id+"/annales/colles-bjcolle.json").then(function(r){
+      if(r.error) return; return r.data.text().then(function(t){ var o=JSON.parse(t), n=0; (o.colles||[]).forEach(function(c){ if(!s.colleSujets[c.id]){ s.colleSujets[c.id]={d:c.d,c:c.c,a:c.a,pj:c.pj}; n++; } }); s.colleImport=o.at||new Date().toISOString(); Store.save(); if(n) emit(); });
+    }).catch(function(){});
+  }
+  function refresh(){
+    if(typeof Sync==="undefined"||!Sync.user()||Date.now()-refreshed<10*60e3) return Promise.resolve();
+    refreshed=Date.now();
+    return importOnce().then(function(){ return Sync.client().from("bj_colles").select("id,date,colleur,annee,pj:champs->_pj").eq("discipline","Mathématiques").not("champs->_pj","is",null).order("date",{ascending:false}).limit(1000).then(function(r){
+      if(r.error||!r.data) return; var s=st(), n=0;
+      r.data.forEach(function(c){ if(!c.pj||!c.pj.length) return; var o=s.colleSujets[c.id]; if(o&&o.pj&&o.pj.length) return; s.colleSujets[c.id]={d:c.date,c:c.colleur,a:c.annee,pj:c.pj}; n++; });
+      if(n){ Store.save(); emit(); }
+    }); }).catch(function(){});
+  }
+  return {refresh:refresh, all:all, chapters:chapters, chLabel:chLabel, target:target, pick:pick, swap:swap, toggleDone:toggleDone, candidates:candidates, analyze:analyze, pump:pump, busy:function(k){ return !!running[k]; }, key:key, on:function(f){ ls.push(f); }, inVac:inVac};
 })();
 
 /* Construction des journées : cours, blocs fixes, créneaux de travail proposés, pales. */
@@ -1377,6 +1722,8 @@ function render(){
     case "bjcolleurs": html=vBjColleurs(); break;
     case "bjcolleur": html=vBjColleur(S.param); break;
     case "notes": html=vNotes(); break;
+    case "annales": html=vAnnales(); break;
+    case "colles": html=vColles(); break;
     case "methodo": html=vMethodo(); break;
     case "plus": html=vPlus(); break;
     default: html=vHome();
@@ -1677,6 +2024,8 @@ function vMatiere(id){
   }
   if(id==="maths"){
     h+='<section class="card"><div class="card-h"><h2>Chapitre en cours</h2></div><input class="field" id="m-chap" list="m-chaps" value="'+esc(mathsChap())+'"><datalist id="m-chaps">'+mathsChaps().map(function(c){ return '<option value="'+esc(c)+'">'; }).join("")+'</datalist><p class="small muted" style="margin:6px 0 0">Sert de chapitre par défaut pour tes dépôts et met en avant ses énoncés dans les quiz.</p></section>';
+    annBoot();
+    h+=trinomeCard()+annalesCard();
     h+='<div class="grid g2">'+mathsTodayCard()+quizCard()+'</div>'+exoCard()+filesCard("maths");
     h+='<div class="note-box">DM : dépose-le en type « DM » avec sa date de rendu ; il devient une tâche découpée sur jeudi, vendredi et dimanche (2 h max par créneau).</div>';
   }
@@ -2077,6 +2426,146 @@ function planAlerts(){
   return h+'</section>';
 }
 
+/* ---------- Maths : trinôme du vendredi, annales, sujets de colle ---------- */
+var EPC={pink:"#D6336C",green:"#2F9E44",teal:"#0C8599",indigo:"#4C6EF5",red:"#E03131",brown:"#9C6B3C",yellow:"#C99A06",blue:"#1C7ED6",purple:"#9C36B5",gray:"#868E96"};
+function epTile(ep){ var e=Ann.EPS[ep]||{m:"?",c:"gray"}; return '<span class="eptile" style="--c:'+EPC[e.c]+'">'+esc(e.m)+'</span>'; }
+function bjTile(){ return '<span class="eptile" style="--c:#B97D0C">BJ</span>'; }
+function annBoot(){ if(!Ann.ready() && !S.annErr && !S.annLoading){ S.annLoading=true; Ann.load().then(function(){ S.annLoading=false; render(); },function(e){ S.annLoading=false; S.annErr=e.message||String(e); render(); }); } if(typeof Colles!=="undefined") Colles.refresh().then(function(){ Colles.pump(); }); }
+function chChip(id,main){ return '<span class="chip'+(main?" chm":"")+'">'+esc(Colles.chLabel(id))+'</span>'; }
+function diffDot(di){ var d=Ann.DIFF[di]; return d?'<span class="ddot d-'+di+'" title="'+d.n+'"></span>'+d.n:""; }
+function stars(n,red){ return n?'<span class="stars'+(red?" red":"")+'">'+"★".repeat(n)+'<i>'+"★".repeat(3-n)+'</i></span>':""; }
+function annChk(id){ var s=Ann.statusOf(id), r=Ann.rec(id)||{}; return '<button class="achk '+s+'" data-a="annchk" data-id="'+esc(id)+'" style="--p:'+(r.p||0)+'%" aria-label="'+(s==="done"?"Marquer à faire":"Marquer comme fait")+'">'+(s==="done"?I.check:s==="redo"?"↻":"")+'</button>'; }
+function annRow(it,sc){
+  var f=Ann.feas(it), r=Ann.rec(it.id)||{}, pills="";
+  if(f.k==="later") pills+='<span class="chip">Après '+esc(f.last.n)+'</span>'; else if(f.k==="part") pills+='<span class="chip warn">Partiel</span>'; else if(f.k==="hp") pills+='<span class="chip warn">Hors programme</span>';
+  if(r.s==="doing") pills+='<span class="chip warn">Commencé '+(r.p||0)+' %</span>'; if(r.s==="redo") pills+='<span class="chip vio">À refaire</span>'; if(r.f) pills+='<span class="chip blu">To-do</span>';
+  return '<div class="arow" data-key="an-'+esc(it.id)+'">'+epTile(it.ep)+'<button class="abody" data-a="annopen" data-id="'+esc(it.id)+'"><b>'+esc(it.th)+'</b><span class="ameta">'+esc(Ann.title(it))+(it.tm?' · ≈ '+Ann.dur(it.tm):'')+(it.di?' · '+diffDot(it.di):'')+(it.st?' '+stars(it.st,it.rd):'')+'</span>'+(pills?'<span class="apills">'+pills+'</span>':'')+'</button>'+(sc!=null&&!it.ex?'<span class="ascore'+(sc>=75?" hi":"")+'" title="Pertinence">'+sc+'</span>':'')+annChk(it.id)+'</div>';
+}
+/* trinôme du vendredi : deux sujets pour le vendredi suivant, sur le programme de colle */
+function pickRow(tg,p,i,cur){
+  var done=cur.done&&cur.done[p.ref], h;
+  if(p.kind==="colle"){
+    var x=Colles.all().find(function(y){ return y.k===p.ref; }); if(!x) return "";
+    var ex=x.ex&&x.ex.exercices, chs=Colles.chapters(x), pr=Ann.progAt(tg)||{main:[]};
+    h=bjTile()+'<button class="abody" data-a="colopen" data-k="'+x.k+'"><b>'+(ex&&ex.length?esc(ex.map(function(e){ return e.titre; }).join(" · ")):'Sujet de '+esc(x.c||"colle"))+'</b><span class="ameta">Colle de '+esc(x.c||"?")+' · '+fmtDay(x.d)+' '+x.d.slice(0,4)+(x.cur?"":" · ECG1")+(Colles.busy(x.k)?' · lecture en cours…':(!x.ex?' · pas encore lu':''))+'</span><span class="apills">'+chs.map(function(c){ return chChip(c,pr.main.indexOf(c)>=0); }).join("")+'</span></button>';
+  } else {
+    var it=Ann.get(p.ref); if(!it) return "";
+    h=epTile(it.ep)+'<button class="abody" data-a="annopen" data-id="'+esc(it.id)+'"><b>'+esc(it.th)+'</b><span class="ameta">'+esc(Ann.title(it))+' · ≈ '+Ann.dur(it.tm||25)+'</span><span class="apills">'+it.tg.filter(function(t){ return Ann.CH[t]; }).map(function(c){ return chChip(c); }).join("")+'</span></button>';
+  }
+  return '<div class="arow'+(done?" isdone":"")+'" data-key="tp-'+esc(p.ref)+'">'+h+'<button class="icon-btn sm" data-a="colswap" data-d="'+tg+'" data-i="'+i+'" title="Proposer un autre sujet" aria-label="Autre sujet">↻</button><button class="achk '+(done?"done":"")+'" data-a="coldone" data-d="'+tg+'" data-k="'+esc(p.ref)+'" aria-label="Fait avec le trinôme">'+(done?I.check:"")+'</button></div>';
+}
+function trinBlock(tg){
+  var p=Ann.progAt(tg), cur=Colles.pick(tg);
+  var h='<div class="trin-h"><div><div class="eyebrow">Pour '+fmtLong(tg)+'</div><b>'+esc(p?p.n+" · "+p.t:"Programme à préciser")+'</b></div></div>';
+  if(p) h+='<div class="apills" style="margin:6px 0 4px">'+p.main.map(function(c){ return chChip(c,true); }).join("")+p.prev.map(function(c){ return chChip(c); }).join("")+'</div>';
+  if(!cur||!cur.picks.length) return h+'<div class="empty"><b>Pas encore de sujet sur ce programme</b>'+(Ann.ready()?"Les sujets de colle se remplissent au fil des lectures.":"Chargement des annales…")+'</div>';
+  return h+'<div class="alist">'+cur.picks.map(function(x,i){ return pickRow(tg,x,i,cur); }).join("")+'</div>';
+}
+function trinomeCard(){
+  var tg=Colles.target(), nx=iso(addDays(parseISO(tg),7)); for(var i=0;i<8&&Colles.inVac(nx);i++) nx=iso(addDays(parseISO(nx),7));
+  var n=Colles.all().length;
+  var h='<section class="card trin"><div class="card-h"><h2>Trinôme du vendredi</h2><button class="link-btn" data-go="colles">'+plural(n,"sujet")+' de colle</button></div>'+trinBlock(tg);
+  if(diffDays(tg,iso(today()))<=1) h+='<details class="trin-next"><summary>Préparer aussi '+fmtDay(nx)+'</summary>'+trinBlock(nx)+'</details>';
+  return h+'<p class="small muted" style="margin:10px 0 0">Chaque vendredi, deux sujets pour le vendredi suivant : le programme de colle en cours d\'abord, le chapitre qu\'on vient de finir ensuite. ↻ en propose un autre.</p></section>';
+}
+function annalesCard(){
+  var h='<section class="card"><div class="card-h"><h2>Annales</h2><button class="link-btn" data-go="annales">Tout chercher</button></div>';
+  if(!Ann.ready()) return h+'<div class="empty">'+(S.annErr?'<b>Annales indisponibles</b>'+esc(S.annErr):'Chargement des 984 exercices…')+'</div></section>';
+  var ws=Ann.weekStats(), focus=Ann.focusNow(), av=+(S.annAvail||0), o={};
+  if(av){ if(av>=240){ o={minT:120,allowFull:true,ds:true}; } else o={maxT:av,orals:av<=60}; }
+  var recs=Ann.recommend(focus,4,o), fsel=Ann.state().focus||"";
+  h+='<div class="aweek"><div><b>'+ws.ex+'</b><span>exercices cette semaine</span></div><div><b>'+ws.min+'</b><span>minutes</span></div><div><b>'+ws.eps+'</b><span>concepteurs</span></div></div>';
+  h+='<div class="row" style="justify-content:space-between;margin:12px 0 8px"><select class="field sm" id="ann-focus" aria-label="Chapitre travaillé"><option value="">Auto : '+esc(Colles.chLabel(Ann.defaultFocus()[0]))+'</option>'+Ann.CHL.map(function(c){ return '<option value="'+c.id+'"'+(fsel===c.id?" selected":"")+'>'+esc(Colles.chLabel(c.id))+'</option>'; }).join("")+'</select></div>';
+  h+='<div class="seg wide">'+[["0","Peu importe"],["30","30 min"],["60","1 h"],["120","2 h"],["240","4 h"]].map(function(x){ return '<button class="'+(String(av)===x[0]?"on":"")+'" data-a="annavail" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>';
+  h+='<div class="alist" style="margin-top:8px">'+(recs.length?recs.map(function(it){ return annRow(it,Ann.score(it,focus)); }).join(""):'<div class="empty">Rien de faisable dans ce temps pour ce chapitre.</div>')+'</div>';
+  var favs=Ann.items().filter(function(it){ var r=Ann.rec(it.id); return r&&(r.f||r.s==="doing"||r.s==="redo")&&r.s!=="done"; });
+  if(favs.length) h+='<div class="group-h" style="margin-top:12px">Ma liste <span class="n">'+favs.length+'</span></div><div class="alist">'+favs.slice(0,6).map(function(it){ return annRow(it); }).join("")+'</div>';
+  return h+'</section>';
+}
+/* page Annales : recherche et filtres */
+function vAnnales(){
+  var h=topbar("Annales")+'<button class="link-btn" data-go="matiere" data-p="maths" style="display:inline-flex;align-items:center;gap:2px;margin-bottom:10px">'+I.left+' Maths</button><h1 class="large-title">Annales</h1>';
+  if(!Ann.ready()){ annBoot(); return h+'<div class="card"><div class="empty">'+(S.annErr?esc(S.annErr):"Chargement…")+'</div></div>'; }
+  var F=S.annF=S.annF||{mode:"ex",eps:[],chs:[],sort:"score",n:60}, R=Ann.search(S.annQ||"",F), L=R.L;
+  h+='<p class="subtitle">Écrits 2000 à 2026, oraux HEC et ESCP, DS de Ginette. Classés par pertinence pour ton chapitre.</p>';
+  h+='<input class="field" id="ann-q" type="search" placeholder="EDHEC 2014, Wallis, loi de Cauchy…" value="'+esc(S.annQ||"")+'" autocomplete="off">';
+  h+='<div class="row" style="margin:10px 0;gap:8px"><div class="seg">'+[["ex","Écrits"],["oral","Oraux"],["ds","DS"]].map(function(x){ return '<button class="'+(F.mode===x[0]?"on":"")+'" data-a="annmode" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div></div>';
+  var eps=F.mode==="oral"?Ann.OEP_ORDER:F.mode==="ds"?[]:Ann.EP_ORDER;
+  if(eps.length) h+='<div class="chips-x">'+'<button class="chip'+(!F.eps.length?" on":"")+'" data-a="anneps" data-v="">Tous</button>'+eps.map(function(e){ return '<button class="chip'+(F.eps.indexOf(e)>=0?" on":"")+'" data-a="anneps" data-v="'+e+'">'+esc(Ann.EPS[e].n)+'</button>'; }).join("")+'</div>';
+  var sel=function(id,cur,opts){ return '<select class="field sm" id="'+id+'">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(cur||"")===o[0]?" selected":"")+'>'+esc(o[1])+'</option>'; }).join("")+'</select>'; };
+  h+='<div class="afilters">'+sel("annf-ch",F.chs[0]||"",[["","Tous les chapitres"]].concat(Ann.CHL.map(function(c){ return [c.id,Colles.chLabel(c.id)]; })))+sel("annf-dur",F.dur||"",[["","Toutes durées"],["30","≤ 30 min"],["60","≤ 1 h"],["120","≤ 2 h"],["long","4 h"]])+sel("annf-feas",F.feas||"",[["","Tout"],["now","Faisable maintenant"]])+sel("annf-stat",F.stat||"",[["","Tout mon suivi"],["todo","À faire"],["doing","Commencés"],["done","Faits"],["redo","À refaire"],["fav","Ma liste"]])+sel("annf-sort",F.sort||"score",[["score","Pertinence"],["recent","Plus récents"],["easy","Plus accessibles"]])+'</div>';
+  h+='<div class="small muted" style="margin:8px 2px">'+plural(L.length,"exercice")+'</div><section class="card" style="padding:6px 10px"><div class="alist">'+(L.length?L.slice(0,F.n).map(function(it){ return annRow(it,R.sc[it.id]); }).join(""):'<div class="empty"><b>Aucun exercice</b>Élargis la recherche ou retire un filtre.</div>')+'</div></section>';
+  if(L.length>F.n) h+='<div style="text-align:center;margin:12px"><button class="btn sm" data-a="annmore">Afficher '+Math.min(60,L.length-F.n)+' de plus</button></div>';
+  return h;
+}
+function linkBtn(u,l){ return u&&/^https?:/.test(u)?'<a class="btn tint sm" href="'+esc(u)+'" target="_blank" rel="noopener">'+l+' '+I.arrow+'</a>':''; }
+function annSheet(id){
+  var it=Ann.get(id); if(!it) return;
+  var sj=Ann.subj(it.sid), r=Ann.rec(id)||{s:"todo"}, ft=Ann.feasText(it), sc=Ann.score(it,Ann.focusNow());
+  var h='<div class="sheet-h"><div class="ttl"><div class="eyebrow">'+esc(Ann.title(it))+'</div><h2>'+esc(it.th)+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
+  h+='<div class="apills">'+Ann.doms(it).map(function(d){ return '<span class="chip">'+Ann.DOM[d].g+' '+Ann.DOM[d].n+'</span>'; }).join("")+(it.di?'<span class="chip">'+diffDot(it.di)+'</span>':'')+(it.st?'<span class="chip">'+stars(it.st,it.rd)+'</span>':'')+(it.rd?'<span class="chip warn">Super classique : astuces à retenir</span>':'')+(it.ex?'':'<span class="chip blu">Pertinence '+sc+'</span>')+(it.tm?'<span class="chip">≈ '+Ann.dur(it.tm)+'</span>':'')+'</div>';
+  h+='<div class="anote '+ft.c+'"><b>'+esc(ft.s)+'.</b> '+esc(ft.l)+'</div>';
+  var links=it.k==="o"?linkBtn(sj.su,"Sujet et corrigé")+linkBtn(sj.co,"Corrigé QSP")+linkBtn(sj.ra,"Rapport du jury"):linkBtn(sj.su,"Sujet")+linkBtn(sj.co,"Corrigé")+linkBtn(sj.ra,"Rapport du jury");
+  h+='<div class="row" style="gap:8px">'+(links||'<span class="small muted">PDF non disponible ici'+(it.k==="d"?" : demande-le à ton prof ou dans tes dossiers de DS.":".")+'</span>')+'</div>';
+  if(it.rm) h+='<div><div class="group-h">Ce que le prof a relevé dans les copies</div><ul class="arm">'+it.rm.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul></div>';
+  (sj.vid||[]).concat(it.vid||[]).forEach(function(v){ h+='<a class="ext" href="'+esc(v.u)+'" target="_blank" rel="noopener"><div><b>▶ '+esc(v.t)+'</b></div></a>'; });
+  if(!it.ex){
+    h+='<div><div class="group-h">Mon suivi</div><div class="seg wide">'+[["todo","À faire"],["doing","Commencé"],["done","Fait"],["redo","À refaire"]].map(function(x){ return '<button class="'+(r.s===x[0]?"on":"")+'" data-a="annst" data-id="'+esc(id)+'" data-v="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>';
+    if(r.s==="doing") h+='<label class="arange"><span>Avancement <b>'+(r.p||0)+' %</b></span><input type="range" min="0" max="100" step="5" value="'+(r.p||0)+'" data-annp="'+esc(id)+'"></label>';
+    h+='<div class="akv"><div><span>Ma note</span><span class="stepper"><button data-a="annnote" data-id="'+esc(id)+'" data-v="-0.5" aria-label="Moins">−</button><b>'+(r.n==null?"–":String(r.n).replace(".",",")+" /20")+'</b><button data-a="annnote" data-id="'+esc(id)+'" data-v="0.5" aria-label="Plus">+</button></span></div>';
+    h+='<div><span>Temps passé</span><span class="row" style="gap:6px"><b>'+(r.t?durTxt(r.t):"0 min")+'</b>'+[15,30,60].map(function(m){ return '<button class="btn sm" data-a="anntime" data-id="'+esc(id)+'" data-v="'+m+'">+'+m+'</button>'; }).join("")+'</span></div>';
+    h+='<div><span>Dans ma liste</span><button class="chip'+(r.f?" on":"")+'" data-a="annfav" data-id="'+esc(id)+'">'+(r.f?"Oui":"Ajouter")+'</button></div></div>';
+    h+='<textarea class="field" id="ann-notes" data-id="'+esc(id)+'" rows="3" placeholder="Pièges, méthodes à retenir, questions à revoir…">'+esc(r.c||"")+'</textarea><div class="small muted">Barème strict : un point n\'est acquis que si une ligne de ta copie le justifie.</div></div>';
+  }
+  var kv=[];
+  if(it.tm) kv.push(["Durée estimée","≈ "+Ann.dur(it.tm)+(it.pt?" (par partie : "+it.pt.map(function(m,i){ return ["I","II","III","IV","V","VI"][i]+" ≈ "+Ann.dur(m); }).join(", ")+")":"")]);
+  if(it.qc) kv.push(["Question de cours",it.qc]);
+  kv.push(["Chapitres",it.tg.filter(function(t){ return Ann.CH[t]; }).map(Colles.chLabel).join(", ")||"–"]);
+  if(it.no) kv.push(["Notions",it.no]);
+  if((it.hp||[]).length) kv.push(["Hors programme",it.hp.map(function(x){ return x.n; }).join(" ; ")]);
+  if(it.ae) kv.push(["Pour les écrits",it.ae]); if(it.ao) kv.push(["Pour l'oral",it.ao]); if(it.nt) kv.push(["Commentaire",it.nt]);
+  if(sj.vi) kv.push([it.k==="d"?"À savoir":"Vision du sujet",sj.vi]); if(sj.rr) kv.push(["Rapport du jury",sj.rr]);
+  h+='<div><div class="group-h">'+(it.k==="d"?"Fiche du devoir":"Analyse Major Prépa")+'</div><dl class="adl">'+kv.map(function(x){ return '<dt>'+esc(x[0])+'</dt><dd>'+esc(x[1])+'</dd>'; }).join("")+'</dl></div>';
+  var sib=Ann.items().filter(function(x){ return x.sid===it.sid&&x.id!==id; });
+  if(sib.length) h+='<div><div class="group-h">Dans le même sujet</div><div class="alist">'+sib.map(function(x){ return annRow(x); }).join("")+'</div></div>';
+  var keep=layer.querySelector(".sheet-b"), y=keep&&layer.getAttribute("data-ann")===id?keep.scrollTop:0;
+  openSheet(h+'</div>'); layer.setAttribute("data-ann",id);
+  if(y){ var sb=layer.querySelector(".sheet-b"); if(sb) sb.scrollTop=y; var sh=layer.querySelector(".sheet"); if(sh) sh.style.animation="none"; }
+}
+/* page Sujets de colle */
+function vColles(){
+  annBoot();
+  var tg=Colles.target(), p=Ann.progAt(tg), F=S.colF=S.colF||{ch:"",q:"",an:""}, L=Colles.all();
+  var h=topbar("Sujets de colle")+'<button class="link-btn" data-go="matiere" data-p="maths" style="display:inline-flex;align-items:center;gap:2px;margin-bottom:10px">'+I.left+' Maths</button><h1 class="large-title">Sujets de colle</h1>';
+  h+='<p class="subtitle">Les sujets en PDF déposés sur BJcolle, lus par Gemini (énoncés et chapitres). '+plural(L.length,"sujet")+' · '+L.filter(function(x){ return x.ex&&x.ex.exercices; }).length+' lus.</p>';
+  h+='<div class="afilters"><select class="field sm" id="colf-ch"><option value="">Tous les chapitres</option>'+Ann.CHL.map(function(c){ return '<option value="'+c.id+'"'+(F.ch===c.id?" selected":"")+'>'+esc(Colles.chLabel(c.id))+'</option>'; }).join("")+'</select><select class="field sm" id="colf-an"><option value="">Toutes les années</option><option value="cur"'+(F.an==="cur"?" selected":"")+'>ECG2 (cette année)</option><option value="old"'+(F.an==="old"?" selected":"")+'>ECG1 (l\'an dernier)</option></select>'+(p?'<button class="chip'+(F.ch==="prog"?" on":"")+'" data-a="colprog">Programme du '+fmtDay(tg)+'</button>':'')+'</div>';
+  var words=norm(F.q).split(/\s+/).filter(Boolean);
+  L=L.filter(function(x){ var chs=Colles.chapters(x); if(F.ch==="prog"&&p&&!chs.some(function(c){ return p.main.indexOf(c)>=0||p.prev.indexOf(c)>=0; })) return false; if(F.ch&&F.ch!=="prog"&&chs.indexOf(F.ch)<0) return false; if(F.an==="cur"&&!x.cur) return false; if(F.an==="old"&&x.cur) return false; return true; });
+  var by={}; L.forEach(function(x){ var m=x.d.slice(0,7); (by[m]=by[m]||[]).push(x); });
+  h+=Object.keys(by).sort().reverse().map(function(m){ var d=parseISO(m+"-01"); return '<div class="group-h" style="margin-top:14px">'+MONTHS[d.getMonth()].replace(/^./,function(c){ return c.toUpperCase(); })+' '+d.getFullYear()+' <span class="n">'+by[m].length+'</span></div><section class="card" style="padding:6px 10px"><div class="alist">'+by[m].map(colRow).join("")+'</div></section>'; }).join("")||'<div class="card"><div class="empty"><b>Aucun sujet</b>Retire un filtre.</div></div>';
+  return h;
+}
+function colRow(x){
+  var ex=x.ex&&x.ex.exercices, chs=Colles.chapters(x);
+  return '<div class="arow" data-key="cs-'+x.k+'">'+bjTile()+'<button class="abody" data-a="colopen" data-k="'+x.k+'"><b>'+(ex&&ex.length?esc(ex.map(function(e){ return e.titre; }).join(" · ")):esc(x.n.replace(/\.pdf$/i,"")))+'</b><span class="ameta">'+esc(x.c||"?")+' · '+fmtDay(x.d)+(x.cur?"":" · ECG1")+(x.ex&&x.ex.err?" · lecture impossible":!x.ex?(Colles.busy(x.k)?" · lecture en cours…":" · pas encore lu"):"")+'</span>'+(chs.length?'<span class="apills">'+chs.map(function(c){ return chChip(c); }).join("")+'</span>':'')+'</button></div>';
+}
+function colleSheet(k){
+  var x=Colles.all().find(function(y){ return y.k===k; }); if(!x) return;
+  var ex=x.ex, h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Colle de '+esc(x.c||"?")+' · '+fmtLong(x.d)+' '+x.d.slice(0,4)+'</div><h2>'+(ex&&ex.exercices&&ex.exercices.length?esc(ex.exercices.map(function(e){ return e.titre; }).join(" · ")):"Sujet de colle")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
+  h+='<div class="row" style="gap:8px"><a class="btn tint sm" href="'+esc(x.u)+'" target="_blank" rel="noopener">Ouvrir le PDF '+I.arrow+'</a>'+(ex&&ex.exercices?'<button class="btn sm" data-a="colan" data-k="'+k+'">Relire</button>':'')+'</div>';
+  var chs=Colles.chapters(x); if(chs.length) h+='<div class="apills">'+chs.map(function(c){ return chChip(c); }).join("")+'</div>';
+  if(Colles.busy(k)) h+='<div class="empty">Gemini lit le sujet…</div>';
+  else if(!ex||!ex.exercices) h+='<div class="empty">'+(ex&&ex.err?'<b>Lecture impossible</b>'+esc(ex.err):'<b>Pas encore lu</b>Gemini recopie les énoncés et repère les chapitres.')+'<div style="margin-top:10px"><button class="btn primary sm" data-a="colan" data-k="'+k+'">Lire le sujet</button></div></div>';
+  else {
+    if(ex.question_cours) h+='<div class="thm thm-def"><div class="thm-h"><b>Question de cours</b></div><div class="thm-b qmath">'+fmtEnonce(ex.question_cours)+'</div></div>';
+    ex.exercices.forEach(function(e){ h+='<div class="thm thm-meth"><div class="thm-h"><b>Exercice '+esc(e.num||"")+'</b> · '+esc(e.titre||"")+(e.minutes?' <span class="faint">· ≈ '+e.minutes+' min</span>':'')+'</div><div class="thm-b qmath">'+fmtEnonce(e.enonce)+'</div></div>'; });
+    h+='<div class="small muted">Énoncés recopiés par Gemini : en cas de doute, le PDF fait foi.</div>';
+  }
+  openSheet(h+'</div>'); layer.setAttribute("data-col",k); renderMath(layer);
+}
+
+function annRefresh(){ var id=layer.getAttribute("data-ann"); if(id&&layer.innerHTML) annSheet(id); render(); }
+function colAnalyze(k){ var p=Colles.analyze(k); colleSheet(k); render(); p.then(function(){ if(layer.getAttribute("data-col")===k&&layer.innerHTML) colleSheet(k); render(); },function(e){ toast("Lecture impossible : "+(e&&e.message||e)); if(layer.getAttribute("data-col")===k&&layer.innerHTML) colleSheet(k); render(); }); }
 /* ---------- Échéances ---------- */
 function vEcheances(){
   var t=iso(today()), m=S.echMode;
@@ -2580,6 +3069,21 @@ document.addEventListener("click",function(ev){
   if(a==="freanalyse"){ var fid=b.getAttribute("data-id"); Files.analyze(fid).then(function(){ toast("Analyse terminée."); Plan.invalidate(); window.__prepaRefresh(); },function(e){ toast("Analyse impossible : "+(e&&e.message||e)); window.__prepaRefresh(); }); render(); return; }
   if(a==="exo"){ var ek=b.getAttribute("data-k"); if(s.mathsDone[ek]) delete s.mathsDone[ek]; else s.mathsDone[ek]=iso(today()); save(); render(); return; }
   if(a==="exomin"){ var em=b.getAttribute("data-k").split("#"), eo=((s.mathsEx[em[0]]||{}).exos||[])[+em[1]]; if(eo){ eo.minutes=Math.max(5,(eo.minutes||30)+(+b.getAttribute("data-v"))); eo.perso=true; save(); render(); } return; }
+  if(a==="annopen"){ annSheet(b.getAttribute("data-id")); return; }
+  if(a==="annchk"){ var aid=b.getAttribute("data-id"); Ann.setStatus(aid,Ann.statusOf(aid)==="done"?"todo":"done"); if(Ann.statusOf(aid)==="done") toast("Bravo, exercice fait."); annRefresh(); return; }
+  if(a==="annst"){ Ann.setStatus(b.getAttribute("data-id"),b.getAttribute("data-v")); annRefresh(); return; }
+  if(a==="annnote"){ var nid=b.getAttribute("data-id"), rr=Ann.rec(nid)||{}, nn=rr.n==null?10:rr.n+(+b.getAttribute("data-v")); Ann.patch(nid,{n:Math.max(0,Math.min(20,nn))}); annRefresh(); return; }
+  if(a==="anntime"){ Ann.addTime(b.getAttribute("data-id"),+b.getAttribute("data-v")); toast("+"+b.getAttribute("data-v")+" min"); annRefresh(); return; }
+  if(a==="annfav"){ var fid2=b.getAttribute("data-id"); Ann.patch(fid2,{f:!((Ann.rec(fid2)||{}).f)}); annRefresh(); return; }
+  if(a==="annavail"){ S.annAvail=+b.getAttribute("data-v"); render(); return; }
+  if(a==="annmode"){ S.annF.mode=b.getAttribute("data-v"); S.annF.eps=[]; S.annF.n=60; render(); return; }
+  if(a==="anneps"){ var ev2=b.getAttribute("data-v"), E=S.annF.eps; if(!ev2) S.annF.eps=[]; else { var ix=E.indexOf(ev2); if(ix>=0) E.splice(ix,1); else E.push(ev2); } S.annF.n=60; render(); return; }
+  if(a==="annmore"){ S.annF.n+=60; render(); return; }
+  if(a==="colopen"){ var ck=b.getAttribute("data-k"); colleSheet(ck); var cx=Colles.all().find(function(y){ return y.k===ck; }); if(cx&&!cx.ex&&!Colles.busy(ck)) colAnalyze(ck); return; }
+  if(a==="colan"){ colAnalyze(b.getAttribute("data-k")); return; }
+  if(a==="colswap"){ Colles.swap(b.getAttribute("data-d"),+b.getAttribute("data-i")); render(); return; }
+  if(a==="coldone"){ Colles.toggleDone(b.getAttribute("data-d"),b.getAttribute("data-k")); render(); return; }
+  if(a==="colprog"){ S.colF.ch=S.colF.ch==="prog"?"":"prog"; render(); return; }
   if(a==="quiz"){ S.quiz=null; quizSheet(); return; }
   if(a==="qshow"){ S.quiz.show=true; quizSheet(); return; }
   if(a==="qrate"){ quizRate(+b.getAttribute("data-v")); return; }
@@ -2589,7 +3093,9 @@ document.addEventListener("click",function(ev){
   if(a==="noteex"){ S.noteEx=S.noteEx||{}; S.noteEx[b.getAttribute("data-ep")]=b.getAttribute("data-t"); var sh=layer.querySelector(".sheet"), sc=sh?sh.scrollTop:0; noteDetail(b.getAttribute("data-ep")); var sh2=layer.querySelector(".sheet"); if(sh2){ sh2.scrollTop=sc; sh2.style.animation="none"; } return; }
   if(a==="resskip"){ var dz=resDismissed(); dz[b.getAttribute("data-k")]=1; try{ localStorage.setItem("prepa.resdone",JSON.stringify(dz)); }catch(e){} render(); return; }
 });
+var annQT=null;
 document.addEventListener("input",function(ev){
+  if(ev.target.id==="ann-q"){ clearTimeout(annQT); annQT=setTimeout(function(){ S.annQ=ev.target.value; if(S.annF) S.annF.n=60; render(); },220); return; }
   var r=ev.target.closest("[data-goal]"); if(!r) return;
   st().goals[r.getAttribute("data-goal")]=+r.value; save();
   var v=document.getElementById("goal-val"); if(v) v.textContent=f1(+r.value);
@@ -2600,6 +3106,16 @@ document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-
   else if(id==="bjf-annee"){ S.bjF.annee=ev.target.value; S.bjF.n=80; render(); }
   else if(id==="bjf-q"){ S.bjF.q=ev.target.value; S.bjF.n=80; render(); }
   else if(id==="bjcf-disc"){ S.bjCF.disc=ev.target.value; render(); }
+  else if(id==="ann-focus"){ Ann.state().focus=ev.target.value||null; save(); render(); }
+  else if(id==="annf-ch"){ S.annF.chs=ev.target.value?[ev.target.value]:[]; S.annF.n=60; render(); }
+  else if(id==="annf-dur"){ S.annF.dur=ev.target.value; S.annF.n=60; render(); }
+  else if(id==="annf-feas"){ S.annF.feas=ev.target.value; S.annF.n=60; render(); }
+  else if(id==="annf-stat"){ S.annF.stat=ev.target.value; S.annF.n=60; render(); }
+  else if(id==="annf-sort"){ S.annF.sort=ev.target.value; render(); }
+  else if(id==="colf-ch"){ S.colF.ch=ev.target.value; render(); }
+  else if(id==="colf-an"){ S.colF.an=ev.target.value; render(); }
+  else if(id==="ann-notes"){ Ann.patch(ev.target.getAttribute("data-id"),{c:ev.target.value}); }
+  else if(ev.target.hasAttribute("data-annp")){ Ann.patch(ev.target.getAttribute("data-annp"),{p:+ev.target.value}); annRefresh(); }
   else if(id==="m-chap"){ st().mathsCfg=st().mathsCfg||{}; st().mathsCfg.chap=ev.target.value.trim(); save(); render(); }
   else if(ev.target.hasAttribute("data-hggfait")){ var H=hggState(), k=ev.target.getAttribute("data-hggfait"); if(ev.target.checked) H.fait[k]=iso(today()); else delete H.fait[k]; H.ask=iso(today()); save(); render(); }
   else if(ev.target.hasAttribute("data-qsec")){ var qk=ev.target.getAttribute("data-qsec"); if(ev.target.checked) delete st().quizOff[qk]; else st().quizOff[qk]=true; save(); }
@@ -2611,7 +3127,7 @@ window.addEventListener("scroll",function(){ var tb=document.getElementById("top
 var _openSlot=openSlot;
 openSlot=function(d,id){ _openSlot(d,id); layer.setAttribute("data-slot",d+"§"+id); };
 var _close=closeSheet;
-closeSheet=function(){ _close(); layer.removeAttribute("data-slot"); };
+closeSheet=function(){ _close(); layer.removeAttribute("data-slot"); layer.removeAttribute("data-ann"); layer.removeAttribute("data-col"); };
 
 /* ---------- démarrage ---------- */
 function start(){
@@ -2620,13 +3136,14 @@ function start(){
   window.__prepaRefresh=function(){ var a=document.activeElement; if(layer.innerHTML || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return; render(); };
   if(typeof Sync!=="undefined"){ var bjLoaded=false; Sync.on(function(stt,user){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); if(user && !bjLoaded && typeof BJ!=="undefined"){ bjLoaded=true; BJ.load(); setInterval(function(){ if(document.visibilityState==="visible") BJ.load(); },10*60000); } }); Sync.init(); }
   if(typeof BJ!=="undefined") BJ.on(function(){ window.__prepaRefresh(); });
-  var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus","bjclasse","bjcolleurs","bjcolleur"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p.length>1?decodeURIComponent(p.slice(1).join("-")):null; } }
+  if(typeof Colles!=="undefined") Colles.on(function(){ if(S.view==="colles"||(S.view==="matiere"&&S.param==="maths")) window.__prepaRefresh(); });
+  var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus","bjclasse","bjcolleurs","bjcolleur","annales","colles"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p.length>1?decodeURIComponent(p.slice(1).join("-")):null; } }
   render();
   if("serviceWorker" in navigator && location.protocol==="https:" && !window.claude){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }
 }
 function confirmDel(f){ return window.confirm("Supprimer « "+f.name+" » ?"+(f.kind==="cours"?" Ses énoncés sortiront des quiz.":"")); }
 window.__toast=toast;
-window.__prepa={addNote:function(i){ addNoteSheet(i); },noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
+window.__prepa={annSheet:function(i){ annSheet(i); },colleSheet:function(k){ colleSheet(k); },addNote:function(i){ addNoteSheet(i); },noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
 })();
 

@@ -162,10 +162,17 @@ async function geminiUpload(buf: ArrayBuffer, mime: string, name: string) {
   return { uri: f.uri as string, mime: (f.mimeType as string) || mime };
 }
 // Prépare un fichier pour Gemini : PDF et images envoyés tels quels (Files API), Word/PowerPoint convertis en texte.
+// Sujets de colle déposés sur BJcolle : PDF publics, seule cette adresse est acceptée.
+async function fetchUrl(url: string) {
+  if (!/^https:\/\/www\.bjcolle\.fr\/pj_doc\/[^?#]+$/.test(url)) throw new Error("Adresse refusée.");
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Sujet illisible (${r.status}).`);
+  return new Uint8Array(await r.arrayBuffer());
+}
 async function partOf(f: any, auth: string) {
   if (f.uri) return { part: { file_data: { mime_type: f.umime, file_uri: f.uri } }, uri: f.uri, umime: f.umime, text: null as string | null };
   const name = String(f.name || ""), mime = String(f.mime || "");
-  const buf = await fetchFile(f.path, auth);
+  const buf = f.url ? await fetchUrl(String(f.url)) : await fetchFile(f.path, auth);
   if (/\.(docx|pptx)$/i.test(name) || /officedocument/.test(mime)) { const t = officeText(buf, name); return { part: null, uri: null, umime: null, text: t }; }
   if (/^text\//.test(mime) || /\.txt$/i.test(name)) { const t = new TextDecoder().decode(buf); return { part: null, uri: null, umime: null, text: t }; }
   const m = /\.pdf$/i.test(name) ? "application/pdf" : (mime || "application/pdf");
@@ -188,10 +195,37 @@ const COURS_SCHEMA = { type: "OBJECT", properties: {
   }, required: ["type", "nom", "titre", "enonce", "section"] } },
 }, required: ["items"] };
 
+const COLLE_SCHEMA = { type: "OBJECT", properties: {
+  question_cours: { type: "STRING" },
+  exercices: { type: "ARRAY", items: { type: "OBJECT", properties: {
+    num: { type: "STRING" }, titre: { type: "STRING" }, enonce: { type: "STRING" },
+    chapitres: { type: "ARRAY", items: { type: "STRING" } }, notions: { type: "ARRAY", items: { type: "STRING" } },
+    difficulte: { type: "INTEGER" }, minutes: { type: "INTEGER" },
+  }, required: ["num", "titre", "enonce", "chapitres", "difficulte", "minutes"] } },
+}, required: ["exercices"] };
+
 async function analyseDoc(b: any, auth: string) {
   if (!auth) throw new Error("Connexion requise.");
   const files: any[] = (b.files ?? []).slice(0, 4);
   if (!files.length) throw new Error("Aucun fichier.");
+  if (b.kind === "colle") {
+    const P = await partOf(files[0], auth);
+    const chl = String(b.chapitres || "");
+    const j = await callGemini({
+      contents: [{ role: "user", parts: [{ text:
+        "Voici un sujet de colle (oral) de mathématiques de prépa ECG (maths approfondies). " +
+        "question_cours : la question de cours si le sujet en contient une, recopiée telle quelle (sinon chaîne vide). " +
+        "exercices : chaque exercice, dans l'ordre. Pour chacun : num (tel qu'écrit, sinon 1, 2…) ; titre (thème en 6 mots maximum) ; " +
+        "enonce : RECOPIE FIDÈLEMENT l'énoncé complet, sans le reformuler, le compléter ni le corriger, les formules en LaTeX entre $…$, " +
+        "un retour à la ligne avant chaque question (1., a), (i)…) et les formules importantes isolées entre $$…$$ ; " +
+        "chapitres : les identifiants des chapitres utilisés, choisis UNIQUEMENT dans cette liste : " + chl + " ; " +
+        "notions : 2 à 4 mots-clés ; difficulte (1 facile, 2 moyen, 3 difficile) ; minutes (temps réaliste au tableau pour un bon élève). " +
+        "N'ajoute rien qui ne soit pas dans le document." }, P.part ?? { text: (P.text ?? "").slice(0, 60000) }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 30000, responseMimeType: "application/json", responseSchema: COLLE_SCHEMA },
+    });
+    const o = jsonOf(textOf(j));
+    return { question_cours: o.question_cours ?? "", exercices: o.exercices ?? [] };
+  }
   if (b.kind === "cours") {
     const chunk = Number(b.chunk ?? 0);
     const f = files[0];

@@ -69,7 +69,12 @@ export function parseDetail(html) {
   if (n) o.note = decode(n[1]).trim();
   o.absent = /name=["']ABS_ELEVE["'][^>]*\bchecked\b/i.test(html);
   const re = /<legend[^>]*>([\s\S]*?)<\/legend>([\s\S]*?)<\/fieldset>/gi; let m;
-  while ((m = re.exec(html))) { const k = text(m[1]); const v = text(m[2]); if (k) o.champs[k] = v; }
+  while ((m = re.exec(html))) {
+    const k = text(m[1]); const v = text(m[2]); if (k) o.champs[k] = v;
+    // pièces jointes (sujets en PDF) : liens publics pj_doc/…
+    if (/^Pi[eè]ces jointes/i.test(k)) { const a = /<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi; let x; o.pj = o.pj || []; while ((x = a.exec(m[2]))) o.pj.push({ n: text(x[2]), u: decode(x[1]).replace(/^\.?\//, "") }); }
+  }
+  o.pj = o.pj || []; o.champs._pj = o.pj;
   o.sujet = o.champs["Sujet"] || "";
   const ck = Object.keys(o.champs).find((k) => /^Commentaire/i.test(k)); o.commentaire = ck ? o.champs[ck] : "";
   const dur = (o.commentaire.match(/Durée de l'exposé\s*:\s*([^\n.]+)/i) || [])[1]; if (dur) o.dureeExpose = dur.trim();
