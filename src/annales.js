@@ -225,19 +225,22 @@ var Colles = (function(){
   }
   function pick(tg,force){
     var T=st().trin, cur=T[tg];
-    if(cur&&cur.picks&&cur.picks.length>=2&&!force) return cur;
+    var nAll=all().length, nEx=Object.keys(st().colleEx).length;
+    if(cur&&cur.picks&&cur.picks.length>=2&&!force&&(cur.touched||(cur.n===nAll&&cur.nx===nEx))) return cur;
     var c=candidates(tg); if(!c.length) return cur||null;
+    if(cur&&!force&&!cur.touched){ var best=c.slice(0,2).map(function(x){ return x.ref; }).sort().join(), have=cur.picks.map(function(p){ return p.ref; }).sort().join(); if(cur.picks.length>=2&&best===have){ cur.n=nAll; cur.nx=nEx; return cur; } cur=null; }
     var keep=(cur&&cur.picks||[]).filter(function(p){ return p.keep; });
     var picks=keep.slice();
     /* d'abord deux sujets de colle si possible, sinon des exercices d'oral */
     var pool=c.filter(function(x){ return !picks.some(function(p){ return p.ref===x.ref; })&&!(cur&&cur.skip&&cur.skip[x.ref]); });
     var top=pool.slice(0,6); top.sort(function(){ return Math.random()-0.5; }); top.sort(function(a,b){ return Math.round(b.s)-Math.round(a.s); });
     while(picks.length<2&&top.length){ var x=top.shift(); picks.push({kind:x.kind,ref:x.ref}); }
-    T[tg]={picks:picks,at:new Date().toISOString(),skip:(cur&&cur.skip)||{},done:(cur&&cur.done)||{}};
+    if(!force&&!cur){ picks=c.slice(0,2).map(function(x){ return {kind:x.kind,ref:x.ref}; }); }
+    T[tg]={picks:picks,at:new Date().toISOString(),skip:(cur&&cur.skip)||{},done:(cur&&cur.done)||{},n:nAll,nx:nEx,touched:!!(cur&&cur.touched)||!!force};
     Store.save(); return T[tg];
   }
   function swap(tg,i){ var T=st().trin, cur=T[tg]; if(!cur) return; var old=cur.picks[i]; cur.skip=cur.skip||{}; if(old) cur.skip[old.ref]=1; cur.picks.forEach(function(p,j){ p.keep=j!==i; }); cur.picks.splice(i,1); var r=pick(tg,true); r.picks.forEach(function(p){ delete p.keep; }); Store.save(); emit(); }
-  function toggleDone(tg,ref){ var cur=st().trin[tg]; if(!cur) return; cur.done=cur.done||{}; if(cur.done[ref]) delete cur.done[ref]; else cur.done[ref]=iso(today()); Store.save(); emit(); }
+  function toggleDone(tg,ref){ var cur=st().trin[tg]; if(!cur) return; cur.touched=true; cur.done=cur.done||{}; if(cur.done[ref]) delete cur.done[ref]; else cur.done[ref]=iso(today()); Store.save(); emit(); }
 
   /* ---------- analyse des PDF par Gemini (énoncés, chapitres) ---------- */
   function chList(){ return Ann.CHL.map(function(c){ return c.id+" = "+c.n+(c.y===1?" (1re année)":""); }).join(" ; "); }
@@ -247,14 +250,19 @@ var Colles = (function(){
     running[k]=Sync.invoke({mode:"doc",kind:"colle",chapitres:chList(),files:[{url:x.u,name:x.n,mime:"application/pdf"}]}).then(function(r){
       st().colleEx[k]={question_cours:r.question_cours||"",exercices:(r.exercices||[]).filter(function(e){ return e&&e.enonce; }),at:new Date().toISOString()};
       Store.save(); delete running[k]; emit(); return st().colleEx[k];
-    },function(e){ st().colleEx[k]={err:String(e&&e.message||e).slice(0,200),at:new Date().toISOString(),exercices:null}; Store.save(); delete running[k]; emit(); throw e; });
+    },function(e){ var m=String(e&&e.message||e).slice(0,200); delete running[k];
+      /* ancienne version de la fonction gemini (pas encore redéployée) : on n'enregistre pas d'échec, on attend la mise à jour */
+      if(/reading 'split'|Aucun fichier|Mode inconnu|Fichier illisible \(400\)/.test(m)){ needDeploy=true; emit(); throw new Error("La fonction Gemini n'est pas encore à jour : redéploie-la dans Supabase."); }
+      st().colleEx[k]={err:m,at:new Date().toISOString(),exercices:null}; Store.save(); emit(); throw e; });
     return running[k];
   }
   /* file d'attente en arrière-plan : propositions d'abord, puis l'année en cours, puis l'archive */
+  var needDeploy=false;
   function pump(){
-    if(busy||typeof Sync==="undefined"||!Sync.user()) return;
+    if(busy||needDeploy||typeof Sync==="undefined"||!Sync.user()) return;
+    var ce=st().colleEx; Object.keys(ce).forEach(function(k){ if(ce[k]&&ce[k].err&&/reading 'split'/.test(ce[k].err)) delete ce[k]; });
     var s=st(), tg=target(), cur=s.trin[tg], want=(cur&&cur.picks||[]).filter(function(p){ return p.kind==="colle"; }).map(function(p){ return p.ref; });
-    var L=all().filter(function(x){ var e=s.colleEx[x.k]; return !e||(e.err&&Date.now()-new Date(e.at)>864e5); });
+    var L=all().filter(function(x){ var e=s.colleEx[x.k]; return !e||(e.err&&Date.now()-new Date(e.at)>3*3600e3); });
     L.sort(function(a,b){ return (want.indexOf(b.k)>=0)-(want.indexOf(a.k)>=0)||(b.cur-a.cur)||b.d.localeCompare(a.d); });
     var x=L[0]; if(!x) return; busy=true;
     analyze(x.k).catch(function(){}).then(function(){ busy=false; pumped++; if(pumped<12) setTimeout(pump,4000); });
@@ -278,5 +286,5 @@ var Colles = (function(){
       if(n){ Store.save(); emit(); }
     }); }).catch(function(){});
   }
-  return {refresh:refresh, all:all, chapters:chapters, chLabel:chLabel, target:target, pick:pick, swap:swap, toggleDone:toggleDone, candidates:candidates, analyze:analyze, pump:pump, busy:function(k){ return !!running[k]; }, key:key, on:function(f){ ls.push(f); }, inVac:inVac};
+  return {needDeploy:function(){ return needDeploy; }, refresh:refresh, all:all, chapters:chapters, chLabel:chLabel, target:target, pick:pick, swap:swap, toggleDone:toggleDone, candidates:candidates, analyze:analyze, pump:pump, busy:function(k){ return !!running[k]; }, key:key, on:function(f){ ls.push(f); }, inVac:inVac};
 })();

@@ -845,6 +845,7 @@ function trinomeCard(){
   var n=Colles.all().length;
   var h='<section class="card trin"><div class="card-h"><h2>Trinôme du vendredi</h2><button class="link-btn" data-go="colles">'+plural(n,"sujet")+' de colle</button></div>'+trinBlock(tg);
   if(diffDays(tg,iso(today()))<=1) h+='<details class="trin-next"><summary>Préparer aussi '+fmtDay(nx)+'</summary>'+trinBlock(nx)+'</details>';
+  if(Colles.needDeploy()) h+='<div class="anote orange" style="margin-top:10px"><b>Lecture des sujets en attente.</b> Redéploie la fonction « gemini » dans Supabase pour que les PDF de colle soient lus.</div>';
   return h+'<p class="small muted" style="margin:10px 0 0">Chaque vendredi, deux sujets pour le vendredi suivant : le programme de colle en cours d\'abord, le chapitre qu\'on vient de finir ensuite. ↻ en propose un autre.</p></section>';
 }
 function annalesCard(){
