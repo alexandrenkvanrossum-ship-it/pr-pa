@@ -481,3 +481,5 @@ body.cal-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .cal-col{cursor:cell}
 .toast.act{display:flex;align-items:center;gap:12px}
 .toast.act button{border:0;background:none;color:#8FC2FF;font-weight:700;font-size:14px;padding:4px 2px;cursor:pointer}
+.icon-btn.del-btn{color:var(--red);background:var(--red-pale);box-shadow:none;flex:none}
+.icon-btn.del-btn:hover{color:var(--red);filter:brightness(.96)}

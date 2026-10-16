@@ -502,6 +502,8 @@ body.cal-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .cal-col{cursor:cell}
 .toast.act{display:flex;align-items:center;gap:12px}
 .toast.act button{border:0;background:none;color:#8FC2FF;font-weight:700;font-size:14px;padding:4px 2px;cursor:pointer}
+.icon-btn.del-btn{color:var(--red);background:var(--red-pale);box-shadow:none;flex:none}
+.icon-btn.del-btn:hover{color:var(--red);filter:brightness(.96)}
 
 </style>
 </head><body>
@@ -2026,7 +2028,7 @@ function openSlot(dISO,id){
   var e=dayEvents(dISO).concat(timedTasks(dISO)).find(function(x){ return x.id===id; }); if(!e) return;
   var s=subj(e.sub), road=e.kind==="work"||e.anki||e.actu?roadFor(e,dISO):[];
   var editable=!e.colle && !(e.kind==="exam");
-  var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+fmtLong(dISO)+' · '+hLabel(e.s)+'–'+hLabel(e.e)+(e.edited||e.added?' · modifié':'')+'</div><h2>'+esc(e.t)+'</h2></div>'+(e.taskId?'<button class="btn sm" data-a="edittask" data-id="'+e.taskId+'">Modifier</button>':editable?'<button class="btn sm" data-a="slotedit" data-d="'+dISO+'" data-id="'+esc(e.id)+'">Modifier</button>':'')+'<button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
+  var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+fmtLong(dISO)+' · '+hLabel(e.s)+'–'+hLabel(e.e)+(e.edited||e.added?' · modifié':'')+'</div><h2>'+esc(e.t)+'</h2></div>'+(e.taskId?'<button class="btn sm" data-a="edittask" data-id="'+e.taskId+'">Modifier</button>':editable?'<button class="btn sm" data-a="slotedit" data-d="'+dISO+'" data-id="'+esc(e.id)+'">Modifier</button><button class="icon-btn del-btn" data-a="slotdel" data-d="'+dISO+'" data-id="'+esc(e.id)+'" aria-label="Supprimer le créneau" title="Supprimer le créneau">'+I.trash+'</button>':'')+'<button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(e.taskId){ h+='<p class="muted" style="margin:0">Rendez-vous ajouté depuis la to-do. Rappel prévu '+(st().tasks.find(function(t){return t.id===e.taskId;})||{}).remind+' min avant.</p>'; }
   else if(e.kind==="course"){ h+='<p class="muted" style="margin:0">Cours. Horaire imposé : l\'app ne le déplace jamais.</p>'; }
   else if(e.kind==="exam"){ h+='<p class="muted" style="margin:0">Pale. Les révisions démarrent automatiquement à J-14 (réactivation, entraînement, consolidation).</p>'; }
@@ -2247,6 +2249,15 @@ function moveSlot(d0,id,d1,s,e){
   var acts=[["Annuler",function(){ var o=JSON.parse(before); st().agendaEdits=o.a; st().tasks=o.t; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Modification annulée."); }]];
   if(weekly) acts.push(["Chaque semaine",function(){ var L=slotLayer("d",d0), W=slotLayer("w",d0); W.mod[weekly]=Object.assign({},W.mod[weekly]||{},L.mod[weekly]); delete L.mod[weekly]; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Appliqué chaque "+WD_NAMES[parseISO(d0).getDay()]+"."); }]);
   toastAct((d1!==d0?fmtDay(d1)+" · ":"")+hLabel(S1)+"–"+hLabel(E1),acts);
+}
+/* supprimer un créneau d'un geste (ce jour-là ; « Chaque semaine » ou « Annuler » dans la bulle) */
+function slotDel(d0,id){
+  var before=JSON.stringify(st().agendaEdits||{}), A=st().agendaEdits=st().agendaEdits||{}, base=id.replace(/-[az]$/,""), own=slotOwner(d0,base), weekly=null;
+  if(own) A[own.k].add=A[own.k].add.filter(function(x){ return x.id!==base; }); else { slotLayer("d",d0).hide[base]=true; weekly=base; }
+  save(); if(typeof Plan!=="undefined") Plan.invalidate(); closeSheet(); render();
+  var acts=[["Annuler",function(){ st().agendaEdits=JSON.parse(before); save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Créneau rétabli."); }]];
+  if(weekly) acts.push(["Chaque semaine",function(){ delete slotLayer("d",d0).hide[weekly]; slotLayer("w",d0).hide[weekly]=true; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Supprimé chaque "+WD_NAMES[parseISO(d0).getDay()]+"."); }]);
+  toastAct("Créneau supprimé",acts);
 }
 function dragLabel(){
   var txt=hLabel(fromMin(drag.s))+"–"+hLabel(fromMin(drag.e))+" · "+durTxt(drag.e-drag.s), t=drag.el.querySelector(".evt");
@@ -3169,6 +3180,7 @@ document.addEventListener("click",function(ev){
   if(a==="fedit"){ editFile(b.getAttribute("data-id")); return; }
   if(a==="slotedit"){ editSlot(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
   if(a==="slotadd"){ addSlot(S.agDate); return; }
+  if(a==="slotdel"){ slotDel(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
   if(a==="unvac"){ var tv=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(tv){ tv.vac=false; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Remise dans la To-Do normale : elle sera planifiée."); } return; }
   if(a==="vaccopy"){ var txt=vacText(); (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){ toast("Liste copiée : colle-la à Claude pour organiser tes vacances."); },function(){ sheetText(txt); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }
