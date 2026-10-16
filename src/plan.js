@@ -151,7 +151,7 @@ var Plan = (function(){
   }
   function sig(){
     var s=Store.get();
-    return [iso(today()), Math.floor(nowMin()/5), JSON.stringify(s.tasks), JSON.stringify(s.mathsDone||{}), JSON.stringify(s.hgg||{}), Object.keys(s.mathsEx||{}).join(","), JSON.stringify(s.files||{}), typeof BJ!=="undefined"?BJ.data().at:""].join("§");
+    return [iso(today()), Math.floor(nowMin()/5), JSON.stringify(s.tasks), JSON.stringify(s.mathsDone||{}), JSON.stringify(s.hgg||{}), Object.keys(s.mathsEx||{}).join(","), JSON.stringify(s.files||{}), JSON.stringify(s.agendaEdits||{}), typeof BJ!=="undefined"?BJ.data().at:""].join("§");
   }
   function get(){ var k=sig(); if(memo.k!==k){ memo.v=compute(); memo.k=k; } return memo.v; }
   function forSlot(dISO, ev){

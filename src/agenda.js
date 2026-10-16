@@ -68,8 +68,22 @@ function dayEvents(dISO){
         if(toMin(w.e)>ce && toMin(w.e)-ce>=20){ var z={}; for(var k2 in w) z[k2]=w[k2]; z.s=fromMin(ce); z.id=w.id+"-z"; acc.push(z); }
         return acc;
       },[]);
-      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
+      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isAumonier(c)?"Colle aumônier":BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
     });
+  }
+  /* jour de colle de maths : tout le travail de l'après-midi avant la colle devient des maths (révision du programme) */
+  if(typeof BJ!=="undefined"){
+    var cm=BJ.mineOn(dISO).filter(function(c){ return BJ.subOf(c)==="maths" && !BJ.isAumonier(c); })[0];
+    if(cm){
+      var lim=toMin(BJ.block(cm).s);
+      ev=ev.map(function(w){
+        if(w.kind!=="work" || w.taskId || toMin(w.e)>lim || toMin(w.s)<12*60 || w.sub==="maths") return w;
+        var o={}; for(var k in w) o[k]=w[k];
+        o.t="Maths · avant la colle"; o.sub="maths"; delete o.subs; o.preColle=true; delete o.trad; delete o.rac; delete o.plan; delete o.light;
+        return o;
+      });
+      ev.forEach(function(w){ if(w.kind==="work" && w.sub==="maths" && toMin(w.e)<=lim && toMin(w.s)>=12*60) w.preColle=true; });
+    }
   }
   ev.sort(function(a,b){ return toMin(a.s)-toMin(b.s); });
   return ev;
@@ -89,7 +103,8 @@ function roadFor(ev,dISO){
   if(ev.actu){ push({lab:"Lecture de l'actualité (HGG et langues)",min:20}); return items; }
   if(ev.kind!=="work") return items;
   var subs=ev.subs||[ev.sub];
-  if(ev.sub==="maths" && ev.crit) push({lab:"Quiz de cours (partie vue en classe)",min:15,sub:"maths",quiz:true});
+  if(ev.preColle){ var pg=(typeof Ann!=="undefined")?Ann.progAt(dISO):null; push({lab:"Avant la colle : revoir le cours et les démonstrations"+(pg?" ("+pg.t+")":""),min:Math.min(40,Math.max(15,Math.round(cap/2))),sub:"maths"}); }
+  else if(ev.sub==="maths" && ev.crit) push({lab:"Quiz de cours (partie vue en classe)",min:15,sub:"maths",quiz:true});
   if(ev.rac) push({lab:"RAC d'anglais (objectif : 2h, puis 1h45)",min:110,sub:"ang"});
   if(ev.plan) push({lab:"Plan détaillé d'HGG (sujet de la semaine)",min:90,sub:"hgg"});
   if(ev.trad){ push({lab:"Traduction d'anglais",min:30,sub:"ang"}); push({lab:"Traduction d'allemand",min:30,sub:"all"}); }

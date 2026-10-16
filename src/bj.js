@@ -46,7 +46,10 @@ var BJ = (function(){
   function mine(){ return data.colles.filter(function(c){ return c.moi && !gone(c); }); }
   function mineOn(dISO){ return data.colles.filter(function(c){ return c.moi && !gone(c) && c.date===dISO && (c.scope==="moi"||c.scope==="kore") && c.debut; }); }
   function upcoming(){ var t=iso(today()); return mine().filter(function(c){ return (c.scope==="moi"||c.scope==="kore") && c.date>=t; }).sort(function(a,b){ return (a.date+a.debut).localeCompare(b.date+b.debut); }); }
+  /* colle aumônier (deux dans l'année) : commence à l'heure exacte, 45 min bloquées */
+  function isAumonier(c){ return !!c && /aum[oô]nier/i.test(c.discipline||""); }
   function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
+    if(isAumonier(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+45))};
     var s=subOf(c), prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20);
     var start=toMin(c.debut)-prep-10, end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0);
     return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end))};
@@ -66,5 +69,5 @@ var BJ = (function(){
   function ready(){ return !!(data.state && data.state.last_ok); }
 
   return {data:function(){ return data; }, load:load, checkNow:checkNow, markRead:markRead, on:function(f){ listeners.push(f); },
-    mine:mine, gone:gone, mineOn:mineOn, upcoming:upcoming, block:block, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
+    mine:mine, gone:gone, mineOn:mineOn, upcoming:upcoming, block:block, isAumonier:isAumonier, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
 })();

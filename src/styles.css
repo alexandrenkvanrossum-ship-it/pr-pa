@@ -470,3 +470,14 @@ html{scroll-behavior:auto}
 .ddot.d-f{background:var(--green)} .ddot.d-m{background:#F08C00} .ddot.d-d{background:#E03131} .ddot.d-td{background:#9C36B5}
 .stars{color:#F5A623;letter-spacing:-1px} .stars i{font-style:normal;color:var(--line-strong,#ccc)} .stars.red{color:#E03131}
 .sheet-b>*{flex-shrink:0}
+
+/* ---------- agenda : déplacer, étirer ---------- */
+.ev.mv{cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.ev .rz{position:absolute;left:0;right:0;bottom:0;height:9px;cursor:ns-resize;touch-action:none}
+.ev .rz::after{content:"";position:absolute;left:50%;bottom:3px;width:18px;height:3px;margin-left:-9px;border-radius:2px;background:currentColor;opacity:0;transition:opacity .15s}
+.ev.mv:hover .rz::after,.ev.dragging .rz::after{opacity:.35}
+.ev.dragging{z-index:20;cursor:grabbing;box-shadow:0 12px 28px rgba(0,0,0,.22),0 0 0 2px var(--si,var(--blue));transform:scale(1.02);transition:transform .15s var(--spring,ease),box-shadow .15s;opacity:.96}
+body.cal-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
+.cal-col{cursor:cell}
+.toast.act{display:flex;align-items:center;gap:12px}
+.toast.act button{border:0;background:none;color:#8FC2FF;font-weight:700;font-size:14px;padding:4px 2px;cursor:pointer}

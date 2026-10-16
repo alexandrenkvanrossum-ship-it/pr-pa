@@ -331,22 +331,31 @@ function vAgenda(){
   h+='<div></div>'+dates.map(function(x){ var dd=parseISO(x); return '<div class="cal-colh'+(x===t?" today":"")+'">'+DAYS_S[dd.getDay()]+' '+dd.getDate()+'</div>'; }).join("");
   h+='<div class="cal-hours" style="height:'+height+'px">'; for(var hh=8;hh<=23;hh++){ h+='<div style="top:'+((hh*60-H0)*PX)+'px">'+hh+'h</div>'; } h+='</div>';
   dates.forEach(function(x){
-    h+='<div class="cal-col" style="height:'+height+'px">';
+    h+='<div class="cal-col" data-col="'+x+'" style="height:'+height+'px">';
     for(var hh=8;hh<=23;hh++) h+='<div class="line" style="top:'+((hh*60-H0)*PX)+'px"></div>';
-    dayEvents(x).concat(timedTasks(x)).forEach(function(e){
+    var evs=dayEvents(x).concat(timedTasks(x)); calLayout(evs);
+    evs.forEach(function(e){
       var top=(Math.max(toMin(e.s),H0)-H0)*PX, ht=Math.max((toMin(e.e)-toMin(e.s))*PX-2,18);
       var cls=subj(e.sub).cls+" "+(e.kind==="course"?"course":e.kind==="fixed"?"fixed":e.kind==="exam"?"exam":"");
       var road=e.kind==="work"?roadFor(e,x):[];
       var done=road.length?road.filter(function(r,ix){ return isDone(x,e,r,ix); }).length:0;
-      h+='<button class="ev '+cls+'" style="top:'+top+'px;height:'+ht+'px" data-a="slot" data-d="'+x+'" data-id="'+esc(e.id)+'"><b>'+esc(e.t)+'</b>'+(ht>34?'<span>'+hLabel(e.s)+'–'+hLabel(e.e)+(road.length?' · '+done+'/'+road.filter(function(r){return !r.pause;}).length:'')+'</span>':'')+'</button>';
+      var mv=e.kind!=="course" && e.kind!=="exam";
+      var pos=e._n>1?'left:calc('+(e._c/e._n*100)+'% + 2px);right:auto;width:calc('+(100/e._n)+'% - 4px);':'';
+      h+='<button class="ev '+cls+(mv?" mv":"")+'" style="top:'+top+'px;height:'+ht+'px;'+pos+'" data-a="slot" data-d="'+x+'" data-id="'+esc(e.id)+'" data-s="'+e.s+'" data-e="'+e.e+'"'+(mv?' data-drag="1"':'')+'><b>'+esc(e.t)+'</b>'+(ht>34?'<span class="evt">'+hLabel(e.s)+'–'+hLabel(e.e)+(road.length?' · '+done+'/'+road.filter(function(r){return !r.pause;}).length:'')+'</span>':'')+(mv?'<i class="rz" aria-hidden="true"></i>':'')+'</button>';
     });
     if(x===t){ var nm=nowMin(); if(nm>=H0&&nm<=H1) h+='<div class="now-line" style="top:'+((nm-H0)*PX)+'px"></div>'; }
     h+='</div>';
   });
   h+='</div></div></div>';
   h+='<div class="legend">'+SUBJECT_ORDER.map(function(id){ return tag(id); }).join("")+'<span class="tag s-neutral">Routine</span><span class="tag s-exam" style="box-shadow:inset 0 0 0 1px #EE9AC4">DST · colles</span></div>';
-  h+='<p class="small muted" style="margin-top:10px">Les cours sont hachurés. Les créneaux de travail suivent ta journée type ; touche un créneau pour ouvrir sa feuille de route. Touche « Modifier » dans un créneau pour changer son horaire, son titre ou sa matière (ce jour-là ou chaque semaine), ou le supprimer ; « + Créneau » en ajoute un.</p>';
+  h+='<p class="small muted" style="margin-top:10px">Glisse un créneau pour le déplacer, tire son bord du bas pour l\'allonger ou le raccourcir (sur téléphone : appui long, puis glisse). Touche un espace vide pour ajouter un créneau à cette heure. La feuille de route s\'adapte à la nouvelle durée ; « Chaque semaine » dans la bulle qui apparaît rend le changement permanent.</p>';
   return h;
+}
+/* événements qui se chevauchent : côte à côte, comme dans Google Agenda */
+function calLayout(evs){
+  var L=evs.slice().sort(function(a,b){ return toMin(a.s)-toMin(b.s)||toMin(b.e)-toMin(a.e); }), group=[], end=-1;
+  function flush(){ var cols=[]; group.forEach(function(e){ var c=0; while(cols[c]!=null && cols[c]>toMin(e.s)) c++; cols[c]=toMin(e.e); e._c=c; }); group.forEach(function(e){ e._n=cols.length; }); group=[]; }
+  L.forEach(function(e){ if(toMin(e.s)>=end) { flush(); end=-1; } group.push(e); end=Math.max(end,toMin(e.e)); }); flush();
 }
 function timedTasks(x){
   return st().tasks.filter(function(t){ return t.time && t.day===x && !t.done && !t.vac; }).map(function(t){ return {kind:"work",s:t.time,e:fromMin(Math.min(toMin(t.time)+(t.dur||45),H1)),t:t.title,sub:t.sub,id:"task-"+t.id,taskId:t.id}; });
@@ -536,11 +545,110 @@ function editSlot(dISO,id){
     reset:e.edited?function(){ [dISO,"w"+wd].forEach(function(k){ var L=A[k]; if(L&&L.mod) delete L.mod[id]; }); }:null, resetLabel:"Rétablir l'horaire type",
     toast:"Créneau modifié." });
 }
-function addSlot(dISO){
-  formSheet({title:"Nouveau créneau", eyebrow:fmtLong(dISO), fields:slotFields(null,dISO,true),
+function addSlot(dISO,startMin){
+  var F=slotFields(null,dISO,true); if(startMin!=null){ F[1].value=fromMin(startMin); F[2].value=fromMin(Math.min(H1,startMin+60)); }
+  formSheet({title:"Nouveau créneau", eyebrow:fmtLong(dISO), fields:F,
     save:function(v){ if(!v.t.trim()) return "Donne un intitulé."; if(!v.s||!v.e||toMin(v.e)<=toMin(v.s)) return "La fin doit être après le début.";
       var kind=v.sub==="neutral"?"fixed":"work"; slotLayer(v.scope,dISO).add.push({id:uid("slot"),kind:kind,s:v.s,e:v.e,t:v.t.trim(),sub:v.sub}); }, toast:"Créneau ajouté." });
 }
+
+/* ---------- agenda : glisser pour déplacer, tirer le bas pour allonger, toucher le vide pour créer (façon Google Agenda) ---------- */
+var drag=null, noClickUntil=0;
+function snap5(m){ return Math.round(m/5)*5; }
+function calCols(){ return Array.prototype.slice.call(document.querySelectorAll(".cal-col[data-col]")); }
+function colAtX(x){ var c=calCols(); for(var i=0;i<c.length;i++){ var r=c[i].getBoundingClientRect(); if(x>=r.left&&x<r.right) return c[i]; } return null; }
+function toastAct(msg,acts){
+  document.querySelectorAll(".toast").forEach(function(t){ t.remove(); });
+  var el=document.createElement("div"); el.className="toast act"; el.setAttribute("role","status");
+  el.innerHTML='<span>'+esc(msg)+'</span>'+acts.map(function(a,i){ return '<button data-i="'+i+'">'+esc(a[0])+'</button>'; }).join("");
+  document.body.appendChild(el);
+  var t=setTimeout(close,6000); function close(){ el.classList.add("out"); setTimeout(function(){ el.remove(); },260); }
+  el.addEventListener("click",function(ev){ var b=ev.target.closest("button"); if(!b) return; clearTimeout(t); close(); acts[+b.getAttribute("data-i")][1](); });
+}
+function slotOwner(dISO,id){ var A=st().agendaEdits||{}, wd=parseISO(dISO).getDay(), r=null; [dISO,"w"+wd].forEach(function(k){ var L=A[k]; if(L&&L.add) L.add.forEach(function(x){ if(x.id===id) r={x:x,k:k}; }); }); return r; }
+/* enregistre un déplacement ou un changement de durée (ce jour-là ; « Chaque semaine » dans la bulle pour le rendre permanent) */
+function moveSlot(d0,id,d1,s,e){
+  var before=JSON.stringify({a:st().agendaEdits||{},t:st().tasks}), A=st().agendaEdits=st().agendaEdits||{}, weekly=null;
+  var S1=fromMin(s), E1=fromMin(e);
+  if(/^task-/.test(id)){ var tk=st().tasks.find(function(x){ return "task-"+x.id===id; }); if(tk){ tk.day=d1; tk.time=S1; tk.dur=e-s; } }
+  else {
+    var base=id.replace(/-[az]$/,""), own=slotOwner(d0,base);
+    if(d1===d0){
+      if(own&&own.k===d0){ own.x.s=S1; own.x.e=E1; }
+      else { var L=slotLayer("d",d0); L.mod[base]=Object.assign({},L.mod[base]||{},{s:S1,e:E1}); if(!own) weekly=base; }
+    } else {
+      var src=dayEvents(d0).concat(timedTasks(d0)).find(function(x){ return x.id===id; })||{};
+      var cp={id:uid("slot"),kind:src.kind==="fixed"?"fixed":"work",s:S1,e:E1,t:src.t||"Créneau",sub:src.sub||"neutral"};
+      ["subs","crit","soir","light","trad","rac","plan"].forEach(function(k){ if(src[k]!=null) cp[k]=src[k]; });
+      if(own&&own.k===d0) A[d0].add=A[d0].add.filter(function(x){ return x.id!==base; }); else slotLayer("d",d0).hide[base]=true;
+      slotLayer("d",d1).add.push(cp);
+    }
+  }
+  save(); if(typeof Plan!=="undefined") Plan.invalidate(); render();
+  var acts=[["Annuler",function(){ var o=JSON.parse(before); st().agendaEdits=o.a; st().tasks=o.t; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Modification annulée."); }]];
+  if(weekly) acts.push(["Chaque semaine",function(){ var L=slotLayer("d",d0), W=slotLayer("w",d0); W.mod[weekly]=Object.assign({},W.mod[weekly]||{},L.mod[weekly]); delete L.mod[weekly]; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Appliqué chaque "+WD_NAMES[parseISO(d0).getDay()]+"."); }]);
+  toastAct((d1!==d0?fmtDay(d1)+" · ":"")+hLabel(S1)+"–"+hLabel(E1),acts);
+}
+function dragLabel(){
+  var txt=hLabel(fromMin(drag.s))+"–"+hLabel(fromMin(drag.e))+" · "+durTxt(drag.e-drag.s), t=drag.el.querySelector(".evt");
+  if(!t){ t=document.createElement("span"); t.className="evt"; drag.el.insertBefore(t,drag.el.querySelector(".rz")); }
+  t.textContent=txt;
+}
+function startDrag(){
+  if(!drag) return; drag.active=true; drag.el.classList.add("dragging"); document.body.classList.add("cal-dragging");
+  try{ drag.el.setPointerCapture(drag.pid); }catch(e){}
+  if(navigator.vibrate) try{ navigator.vibrate(8); }catch(e){}
+}
+document.addEventListener("pointerdown",function(ev){
+  if(S.view!=="agenda" || (ev.pointerType==="mouse"&&ev.button!==0)) return;
+  var el=ev.target.closest(".ev[data-drag]");
+  if(!el){ var col=ev.target.closest(".cal-col[data-col]"); if(col&&!ev.target.closest(".ev")) drag={create:true,col:col,x0:ev.clientX,y0:ev.clientY}; return; }
+  var rz=ev.target.classList.contains("rz"), s=toMin(el.getAttribute("data-s")), e=toMin(el.getAttribute("data-e"));
+  drag={el:el,mode:rz?"resize":"move",d0:el.getAttribute("data-d"),d1:el.getAttribute("data-d"),id:el.getAttribute("data-id"),s0:s,e0:e,s:s,e:e,x0:ev.clientX,y0:ev.clientY,pid:ev.pointerId,touch:ev.pointerType!=="mouse",active:false};
+  if(drag.touch){ if(rz) startDrag(); else drag.timer=setTimeout(startDrag,320); }
+});
+document.addEventListener("pointermove",function(ev){
+  if(!drag||drag.create) return;
+  var dx=ev.clientX-drag.x0, dy=ev.clientY-drag.y0;
+  if(!drag.active){
+    if(drag.touch){ if(Math.abs(dx)+Math.abs(dy)>8){ clearTimeout(drag.timer); drag=null; } return; }
+    if(Math.abs(dx)+Math.abs(dy)<4) return; startDrag();
+  }
+  ev.preventDefault();
+  var dm=dy/PX, len=drag.e0-drag.s0;
+  if(drag.mode==="move"){
+    drag.s=Math.max(H0,Math.min(H1-len,snap5(drag.s0+dm))); drag.e=drag.s+len;
+    var col=colAtX(ev.clientX); if(col&&col.getAttribute("data-col")!==drag.d1){ drag.d1=col.getAttribute("data-col"); col.appendChild(drag.el); }
+  } else { drag.e=Math.max(drag.s0+15,Math.min(H1,snap5(drag.e0+dm))); }
+  drag.el.style.top=((drag.s-H0)*PX)+"px"; drag.el.style.height=Math.max((drag.e-drag.s)*PX-2,18)+"px";
+  drag.el.style.left=""; drag.el.style.width=""; drag.el.style.right="";
+  dragLabel();
+},{passive:false});
+document.addEventListener("touchmove",function(ev){ if(drag&&drag.active) ev.preventDefault(); },{passive:false});
+function endDrag(ev,cancel){
+  if(!drag) return; var d=drag; drag=null; clearTimeout(d.timer); document.body.classList.remove("cal-dragging");
+  if(d.create){
+    if(!cancel&&Math.abs(ev.clientX-d.x0)+Math.abs(ev.clientY-d.y0)<6){ var r=d.col.getBoundingClientRect(), m=Math.max(H0,Math.min(H1-60,Math.floor((H0+(ev.clientY-r.top)/PX)/15)*15)); noClickUntil=Date.now()+400; addSlot(d.col.getAttribute("data-col"),m); }
+    return;
+  }
+  if(!d.active) return;
+  noClickUntil=Date.now()+400; d.el.classList.remove("dragging");
+  if(cancel||(d.s===d.s0&&d.e===d.e0&&d.d1===d.d0)){ render(); return; }
+  moveSlot(d.d0,d.id,d.d1,d.s,d.e);
+}
+document.addEventListener("pointerup",function(ev){ endDrag(ev,false); });
+document.addEventListener("pointercancel",function(ev){ endDrag(ev,true); });
+document.addEventListener("click",function(ev){ if(Date.now()<noClickUntil && ev.target.closest(".cal")){ ev.stopPropagation(); ev.preventDefault(); } },true);
+/* navigation : glisser à gauche ou à droite sur l'agenda (vue jour), flèches du clavier, T = aujourd'hui */
+(function(){ var sx=null, sy=null;
+  document.addEventListener("touchstart",function(ev){ if(S.view!=="agenda"||ev.touches.length!==1||!ev.target.closest(".cal")){ sx=null; return; } sx=ev.touches[0].clientX; sy=ev.touches[0].clientY; },{passive:true});
+  document.addEventListener("touchend",function(ev){ if(sx==null||(drag&&drag.active)||Date.now()<noClickUntil){ sx=null; return; } var t=ev.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy; sx=null;
+    if(Math.abs(dx)>70&&Math.abs(dy)<45&&(S.agMode||(window.innerWidth>=900?"week":"day"))==="day"){ S.agDate=iso(addDays(parseISO(S.agDate),dx<0?1:-1)); render(); } },{passive:true});
+  document.addEventListener("keydown",function(ev){ if(S.view!=="agenda"||layer.innerHTML||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"")) return;
+    var wk=(S.agMode||(window.innerWidth>=900?"week":"day"))==="week";
+    if(ev.key==="ArrowLeft"||ev.key==="ArrowRight"){ S.agDate=iso(addDays(parseISO(S.agDate),(ev.key==="ArrowLeft"?-1:1)*(wk?7:1))); render(); }
+    else if(ev.key==="t"||ev.key==="T"){ S.agDate=iso(today()); render(); } });
+})();
 
 /* ---------- liste des vacances ---------- */
 function nextVac(){ var t=iso(today()); return VACANCES.filter(function(v){ return v.to>=t; }).sort(function(a,b){ return a.from.localeCompare(b.from); })[0]||null; }
