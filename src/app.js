@@ -418,8 +418,8 @@ function vMatiere(id){
     h+='<div class="note-box">DM : dépose-le en type « DM » avec sa date de rendu ; il devient une tâche découpée sur jeudi, vendredi et dimanche (2 h max par créneau).</div>';
   }
   if(id==="ang"||id==="all"){
-    h+='<a class="ext" href="https://drive.google.com/drive/folders/'+(id==="ang"?"1gB_5IFmCYKBvV6NEVnpvW_s4Af3p55eN":"17qWGaCZyhugv6wWramnWl_WTCE6nAE7S")+'" target="_blank" rel="noopener"><div><b>CIVI · '+(id==="ang"?"Nothing New on the English-Speaking Front":"CIVI")+'</b><span class="small muted">Ton document sur Drive. Il s\'affichera ici avec la même structure après conversion en Google Doc.</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
-    h+=modCard("Revue de presse du dimanche",id==="ang"?"Entièrement en anglais, vocabulaire par article, envoi vers Anki.":"Titres en allemand avec traduction, chapeau en allemand, corps en français ; un ou deux articles entièrement en allemand avec leur vocabulaire.");
+    h+='<a class="ext" href="'+CIVI_DOC[id==="ang"?"en":"de"]+'" target="_blank" rel="noopener"><div><b>CIVI · '+(id==="ang"?"Nothing New on the English-Speaking Front":"CIVI")+'</b><span class="small muted">Ton document de civilisation (Google Docs). « Ajouter à ma civi » y range une news en prise de notes, dans la bonne partie.</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
+    h+=pressCard(id==="ang"?"en":"de");
   }
   if(id!=="hgg"&&id!=="maths") h+=filesCard(id);
   h+='<section class="card"><div class="card-h"><h2>Tâches</h2><span class="small muted">'+tasks.length+'</span></div><div class="tasks">'+taskRows(tasks)+'</div></section></div>';
@@ -658,6 +658,99 @@ document.addEventListener("click",function(ev){ if(Date.now()<noClickUntil && ev
     if(ev.key==="ArrowLeft"||ev.key==="ArrowRight"){ S.agDate=iso(addDays(parseISO(S.agDate),(ev.key==="ArrowLeft"?-1:1)*(wk?7:1))); render(); }
     else if(ev.key==="t"||ev.key==="T"){ S.agDate=iso(today()); render(); } });
 })();
+
+/* ---------- presse du jour en anglais et en allemand (revue du matin) : civi + Anki ---------- */
+var DECKS={
+  en:["Anglais::Civi","Anglais::Civi::AI","Anglais::Civi::Artists and Commitment","Anglais::Civi::Climate change - Race against global warming","Anglais::Civi::Culture wars","Anglais::Civi::Navigating gender","Anglais::Civi::Politics - Starmer in the storm list","Anglais::Civi::Politics in the UK","Anglais::Civi::The challenges facing education","Anglais::Civi::The media","Anglais::Civi::The US","Anglais::Civi::Tipping the scales - justice and politics in Trump's America","Anglais::Oral - Ecrit::Expressions","Anglais::Oral - Ecrit::Nouns","Anglais::Oral - Ecrit::Verbs"],
+  de:["Allemand::Civi","Allemand::Civi::Administration, vie en collectivité","Allemand::Civi::Arbeit","Allemand::Civi::Das deutsch-französische Tandem","Allemand::Civi::die AfD","Allemand::Civi::Die Debatte über der Pflichtdienst","Allemand::Civi::Die Länder","Allemand::Civi::Kulturkampf ums Bauhaus (Sachsen-Anhalt)","Allemand::Civi::Migration","Allemand::Civi::Ost-West","Allemand::Civi::Politik","Allemand::Civi::Verrohung der Sprache","Allemand::Civi::Wirtschaft","Allemand::Civi::Ökonomie und Industrie","Allemand::Vocabulaire général::Expressions"]
+};
+var ANKI_MODEL={en:"Anglais FR-EN sobre (nuit)",de:"Allemand <-> Français (éco)"};
+var CIVI_DOC={en:"https://docs.google.com/document/d/1IAtxlkQi-rZg4czoK_PkzHdynwslKpz2AAljBstiqho/edit",de:"https://docs.google.com/document/d/1N1yQu4GTpNpne1TUWBkwg8i2zWYCY7pp6GQnBDUg7vM/edit"};
+var PRESS={data:null,date:null,err:null,loading:false,sections:null,dates:[]};
+function gUrl(){ return ((st().gapi||{}).url||"").trim(); }
+function pressMark(){ var s=st(); s.press=s.press||{}; return s.press; }
+function gGet(params){ var u=gUrl(); if(!u) return Promise.reject(new Error("Passerelle Google non connectée.")); return fetch(u+(u.indexOf("?")>=0?"&":"?")+params,{redirect:"follow"}).then(function(r){ return r.json(); }); }
+function gPost(body){ var u=gUrl(); if(!u) return Promise.reject(new Error("Passerelle Google non connectée.")); return fetch(u,{method:"POST",redirect:"follow",body:JSON.stringify(body)}).then(function(r){ return r.json(); }).then(function(j){ if(!j||!j.ok) throw new Error((j&&j.error)||"Réponse inattendue."); return j; }); }
+function pressLoad(date,force){
+  if(PRESS.loading || (!force && PRESS.data && (!date||PRESS.date===date))) return;
+  if(!gUrl()) return;
+  if(!date){ try{ var c=JSON.parse(localStorage.getItem("prepa.press")||"null"); if(c&&c.data&&!PRESS.data){ PRESS.data=c.data; PRESS.date=c.data.date; PRESS.dates=c.dates||[]; } }catch(e){} }
+  PRESS.loading=true; PRESS.err=null;
+  gGet("action=news"+(date?"&date="+date:"")).then(function(j){
+    PRESS.loading=false; PRESS.dates=j.dates||PRESS.dates;
+    if(!j.ok){ PRESS.err=j.error; render(); return; }
+    PRESS.data=j.data; PRESS.date=j.data.date; if(!date) try{ localStorage.setItem("prepa.press",JSON.stringify({data:j.data,dates:PRESS.dates})); }catch(e){}
+    render();
+  },function(e){ PRESS.loading=false; PRESS.err="Passerelle injoignable : "+(e&&e.message||e); render(); });
+  if(!PRESS.sections) gGet("action=sections").then(function(j){ if(j.ok){ PRESS.sections={en:j.en,de:j.de}; } },function(){});
+}
+function pressSetup(lang){
+  return '<section class="card"><div class="card-h"><h2>'+(lang==="en"?"🇬🇧":"🇩🇪")+' Presse du jour</h2></div><p class="small muted" style="margin:0 0 10px">Chaque matin, trois articles '+(lang==="en"?"du monde anglophone":"sur l'Allemagne")+' avec leur vocabulaire. Pour les recevoir ici, puis les ajouter à ta civi et à Anki en un geste, connecte une fois la passerelle Google.</p><button class="btn primary sm" data-a="gapisetup">Connecter la passerelle Google</button></section>';
+}
+function pressCard(lang){
+  if(!gUrl()) return pressSetup(lang);
+  pressLoad();
+  var flag=lang==="en"?"🇬🇧":"🇩🇪", D=PRESS.data, list=D&&D[lang]||[];
+  var h='<section class="card press"><div class="card-h"><h2>'+flag+' Presse du jour</h2><span class="small muted">'+(D?fmtLong(D.date):"")+'</span></div>';
+  if(PRESS.dates&&PRESS.dates.length>1){ var ds=PRESS.dates.slice(-7).reverse(); h+='<div class="chips-x">'+ds.map(function(d){ return '<button class="chip'+(D&&D.date===d?" on":"")+'" data-a="pressday" data-d="'+d+'">'+fmtDay(d)+'</button>'; }).join("")+'</div>'; }
+  if(PRESS.loading&&!D) return h+'<div class="empty">Chargement…</div></section>';
+  if(PRESS.err&&!D) return h+'<div class="empty"><b>Pas de presse</b>'+esc(PRESS.err)+'</div></section>';
+  if(!list.length) return h+'<div class="empty">Pas d\'article dans cette langue pour ce jour.</div></section>';
+  var M=pressMark();
+  list.forEach(function(a,i){
+    var key=D.date+"|"+lang+"|"+(a.id||i), m=M[key]||{};
+    h+='<article class="pa" data-key="pa-'+esc(key)+'"><div class="pa-top">'+(a.principal?'<span class="chip blu">À la une</span>':'')+'<span class="chip">'+esc(a.rubrique||"")+'</span>'+(a.pays?'<span class="chip">'+esc(a.pays)+'</span>':'')+'</div>';
+    h+='<h3>'+esc(a.titre||"")+'</h3><p class="pa-txt">'+esc(a.texte||"")+'</p>'+(a.source&&a.source.url?'<a class="small" href="'+esc(a.source.url)+'" target="_blank" rel="noopener">'+esc(a.source.label||"Source")+' '+I.arrow+'</a>':'');
+    var voc=a.vocab||[];
+    if(voc.length){
+      h+='<div class="pa-voc"><div class="group-h">Vocabulaire <span class="n">'+voc.length+'</span></div><ul>'+voc.map(function(v,j){ return '<li><label><input type="checkbox" data-pv="'+esc(key)+'" data-j="'+j+'"'+(m.ankiSel&&m.ankiSel.indexOf(j)<0?"":" checked")+'><span class="t">'+esc(v.t)+(v.uk?' <span class="uk">UK</span>':'')+'</span><span class="f">'+esc(v.f)+'</span></label></li>'; }).join("")+'</ul>';
+      var deck=m.deck||a.paquet||DECKS[lang][0];
+      h+='<div class="pa-anki"><select class="field sm" data-pdeck="'+esc(key)+'">'+DECKS[lang].concat(DECKS[lang].indexOf(deck)<0?[deck]:[]).map(function(d){ return '<option value="'+esc(d)+'"'+(d===deck?" selected":"")+'>'+esc(d.replace(/^(Anglais|Allemand)::/,""))+'</option>'; }).join("")+'<option value="__new">Autre paquet…</option></select>'+
+        '<button class="btn sm '+(m.anki?"":"tint")+'" data-a="panki" data-k="'+esc(key)+'" data-l="'+lang+'" data-i="'+i+'">'+(m.anki?"✓ Envoyé · renvoyer":"Envoyer à Anki")+'</button></div></div>';
+    }
+    h+='<div class="pa-act"><button class="btn sm '+(m.civi?"":"primary")+'" data-a="pcivi" data-k="'+esc(key)+'" data-l="'+lang+'" data-i="'+i+'">'+(m.civi?"✓ Dans ta civi · rajouter":"Ajouter à ma civi")+'</button>'+(m.civi?'<a class="small" href="'+CIVI_DOC[lang]+'" target="_blank" rel="noopener">Ouvrir le document '+I.arrow+'</a>':'')+'</div></article>';
+  });
+  return h+'</section>';
+}
+function pressArt(lang,i){ return ((PRESS.data||{})[lang]||[])[+i]; }
+function civiSheet(key,lang,i){
+  var a=pressArt(lang,i); if(!a) return; var c=a.civi||{}, secs=(PRESS.sections||{})[lang]||[];
+  var opts=secs.slice(); if(c.section&&opts.map(norm).indexOf(norm(c.section))<0) opts.unshift(c.section);
+  formSheet({title:"Ajouter à ma civi", eyebrow:(lang==="en"?"🇬🇧 NOTHING NEW ON THE ENGLISH-SPEAKING FRONT":"🇩🇪 CIVI"), fields:[
+    {k:"section",label:"Partie du document",type:"select",options:opts.map(function(x){ return [x,x]; }).concat([["__new","Nouvelle partie…"]]),value:c.section||opts[0]||"__new"},
+    {k:"newsec",label:"Nouvelle partie (si choisie)",value:"",hint:"En majuscules, comme tes titres."},
+    {k:"titre",label:"Titre du point",value:c.titre||a.titre||""},
+    {k:"puces",label:"Notes (une puce par ligne, **gras** pour l'essentiel)",type:"textarea",rows:8,value:(c.puces||[]).join("\n")}],
+    save:function(v){
+      var sec=v.section==="__new"?v.newsec.trim():v.section; if(!sec) return "Choisis une partie ou nomme la nouvelle.";
+      var puces=String(v.puces||"").split(/\n+/).map(function(x){ return x.replace(/^[-•*]\s+/,"").trim(); }).filter(Boolean);
+      gPost({action:"civi",lang:lang,section:sec,titre:v.titre.trim(),puces:puces,source:a.source||null,date:PRESS.data.date}).then(function(j){ var M=pressMark(); M[key]=Object.assign({},M[key]||{},{civi:iso(today())}); save(); render(); toast(j.nouvelle?"Ajouté dans une nouvelle partie « "+sec+" ».":"Ajouté dans « "+sec+" »."); },function(e){ toast("Ajout impossible : "+(e&&e.message||e)); });
+    }, toast:"Envoi vers ton document…" });
+}
+/* Anki : directement si Anki est ouvert sur cet ordinateur (AnkiConnect), sinon file d'attente traitée dès que l'ordinateur est allumé */
+function ankiDirect(notes){
+  var ctl=window.AbortController?new AbortController():null, t=setTimeout(function(){ if(ctl) ctl.abort(); },1800);
+  return fetch("http://127.0.0.1:8765",{method:"POST",body:JSON.stringify({action:"multi",version:6,params:{actions:[{action:"createDeck",params:{deck:notes[0].deckName}},{action:"addNotes",params:{notes:notes}}]}}),signal:ctl?ctl.signal:undefined})
+    .then(function(r){ clearTimeout(t); return r.json(); }).then(function(j){ if(!j||j.error) throw new Error(j&&j.error||"AnkiConnect"); var res=j.result&&j.result[1]; return (res&&res.result)||res; });
+}
+function pressAnki(key,lang,i){
+  var a=pressArt(lang,i); if(!a) return; var M=pressMark(), m=M[key]||{};
+  var sel=Array.prototype.slice.call(document.querySelectorAll('[data-pv]')).filter(function(x){ return x.getAttribute("data-pv")===key && x.checked; }).map(function(x){ return +x.getAttribute("data-j"); });
+  if(!sel.length){ toast("Coche au moins un mot."); return; }
+  var deck=m.deck||a.paquet||DECKS[lang][0], tag="presse_"+PRESS.data.date;
+  var cards=sel.map(function(j){ var v=a.vocab[j]; return {id:key+"#"+j,lang:lang,deck:deck,model:ANKI_MODEL[lang],front:lang==="en"?v.f:v.t,back:lang==="en"?v.t+(v.uk?" (UK)":""):v.f,note:a.titre||"",tags:"presse "+tag}; });
+  var notes=cards.map(function(c){ var f=lang==="en"?{Front:c.front,Back:c.back,Note:c.note}:{Allemand:c.front,Francais:c.back}; return {deckName:deck,modelName:c.model,fields:f,tags:["presse",tag],options:{allowDuplicate:false}}; });
+  var done=function(msg){ M[key]=Object.assign({},M[key]||{},{anki:iso(today())}); save(); render(); toast(msg); };
+  ankiDirect(notes).then(function(r){ var ok=(r||[]).filter(function(x){ return x; }).length; done(ok+" carte"+(ok>1?"s":"")+" ajoutée"+(ok>1?"s":"")+" dans « "+deck.split("::").pop()+" »"+(ok<notes.length?" ("+(notes.length-ok)+" déjà présente"+(notes.length-ok>1?"s":"")+")":"")+"."); },
+    function(){ gPost({action:"anki",cards:cards}).then(function(){ done(cards.length+" mot"+(cards.length>1?"s":"")+" en file : ils arrivent dans Anki dès que ton ordinateur est allumé avec Anki ouvert."); },function(e){ toast("Envoi impossible : "+(e&&e.message||e)); }); });
+}
+function gapiSetup(){
+  formSheet({title:"Passerelle Google", eyebrow:"Une seule fois", fields:[
+    {k:"url",label:"Adresse de l'application Web (se termine par /exec)",value:gUrl(),hint:"1) Ouvre script.google.com → Nouveau projet. 2) Colle le code du fichier Code.gs (lien ci-dessous) à la place du code. 3) Déployer → Nouveau déploiement → Application Web ; Exécuter en tant que : moi ; Accès : tout le monde. 4) Autorise l'accès à ton Drive, puis colle ici l'adresse obtenue."}],
+    save:function(v){ var u=v.url.trim(); if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(u)) return "L'adresse doit ressembler à https://script.google.com/macros/s/…/exec"; st().gapi={url:u}; PRESS.data=null; PRESS.sections=null; },
+    after:null, toast:"Passerelle connectée." });
+  var b=layer.querySelector(".sheet-b"); if(b) b.insertAdjacentHTML("beforeend",'<a class="ext" href="https://github.com/alexandrenkvanrossum-ship-it/pr-pa/blob/main/supabase/apps-script/Code.gs" target="_blank" rel="noopener"><div><b>Code.gs</b><span class="small muted">Le code à coller dans Apps Script</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>');
+}
 
 /* ---------- liste des vacances ---------- */
 function nextVac(){ var t=iso(today()); return VACANCES.filter(function(v){ return v.to>=t; }).sort(function(a,b){ return a.from.localeCompare(b.from); })[0]||null; }
@@ -1519,6 +1612,10 @@ document.addEventListener("click",function(ev){
   if(a==="fedit"){ editFile(b.getAttribute("data-id")); return; }
   if(a==="slotedit"){ editSlot(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
   if(a==="slotadd"){ addSlot(S.agDate); return; }
+  if(a==="gapisetup"){ gapiSetup(); return; }
+  if(a==="pressday"){ pressLoad(b.getAttribute("data-d"),true); return; }
+  if(a==="pcivi"){ civiSheet(b.getAttribute("data-k"),b.getAttribute("data-l"),b.getAttribute("data-i")); return; }
+  if(a==="panki"){ pressAnki(b.getAttribute("data-k"),b.getAttribute("data-l"),b.getAttribute("data-i")); return; }
   if(a==="slotdel"){ slotDel(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
   if(a==="unvac"){ var tv=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(tv){ tv.vac=false; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Remise dans la To-Do normale : elle sera planifiée."); } return; }
   if(a==="vaccopy"){ var txt=vacText(); (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){ toast("Liste copiée : colle-la à Claude pour organiser tes vacances."); },function(){ sheetText(txt); }); return; }
@@ -1604,6 +1701,10 @@ document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-
   else if(id==="bjf-annee"){ S.bjF.annee=ev.target.value; S.bjF.n=80; render(); }
   else if(id==="bjf-q"){ S.bjF.q=ev.target.value; S.bjF.n=80; render(); }
   else if(id==="bjcf-disc"){ S.bjCF.disc=ev.target.value; render(); }
+  else if(ev.target.hasAttribute("data-pdeck")){ var pk=ev.target.getAttribute("data-pdeck"), PM=pressMark(), dv=ev.target.value;
+    if(dv==="__new"){ var base=pk.indexOf("|en|")>0?"Anglais::Civi::":"Allemand::Civi::"; formSheet({title:"Nouveau paquet Anki",fields:[{k:"n",label:"Nom du sous-paquet",value:"",hint:"Créé dans "+base.replace(/::$/,"")}],save:function(v){ if(!v.n.trim()) return "Donne un nom."; PM[pk]=Object.assign({},PM[pk]||{},{deck:base+v.n.trim()}); },toast:"Paquet choisi."}); }
+    else { PM[pk]=Object.assign({},PM[pk]||{},{deck:dv}); save(); } }
+  else if(ev.target.hasAttribute("data-pv")){ var vk=ev.target.getAttribute("data-pv"), VM=pressMark(); VM[vk]=Object.assign({},VM[vk]||{}); VM[vk].ankiSel=Array.prototype.slice.call(document.querySelectorAll('[data-pv]')).filter(function(x){ return x.getAttribute("data-pv")===vk && x.checked; }).map(function(x){ return +x.getAttribute("data-j"); }); save(); }
   else if(id==="ann-focus"){ Ann.state().focus=ev.target.value||null; save(); render(); }
   else if(id==="annf-ch"){ S.annF.chs=ev.target.value?[ev.target.value]:[]; S.annF.n=60; render(); }
   else if(id==="annf-dur"){ S.annF.dur=ev.target.value; S.annF.n=60; render(); }

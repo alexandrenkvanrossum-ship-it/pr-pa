@@ -483,3 +483,20 @@ body.cal-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .toast.act button{border:0;background:none;color:#8FC2FF;font-weight:700;font-size:14px;padding:4px 2px;cursor:pointer}
 .icon-btn.del-btn{color:var(--red);background:var(--red-pale);box-shadow:none;flex:none}
 .icon-btn.del-btn:hover{color:var(--red);filter:brightness(.96)}
+
+/* ---------- presse du jour en langues ---------- */
+.press .pa{border-top:.5px solid var(--line);padding:14px 0 6px;display:flex;flex-direction:column;gap:8px}
+.press .pa:first-of-type{border-top:0;padding-top:4px}
+.pa-top{display:flex;flex-wrap:wrap;gap:6px}
+.pa h3{font-family:var(--font-display);font-size:17px;font-weight:700;line-height:1.3;margin:0}
+.pa-txt{margin:0;font-size:15px;line-height:1.6}
+.pa-voc{background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.pa-voc ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column}
+.pa-voc li label{display:grid;grid-template-columns:20px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:baseline;padding:5px 0;border-bottom:.5px solid var(--line);font-size:14px;cursor:pointer}
+.pa-voc li:last-child label{border-bottom:0}
+.pa-voc .t{font-weight:600}
+.pa-voc .f{color:var(--ink-2)}
+.pa-voc .uk{font-size:10px;font-weight:800;color:#C8102E;background:#FCE8EB;border-radius:4px;padding:1px 4px;vertical-align:1px}
+.pa-anki{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.pa-anki select{flex:1;min-width:0}
+.pa-act{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
