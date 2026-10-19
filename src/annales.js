@@ -51,14 +51,72 @@ var Ann = (function(){
     {d:"2027-02-15",n:"Colle 8",t:"Convergences, estimation",main:["C9","C10"],prev:["C7"]}
   ];
 
-  var D=null, ITEMS=[], BY={}, SUBJ={}, OY=[], IDX={}, loading=null, ls=[];
+  /* échéances de maths (DS de Ginette) avec les DS des promos précédentes à refaire avant */
+  var ALL2=CH2.map(function(c){ return c.id; }), SEEN1=["A1","A2","A3","L1","P1"];
+  var EVENTS=[
+    {d:"2026-11-21",n:"DS 2",ds:["DS-2425-DST2","DS-2526-DST2"],ch:["C0","C1","C2","C3"],t:"Intégrales généralisées, v.a. à densité, algèbre linéaire (changement de base, trace), diagonalisation",prep:"DS 2 de 2024-25 et DST 2 de 2025-26, avec leurs rapports."},
+    {d:"2026-12-16",n:"Concours blanc, épreuve 1",ds:["DS-2425-CB1","DS-2526-CB2"],ch:["C0","C1","C2","C3","C4","C5"],t:"Tout le programme vu jusqu'à mi-décembre + 1re année",prep:"Les deux concours blancs 2024-25 et 2025-26, en conditions réelles pendant la semaine du 7 décembre."},
+    {d:"2026-12-17",n:"Concours blanc, épreuve 2",ds:["DS-2526-CB2","DS-2425-CB1"],ch:["C0","C1","C2","C3","C4","C5"],t:"Idem ; l'an dernier le sujet portait surtout sur les v.a. à densité (fonction génératrice des moments)",prep:"Les deux concours blancs, en conditions réelles."},
+    {d:"2027-01-23",n:"DS 3",ds:["DS-2425-DST3","DS-2526-DST3"],ch:["C5","C6","C3"],t:"Espaces euclidiens, endomorphismes symétriques (+ réduction) ; l'an dernier : matrices normales",prep:"DS 3 bis 2024-25 et DST 3 2025-26."},
+    {d:"2027-03-13",n:"DS 4",ds:["DS-2425-DST4","DS-2526-DS4"],ch:["C0","C1","C2","C3","C4","C5","C6","C7","C8","C9"],t:"Sujet type concours complet (l'an dernier : HEC-ESSEC 2019)",prep:"DS 4 2024-25 et le sujet HEC-ESSEC 2019, puis les écrits HEC 2025 corrigés."},
+    {d:"2027-04-14",n:"Écrits BCE",approx:true,ch:ALL2,t:"Vers mi-avril, dates à vérifier",prep:"Sujets complets récents en conditions réelles."}
+  ];
+  var WEEKS=[
+    {d:"2026-09-21",c:"Ch. 0 Intégrales généralisées → Ch. 1 v.a. à densité",k:"Colle 1 : révisions d'analyse + intégrales généralisées",dm:"DM 2 (21/09)",f:["C0","C1"]},
+    {d:"2026-09-28",c:"Ch. 1 v.a. à densité",k:"Colle 1 (suite)",f:["C1"]},
+    {d:"2026-10-05",c:"Ch. 1 (lois usuelles, loi γ)",k:"Colle 2 : v.a. à densité",dm:"DM 3 (05/10)",f:["C1"]},
+    {d:"2026-10-12",c:"Fin ch. 1 → Ch. 2 Compléments d'algèbre linéaire",k:"Colle 2 (suite)",dm:"DM 4 (12/10)",f:["C1","C2"]},
+    {d:"2026-10-19",vac:1,c:"Vacances de la Toussaint",k:"",f:["C0","C1"].concat(SEEN1)},
+    {d:"2026-10-26",vac:1,c:"Vacances de la Toussaint",k:"",f:["C0","C1"].concat(SEEN1)},
+    {d:"2026-11-02",c:"Ch. 2 (changement de base, trace) → Ch. 3 Diagonalisation",k:"Colle 3 : densité + algèbre linéaire 1A + compléments",dm:"DM 5 (02/11)",f:["C2","C3"]},
+    {d:"2026-11-09",c:"Ch. 3 Diagonalisation",k:"Colle 3 (suite)",dm:"DM 6 (09/11)",f:["C3"]},
+    {d:"2026-11-16",c:"Fin ch. 3 → Ch. 4 v.a. discrètes",k:"Colle 4 : algèbre linéaire + réduction",dm:"DM 7 (16/11)",ev:"DS 2 sam. 21/11",f:["C0","C1","C2","C3"]},
+    {d:"2026-11-23",c:"Ch. 4 (couples, covariance)",k:"Colle 4 (suite)",f:["C4"]},
+    {d:"2026-11-30",c:"Ch. 4 (vecteurs aléatoires) → Ch. 5 Algèbre bilinéaire",k:"Colle 5 : v.a. et vecteurs aléatoires discrets",dm:"DM 8 (30/11)",f:["C4","C5"]},
+    {d:"2026-12-07",c:"Ch. 5 (produit scalaire, orthogonalité)",k:"Colle 5 (suite)",dm:"DM 9 (07/12)",f:["C5"],note:"Refais les deux concours blancs 2024-25 et 2025-26 en conditions réelles cette semaine."},
+    {d:"2026-12-14",c:"Concours blanc",k:"Pas de colle",ev:"Concours blanc mer. 16 + jeu. 17/12",f:["C0","C1","C2","C3","C4","C5"]},
+    {d:"2026-12-21",vac:1,c:"Vacances de Noël",k:"",f:["C0","C1","C2","C3","C4","C5"].concat(SEEN1)},
+    {d:"2026-12-28",vac:1,c:"Vacances de Noël",k:"",f:["C0","C1","C2","C3","C4","C5"].concat(SEEN1)},
+    {d:"2027-01-04",c:"Ch. 5 (projecteurs orthogonaux, matrices orthogonales) → Ch. 6",k:"Colle 6 : espaces euclidiens",dm:"DM 10 (04/01)",f:["C5"]},
+    {d:"2027-01-11",c:"Ch. 6 Endomorphismes symétriques",k:"Colle 6 : euclidiens + endo. symétriques",dm:"DM 11 (11/01)",f:["C6"]},
+    {d:"2027-01-18",c:"Ch. 7 Fonctions de plusieurs variables",k:"Colle 6 (suite)",dm:"DM 12 (≈18/01)",ev:"DS 3 sam. 23/01",f:["C5","C6","C3"]},
+    {d:"2027-01-25",c:"Ch. 7 (C¹, C², hessienne)",k:"Colle 6 (suite)",f:["C7"]},
+    {d:"2027-02-01",c:"Ch. 7 (extrema) → Ch. 8 Optimisation sous contraintes linéaires",k:"Colle 7 : fonctions de plusieurs variables",dm:"DM 13 (01/02)",f:["C7","C8"]},
+    {d:"2027-02-08",c:"Ch. 8 → Ch. 9 Convergences de suites de v.a.",k:"Colle 7 : + extrema sous contraintes",dm:"DM 14 (08/02)",f:["C8","C7"]},
+    {d:"2027-02-15",c:"Ch. 9 Convergences → Ch. 10 Estimation",k:"Colle 8 : convergences",f:["C9"]},
+    {d:"2027-02-22",c:"Ch. 9 → Ch. 10 Estimation",k:"Colle 8 : estimateurs et intervalles de confiance",f:["C9","C10"]},
+    {d:"2027-03-01",c:"Ch. 10 Estimation",k:"Colle 8 (suite)",f:["C10"]},
+    {d:"2027-03-08",c:"Ch. 10 Estimation",k:"Colle 8 (suite)",dm:"DM 15 (08/03)",ev:"DS 4 sam. 13/03",f:["C7","C9","C10"]},
+    {d:"2027-03-15",full:1,c:"Programme terminé : révisions, sujets de concours, oraux blancs",k:"Colles de révision",f:[]},
+    {d:"2027-03-22",full:1,c:"Révisions, sujets de concours",k:"Colles de révision",f:[]},
+    {d:"2027-03-29",full:1,c:"Révisions, sujets de concours",k:"Colles de révision",f:[]},
+    {d:"2027-04-05",full:1,c:"Dernière ligne droite",k:"Écrits BCE vers mi-avril (dates à vérifier)",f:[]}
+  ];
+  var ANTICIPER=[
+    ["Avance d'un chapitre","Lis le cours suivant le week-end avant qu'il commence, puis fais ses exercices de cours."],
+    ["Avant chaque colle","Rédige au propre les démonstrations exigibles listées dans les chapitres."],
+    ["DS 2 (21/11)","DS 2 de 2024-25 et DST 2 de 2025-26, avec leurs rapports."],
+    ["Concours blanc (16-17/12)","Les deux concours blancs 2024-25 et 2025-26, en conditions réelles pendant la semaine du 7 décembre."],
+    ["DS 3 (23/01)","DS 3 bis 2024-25 et DST 3 2025-26 (euclidien, matrices normales)."],
+    ["DS 4 (13/03)","DS 4 2024-25 et le sujet HEC-ESSEC 2019, puis les écrits HEC 2025 corrigés."]
+  ];
+  var PER={ecg:"ECG 2023 à 2026",ecs2:"ECS 2014 à 2022",ecs1:"ECS 2000 à 2013"};
+  function per(y){ return y>=2023?"ecg":(y>=2014?"ecs2":"ecs1"); }
+  var LAL={e1:"ex1 ex 1 exo 1",e2:"ex2 ex 2 exo 2",e3:"ex3 ex 3 exo 3",p:"pb probleme",p1:"pb1 pb 1 probleme 1",p2:"pb2 pb 2 probleme 2",p3:"pb3",p4:"pb4",s:"sujet complet",ex:"exercice principal oral",qsp:"qsp question sans preparation",sj:"sujet oral",ds:"ds dst devoir"};
+  var AL={EML:"em lyon emlyon eml",EDHEC:"edhec",ECRI:"ecricome",HE:"hec essec maths 1 maths i parisienne parisiennes",M2:"hec escp maths 2 maths ii parisienne parisiennes",HEC:"hec maths 1 maths i parisienne",ESSEC:"essec maths 1 maths i parisienne",OH:"oral hec qsp question sans preparation",OE:"oral escp qsp question sans preparation",DS:"ds dst devoir concours blanc ginette sainte genevieve besbes"};
+  var PAGE={EML:"toutes-les-annales-emlyon-maths-approfondies/",EDHEC:"toutes-les-annales-edhec-maths-approfondies/",ECRI:"toutes-les-annales-ecricome-maths-approfondies/",HE:"toutes-les-annales-emlyon-maths-i-hec-essec/",M2:"toutes-les-annales-maths-ii-approfondies/",HEC:"toutes-les-annales-maths-hec-2000-2018/",ESSEC:"toutes-les-annales-maths-essec-2000-2018/",OH:"annales-oraux-maths-hec-approfondies/",OE:"annales-oraux-maths-escp-approfondies/"};
+  Object.keys(PAGE).forEach(function(k){ EPS[k].page="https://major-prepa.com/mathematiques/"+PAGE[k]; });
+  function hpList(it){ return Array.isArray(it.hp)?it.hp.map(function(h){ return h.n; }):(it.hp?String(it.hp).split(/,(?![^()]*\))/).map(function(x){ return x.trim(); }).filter(Boolean):[]); }
+  function hpLinks(it){ return Array.isArray(it.hp)?it.hp:hpList(it).map(function(n){ return {n:n,u:""}; }); }
+
+  var D=null, ITEMS=[], BY={}, SUBJ={}, SUBJL=[], OY=[], IDX={}, loading=null, ls=[];
   var CACHE="prepa-annales", PATH=function(){ return Sync.user().id+"/annales/annales.json"; };
   function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
   function setData(o){
-    D=o; ITEMS=o.items||[]; OY=o.oy||[]; BY={}; SUBJ={};
-    (o.subjects||[]).forEach(function(s){ SUBJ[s.sid]=s; });
-    ITEMS.forEach(function(it){ BY[it.id]=it; it.tg=it.tg||[]; it.hp=it.hp||[];
-      IDX[it.id]=norm([EPS[it.ep]?EPS[it.ep].n:"",it.ep,it.y,it.sub||"",it.dsn||"",LBL[it.lb]||"",it.th,it.no||"",(it.hp||[]).map(function(h){ return h.n; }).join(" "),it.nt||"",it.rd?"super classique":"",it.tg.map(function(t){ return CH[t]?CH[t].n:""; }).join(" "),DIFF[it.di]?DIFF[it.di].n:""].join(" "));
+    D=o; ITEMS=o.items||[]; OY=o.oy||[]; BY={}; SUBJ={}; SUBJL=o.subjects||[];
+    SUBJL.forEach(function(s){ SUBJ[s.sid]=s; });
+    ITEMS.forEach(function(it){ BY[it.id]=it; it.tg=it.tg||[]; it.hp=hpLinks(it); var e=EPS[it.ep]||{};
+      IDX[it.id]=norm([e.n,e.m,e.full,AL[it.ep]||"",it.y,it.sub||"",it.qc||"",it.dsn||"",it.orig||"",LBL[it.lb]||"",LAL[it.lb]||"",it.th,it.no||"",hpList(it).join(" "),it.nt||"",it.rd?"super classique rouge":"",it.py?"python "+it.py.map(function(p){ return p.th; }).join(" "):"",it.tg.map(function(t){ return CH[t]?CH[t].n:""; }).join(" "),DIFF[it.di]?DIFF[it.di].n:"",doms(it).map(function(d){ return DOM[d].n; }).join(" ")].join(" "));
     });
   }
   /* la base est rangée dans ton espace privé « fichiers » (pas dans le dépôt public) */
@@ -144,31 +202,131 @@ var Ann = (function(){
       if(f.dur){ var t=it.tm||0; if(f.dur==="long"?t<180:t>+f.dur) return false; }
       if(f.diff&&f.diff.length&&f.diff.indexOf(it.di)<0) return false;
       if(f.stars===4?!it.rd:(f.stars&&(it.st||0)<f.stars)) return false;
-      if(f.feas){ var k=feas(it).k; if(f.feas==="now"&&!(k==="ok"||k==="cur")) return false; }
-      if(f.stat){ var s=statusOf(it.id), r=S().it[it.id]; if(f.stat==="fav"?!(r&&r.f):s!==f.stat) return false; }
+      if(f.dom&&doms(it).indexOf(f.dom)<0) return false;
+      if(f.per&&f.per.length&&f.per.indexOf(per(it.y))<0) return false;
+      if(f.py&&!(it.py||it.tg.indexOf("PY")>=0)) return false;
+      if(kind==="o"&&f.ot&&f.ot.length&&f.ot.indexOf(it.lb==="qsp"?"qsp":"ex")<0) return false;
+      if(f.feas){ var k=feas(it).k; if(f.feas==="now"&&!(k==="ok"||k==="cur")) return false; if(f.feas==="part"&&!(k==="ok"||k==="cur"||k==="part")) return false; }
+      var stl=f.stat?(Array.isArray(f.stat)?f.stat:[f.stat]):[];
+      if(stl.length){ var s=statusOf(it.id), r=S().it[it.id]; if(!stl.some(function(x){ return x==="fav"?(r&&r.f):x===s; })) return false; }
       if(words.length){ var h=IDX[it.id]; if(!words.every(function(w){ return h.indexOf(w)>=0; })) return false; }
       return true;
     });
     var sc={}; L.forEach(function(it){ sc[it.id]=score(it,focus); });
-    var by={score:function(a,b){ return sc[b.id]-sc[a.id]||b.y-a.y; },recent:function(a,b){ return b.y-a.y||a.ep.localeCompare(b.ep); },easy:function(a,b){ return ((DIFF[a.di]||{o:5}).o-(DIFF[b.di]||{o:5}).o)||sc[b.id]-sc[a.id]; }}[f.sort||"score"];
+    var by={score:function(a,b){ return sc[b.id]-sc[a.id]||b.y-a.y; },recent:function(a,b){ return b.y-a.y||a.ep.localeCompare(b.ep); },easy:function(a,b){ return ((DIFF[a.di]||{o:5}).o-(DIFF[b.di]||{o:5}).o)||sc[b.id]-sc[a.id]; },stars:function(a,b){ return (b.st||0)-(a.st||0)||sc[b.id]-sc[a.id]; },date:function(a,b){ return String(a.dsd||"").localeCompare(String(b.dsd||"")); }}[f.sort||"score"]||function(){ return 0; };
     L.sort(by); return {L:L,sc:sc};
   }
   /* suivi */
   function rec(id){ return S().it[id]||null; }
   function patch(id,p){ var r=Object.assign({s:"todo"},S().it[id]||{},p); if(r.s==="todo"&&r.n==null&&!r.t&&!r.c&&!r.f) delete S().it[id]; else S().it[id]=r; Store.save(); emit(); }
+  function dayRec(){ var d=S().days[T()]; if(!d) d=S().days[T()]={n:0,m:0}; return d; }
+  /* change le statut et renvoie ce qui a changé côté jeu (XP, niveau, badges) pour l'afficher */
   function setStatus(id,s){
-    var r=Object.assign({s:"todo"},S().it[id]||{}), prev=r.s;
-    if(s==="done"&&prev!=="done"){ r.d=T(); r.dc=(r.dc||0)+1; if(prev==="redo") r.r=(r.r||0)+1; }
-    if(s==="doing"&&r.p==null) r.p=25; r.s=s; if(s==="redo") r.rd=T();
+    var before=totalXP(), r=Object.assign({s:"todo"},S().it[id]||{}), prev=r.s;
+    if(s==="done"&&prev!=="done"){ r.d=T(); r.dc=(r.dc||0)+1; if(prev==="redo") r.r=(r.r||0)+1; dayRec().n=(dayRec().n||0)+1; }
+    if(s==="doing"&&r.p==null) r.p=25; r.s=s; if(s==="redo") r.rd=T(); if(s!=="todo") dayRec().a=1;
     S().it[id]=r; patch(id,{});
+    return afterGame(before);
   }
-  function addTime(id,m){ var d=S().days[T()]||(S().days[T()]={m:0}); d.m+=m; patch(id,{t:((rec(id)||{}).t||0)+m}); }
-  function weekStats(){
-    var mon=iso(mondayOf(today())), end=iso(addDays(mondayOf(today()),6)), ex=0, min=0, eps={};
+  function addTime(id,m){ var d=dayRec(); d.m=(d.m||0)+m; d.a=1; patch(id,{t:((rec(id)||{}).t||0)+m}); }
+  function mondayIso(dISO){ return iso(mondayOf(parseISO(dISO||T()))); }
+  function weekStats(mon){
+    mon=mon||mondayIso(); var end=iso(addDays(parseISO(mon),6)), ex=0, min=0, eps={};
     Object.keys(S().it).forEach(function(id){ var r=S().it[id]; if(r.d&&r.d>=mon&&r.d<=end&&(r.s==="done"||r.s==="redo")&&BY[id]){ ex++; eps[BY[id].ep]=1; } });
     Object.keys(S().days).forEach(function(d){ if(d>=mon&&d<=end) min+=S().days[d].m||0; });
     return {ex:ex,min:min,eps:Object.keys(eps).length};
   }
+  function goal(){ var g=S().goal; if(!g) g=S().goal={ex:4,min:300,ep:3}; return g; }
+  function xpOf(it,r){
+    if(!r) return 0;
+    var dm=({f:0.9,m:1,d:1.15,td:1.3})[it.di]||1, x=(it.tm||60)*1.6*dm+(it.st||0)*10+(it.rd?15:0);
+    var frac=(r.s==="done"||r.s==="redo")?1:(r.s==="doing"?(r.p||0)/100:0); x*=frac;
+    if(frac===1&&r.n!=null&&r.n>=14) x*=1.15;
+    x+=40*(r.r||0); return Math.round(x);
+  }
+  function potentialXP(it){ return xpOf(it,{s:"done"}); }
+  function totalXP(){ var t=0; Object.keys(S().it).forEach(function(id){ if(BY[id]) t+=xpOf(BY[id],S().it[id]); }); return t; }
+  var LV=[0,300,800,1500,2500,4000,6000,8500,12000,16000,21000];
+  var LVN=["Premiers pas","Échauffement","Régulier","Solide","Méthodique","Redoutable","Admissible","Parisien","Top 10","Major","Légende"];
+  function level(xp){ var i=0; while(i<LV.length-1&&xp>=LV[i+1]) i++; var lo=LV[i], hi=LV[i+1]!=null?LV[i+1]:lo+6000; return {i:i,n:LVN[i],lo:lo,hi:hi,next:LVN[i+1]||"Légende+",p:Math.min(1,(xp-lo)/(hi-lo))}; }
+  function streak(){
+    function has(d){ var x=S().days[d]; return x&&(x.n>0||x.m>0||x.a); }
+    var d=T(); if(!has(d)) d=iso(addDays(parseISO(d),-1)); var n=0;
+    while(has(d)){ n++; d=iso(addDays(parseISO(d),-1)); }
+    return n;
+  }
+  function gameStats(){
+    var s={done:0,red:0,oral:0,qsp:0,ds:0,eps:{},paris:0,ch:{},dom:{A:0,L:0,P:0},hard:0,three:0,redone:0,good:0,best:Math.max(S().best||0,streak()),maxWeekMin:0,notes:[],minutes:0};
+    Object.keys(S().it).forEach(function(id){
+      var r=S().it[id], it=BY[id]; if(!it) return; s.minutes+=r.t||0; if(r.n!=null) s.notes.push(r.n);
+      if(r.s!=="done"&&r.s!=="redo") return;
+      s.done++; s.eps[it.ep]=1; if(["M2","HE","HEC","ESSEC"].indexOf(it.ep)>=0) s.paris++;
+      if(it.k==="o") s.oral++; if(it.lb==="qsp") s.qsp++; if(it.k==="d") s.ds++;
+      it.tg.forEach(function(t){ s.ch[t]=(s.ch[t]||0)+1; }); doms(it).forEach(function(d){ s.dom[d]++; });
+      if(it.di==="d"||it.di==="td") s.hard++; if(it.st===3) s.three++; if(it.rd) s.red++; if(r.r) s.redone++; if(r.n!=null&&r.n>=16) s.good++;
+    });
+    var wk={}; Object.keys(S().days).forEach(function(d){ var m=mondayIso(d); wk[m]=(wk[m]||0)+(S().days[d].m||0); });
+    Object.keys(wk).forEach(function(k){ s.maxWeekMin=Math.max(s.maxWeekMin,wk[k]); });
+    /* au-delà des annales : exercices de tes TD cochés, footings, sujets de colle faits en trinôme */
+    var st=Store.get(); s.td=Object.keys(st.mathsDone||{}).length;
+    s.runs=Object.keys(st.runs||{}).filter(function(k){ return st.runs[k]&&st.runs[k].done; }).length;
+    s.trin=0; Object.keys(st.trin||{}).forEach(function(k){ var x=st.trin[k]; if(x&&x.done) s.trin+=Object.keys(x.done).filter(function(j){ return x.done[j]; }).length; });
+    return s;
+  }
+  var BADGES=[
+    {id:"b1",n:"Premier pas",d:"1 exercice d'annale terminé",g:"1",c:"green",t:function(s){ return s.done>=1; }},
+    {id:"b10",n:"Dizaine",d:"10 exercices terminés",g:"10",c:"teal",t:function(s){ return s.done>=10; }},
+    {id:"b50",n:"Cinquantaine",d:"50 exercices terminés",g:"50",c:"blue",t:function(s){ return s.done>=50; }},
+    {id:"b100",n:"Centurion",d:"100 exercices terminés",g:"100",c:"indigo",t:function(s){ return s.done>=100; }},
+    {id:"tour",n:"Tour des concours",d:"Un exercice emlyon, EDHEC, Ecricome, Maths I et Maths II",g:"5",c:"pink",t:function(s){ return ["EML","EDHEC","ECRI","M2"].every(function(e){ return s.eps[e]; })&&["HE","HEC","ESSEC"].some(function(e){ return s.eps[e]; }); }},
+    {id:"paris",n:"Parisien",d:"Un problème de Maths I ou II terminé",g:"P",c:"red",t:function(s){ return s.paris>=1; }},
+    {id:"s7",n:"Semaine de feu",d:"7 jours de maths d'affilée",g:"7j",c:"orange",t:function(s){ return s.best>=7; }},
+    {id:"s30",n:"Inarrêtable",d:"30 jours d'affilée",g:"30j",c:"red",t:function(s){ return s.best>=30; }},
+    {id:"dens",n:"Densités",d:"10 exercices de VA à densité",g:"f",c:"orange",t:function(s){ return (s.ch.C1||0)>=10; }},
+    {id:"red",n:"Réduction",d:"10 exercices de diagonalisation",g:"λ",c:"purple",t:function(s){ return (s.ch.C3||0)>=10; }},
+    {id:"eucl",n:"Euclidien",d:"10 exercices d'algèbre bilinéaire",g:"⊥",c:"indigo",t:function(s){ return (s.ch.C5||0)+(s.ch.C6||0)>=10; }},
+    {id:"ana",n:"Analyste",d:"15 exercices d'analyse",g:"∫",c:"blue",t:function(s){ return s.dom.A>=15; }},
+    {id:"proba",n:"Probabiliste",d:"15 exercices de probabilités",g:"Ω",c:"orange",t:function(s){ return s.dom.P>=15; }},
+    {id:"hard",n:"Sans peur",d:"5 exercices difficiles",g:"!",c:"red",t:function(s){ return s.hard>=5; }},
+    {id:"classic",n:"Les classiques",d:"20 exercices ★★★",g:"★",c:"yellow",t:function(s){ return s.three>=20; }},
+    {id:"redst",n:"Astuces gravées",d:"10 super classiques (★★★ rouges)",g:"★",c:"red",t:function(s){ return s.red>=10; }},
+    {id:"back",n:"Retour gagnant",d:"Refaire un exercice marqué à refaire",g:"↻",c:"green",t:function(s){ return s.redone>=1; }},
+    {id:"rig",n:"Rigueur",d:"5 notes d'au moins 16/20 au barème strict",g:"16",c:"teal",t:function(s){ return s.good>=5; }},
+    {id:"oral",n:"Devant le jury",d:"5 exercices d'oral HEC ou ESCP",g:"O",c:"blue",t:function(s){ return s.oral>=5; }},
+    {id:"qsp",n:"Réflexes",d:"10 questions sans préparation",g:"Q",c:"purple",t:function(s){ return s.qsp>=10; }},
+    {id:"dsg",n:"Mémoire de classe",d:"2 DS des années passées refaits",g:"G",c:"gray",t:function(s){ return s.ds>=2; }},
+    {id:"mara",n:"Marathon",d:"10 heures d'annales dans la semaine",g:"10h",c:"pink",t:function(s){ return s.maxWeekMin>=600; }},
+    {id:"td20",n:"TD carrés",d:"20 exercices de tes TD et accompagnements cochés",g:"TD",c:"yellow",t:function(s){ return s.td>=20; }},
+    {id:"td60",n:"Bûcheron",d:"60 exercices de tes TD et accompagnements cochés",g:"60",c:"orange",t:function(s){ return s.td>=60; }},
+    {id:"trin",n:"Trinôme soudé",d:"6 sujets de colle faits avec le trinôme",g:"3",c:"teal",t:function(s){ return s.trin>=6; }},
+    {id:"run4",n:"Foulées",d:"4 footings de 30 min dans Versailles",g:"🏃",c:"green",t:function(s){ return s.runs>=4; }},
+    {id:"run12",n:"Endurant",d:"12 footings",g:"12",c:"teal",t:function(s){ return s.runs>=12; }}
+  ];
+  function checkBadges(){
+    var b=S().badges||(S().badges={}), gs=gameStats(), fresh=[];
+    BADGES.forEach(function(x){ if(!b[x.id]&&x.t(gs)){ b[x.id]=T(); fresh.push(x); } });
+    var st=streak(); if(st>(S().best||0)) S().best=st;
+    if(fresh.length) Store.save();
+    return fresh;
+  }
+  function afterGame(before){
+    var xp=totalXP(), l0=level(before), l1=level(xp), fresh=checkBadges();
+    return {xp:xp-before,level:l1.i>l0.i?l1:null,badges:fresh};
+  }
+  /* plan d'annales semaine par semaine : 3 par semaine, 5 en vacances, sujets complets en fin d'année, jamais deux fois le même */
+  function weekPlan(){
+    var cur=mondayIso(), used={}, plan={};
+    WEEKS.forEach(function(w){
+      if(w.d<cur) return; var end=iso(addDays(parseISO(w.d),6)), picks;
+      if(w.full){
+        picks=ITEMS.filter(function(it){ return !it.ex&&!used[it.id]&&statusOf(it.id)!=="done"&&(it.lb==="s"||(["M2","HE"].indexOf(it.ep)>=0&&it.st===3)); })
+          .sort(function(a,b){ return ((b.lb==="s")-(a.lb==="s"))||b.y-a.y; }).slice(0,3);
+      } else picks=recommend(w.f,w.vac?5:3,{date:end,exclude:used});
+      picks.forEach(function(it){ used[it.id]=1; }); plan[w.d]=picks;
+    });
+    return plan;
+  }
+  function nextEvent(){ var t=T(); return EVENTS.filter(function(e){ return e.d>=t; })[0]||null; }
 
   /* ---------- programme de colle ---------- */
   function progAt(date){ var p=null; PROG.forEach(function(x){ if(x.d<=date) p=x; }); var o=(Store.get().ann||{}).progOv; if(o&&o.from<=date&&(!o.to||date<=o.to)) return Object.assign({},p||{},o.p); return p; }
@@ -178,7 +336,9 @@ var Ann = (function(){
   return {load:load, ready:function(){ return !!D; }, on:function(f){ ls.push(f); }, items:function(){ return ITEMS; }, get:function(id){ return BY[id]; }, subj:function(sid){ return SUBJ[sid]||{}; }, oy:function(){ return OY; },
     EPS:EPS, EP_ORDER:EP_ORDER, OEP_ORDER:OEP_ORDER, LBL:LBL, DIFF:DIFF, DOM:DOM, CHL:CHL, CH:CH, CH2:CH2, PROG:PROG,
     chStatus:chStatus, focusNow:focusNow, defaultFocus:defaultFocus, feas:feas, feasText:feasText, score:score, doms:doms, recommend:recommend, search:search,
-    statusOf:statusOf, rec:rec, patch:patch, setStatus:setStatus, addTime:addTime, weekStats:weekStats, progAt:progAt, title:title, dur:dur, state:S};
+    statusOf:statusOf, rec:rec, patch:patch, setStatus:setStatus, addTime:addTime, weekStats:weekStats, progAt:progAt, title:title, dur:dur, state:S,
+    EVENTS:EVENTS, WEEKS:WEEKS, ANTICIPER:ANTICIPER, PER:PER, per:per, hpList:hpList, hpLinks:hpLinks, subjects:function(){ return SUBJL; }, idx:function(id){ return IDX[id]||""; },
+    goal:goal, xpOf:xpOf, potentialXP:potentialXP, totalXP:totalXP, level:level, streak:streak, gameStats:gameStats, BADGES:BADGES, checkBadges:checkBadges, weekPlan:weekPlan, nextEvent:nextEvent, mondayIso:mondayIso};
 })();
 
 /* ---------- sujets de colle de maths (BJcolle) ---------- */

@@ -57,7 +57,8 @@ function taskFrom(p){
 }
 
 /* ---------- coquille ---------- */
-var NAV=[["home","Accueil",I.home],["agenda","Agenda",I.cal],["todo","To-Do",I.list],["matieres","Matières",I.grid],["echeances","Échéances",I.flag],["notes","Notes",I.chart],["methodo","Méthodo",I.book]];
+var GRANGE_IC='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="4.5" height="16" rx="1"/><rect x="9.5" y="4" width="4.5" height="16" rx="1"/><path d="M16 5.2l3.3-.9 3.2 15.2-3.3.8z"/></svg>';
+var NAV=[["home","Accueil",I.home],["agenda","Agenda",I.cal],["todo","To-Do",I.list],["matieres","Matières",I.grid],["echeances","Échéances",I.flag],["notes","Objectifs",I.chart],["grange","Grange",GRANGE_IC],["methodo","Méthodo",I.book]];
 function shell(){
   document.getElementById("root").innerHTML=
    '<div class="shell">'+
@@ -78,7 +79,7 @@ function setActive(){
     var on=b.getAttribute("data-go")===v && !b.getAttribute("data-p");
     if(S.view==="matiere" && b.getAttribute("data-p")===S.param) on=true;
     if(S.view==="matiere" && b.getAttribute("data-go")==="matieres" && b.closest(".side")) on=false;
-    if(["echeances","notes","methodo","todo","bjclasse","bjcolleurs","bjcolleur"].indexOf(S.view)>=0 && b.closest(".tabbar") && b.getAttribute("data-go")==="plus") on=true;
+    if(["echeances","notes","methodo","todo","bjclasse","bjcolleurs","bjcolleur","grange"].indexOf(S.view)>=0 && b.closest(".tabbar") && b.getAttribute("data-go")==="plus") on=true;
     b.classList.toggle("on",on);
   });
 }
@@ -100,11 +101,12 @@ function render(){
     case "bjclasse": html=vBjClasse(); break;
     case "bjcolleurs": html=vBjColleurs(); break;
     case "bjcolleur": html=vBjColleur(S.param); break;
-    case "notes": html=vNotes(); break;
-    case "annales": html=vAnnales(); break;
+    case "notes": html=vObjectifs(); break;
+    case "annales": S.view="matiere"; S.param="maths"; setMTab("grange"); html=vMatiere("maths"); break;
     case "colles": html=vColles(); break;
     case "methodo": html=vMethodo(); break;
     case "plus": html=vPlus(); break;
+    case "grange": html=vGrange(); break;
     default: html=vHome();
   }
   var key=S.view+"|"+(S.param||""), nav=key!==lastViewKey; lastViewKey=key;
@@ -198,6 +200,7 @@ function vHome(){
 
   h+=homeMethodoCards();
   var vt=inVacances(t), vl=st().tasks.filter(function(x){ return x.vac && !x.done; });
+  h+=runCard();
   if(vt && vacDay(t)) h+=vacPlanCard(t);
   else if(vl.length && (vt || (nextVac() && diffDays(nextVac().from,t)<=3))) h+='<section class="card s-hgg" style="margin-top:14px"><div class="card-h"><h2>'+(vt?"C'est les vacances":"Vacances dans "+plural(diffDays(nextVac().from,t),"jour"))+'</h2><span class="tag">'+plural(vl.length,"chose")+' à faire</span></div><p class="small muted" style="margin:0 0 10px">'+(vt?"Ta liste des vacances t'attend. Copie-la et envoie-la à Claude pour organiser ces deux semaines ensemble.":"Pense à finir d'y noter ce que tu veux faire ; on l'organisera ensemble dès le début des vacances.")+'</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="vaccopy">Copier pour Claude</button><button class="btn sm" data-go="todo">Voir la liste</button></div></section>';
   if(hasCSH(t)){
@@ -427,23 +430,20 @@ function vMatiere(id){
   h+='<section class="hero-subj '+s.cls+'"><h1>'+s.name+'</h1><p>'+esc(s.blurb)+'</p></section><div class="stack" style="margin-top:14px">';
   if(id==="hgg"){
     h+='<a class="ext" href="https://claude.ai/artifact/TyMQ4dNtMg8XY5NeQqBuhZ" target="_blank" rel="noopener"><div><b>Atelier HGG</b><span class="small muted">Sur claude.ai : fiches, revue de presse, sujets, accroches.</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
-    h+=hggAskCard()+hggWorkCard()+hggProgCard()+filesCard("hgg");
+    h+=hggAskCard()+hggWorkCard()+hggProgCard()+grangeCard("hgg")+filesCard("hgg");
   }
   if(id==="csh"){
     h+='<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Œuvre du jour, parcours d'étude avec extraits vérifiés, références, duos, sous-thèmes, feuille blanche, Anki."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
     h+='<section class="card"><div class="card-h"><h2>Sous-thèmes</h2><span class="small muted">18</span></div>'+["I","II","III"].map(function(part){ return '<div class="eyebrow" style="margin:8px 0 6px">'+({I:"I · Définir",II:"II · À l'épreuve",III:"III · Rayonnante"})[part]+'</div><div class="sous">'+SOUS_THEMES.filter(function(x){return x[0]===part;}).map(function(x){ return '<span class="chip">'+esc(x[1])+'</span>'; }).join("")+'</div>'; }).join("")+'</section>';
   }
   if(id==="maths"){
-    h+='<section class="card"><div class="card-h"><h2>Chapitre en cours</h2></div><input class="field" id="m-chap" list="m-chaps" value="'+esc(mathsChap())+'"><datalist id="m-chaps">'+mathsChaps().map(function(c){ return '<option value="'+esc(c)+'">'; }).join("")+'</datalist><p class="small muted" style="margin:6px 0 0">Sert de chapitre par défaut pour tes dépôts et met en avant ses énoncés dans les quiz.</p></section>';
-    annBoot();
-    h+=trinomeCard()+annalesCard();
-    h+='<div class="grid g2">'+mathsTodayCard()+quizCard()+'</div>'+exoCard()+filesCard("maths");
-    h+='<div class="note-box">DM : dépose-le en type « DM » avec sa date de rendu ; il devient une tâche découpée sur jeudi, vendredi et dimanche (2 h max par créneau).</div>';
+    h+=mathsSpace();
   }
   if(id==="ang"||id==="all"){
     h+='<a class="ext" href="'+CIVI_DOC[id==="ang"?"en":"de"]+'" target="_blank" rel="noopener"><div><b>CIVI · '+(id==="ang"?"Nothing New on the English-Speaking Front":"CIVI")+'</b><span class="small muted">Ton document de civilisation (Google Docs). « Ajouter à ma civi » y range une news en prise de notes, dans la bonne partie.</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>';
     h+=pressCard(id==="ang"?"en":"de");
   }
+  if(id==="csh"||id==="ang"||id==="all") h+=grangeCard(id);
   if(id!=="hgg"&&id!=="maths") h+=filesCard(id);
   h+='<section class="card"><div class="card-h"><h2>Tâches</h2><span class="small muted">'+tasks.length+'</span></div><div class="tasks">'+taskRows(tasks)+'</div></section></div>';
   return h;
@@ -1040,7 +1040,7 @@ function planAlerts(){
 
 /* ---------- Maths : trinôme du vendredi, annales, sujets de colle ---------- */
 var EPC={pink:"#D6336C",green:"#2F9E44",teal:"#0C8599",indigo:"#4C6EF5",red:"#E03131",brown:"#9C6B3C",yellow:"#C99A06",blue:"#1C7ED6",purple:"#9C36B5",gray:"#868E96"};
-function epTile(ep){ var e=Ann.EPS[ep]||{m:"?",c:"gray"}; return '<span class="eptile" style="--c:'+EPC[e.c]+'">'+esc(e.m)+'</span>'; }
+function epTile(ep,sm){ var e=Ann.EPS[ep]||{m:"?",c:"gray"}; return '<span class="eptile'+(sm?" sm":"")+'" style="--c:'+EPC[e.c]+'">'+esc(e.m)+'</span>'; }
 function bjTile(){ return '<span class="eptile" style="--c:#B97D0C">BJ</span>'; }
 function annBoot(){ if(!Ann.ready() && !S.annErr && !S.annLoading){ S.annLoading=true; Ann.load().then(function(){ S.annLoading=false; render(); },function(e){ S.annLoading=false; S.annErr=e.message||String(e); render(); }); } if(typeof Colles!=="undefined") Colles.refresh().then(function(){ Colles.pump(); }); }
 function chChip(id,main){ return '<span class="chip'+(main?" chm":"")+'">'+esc(Colles.chLabel(id))+'</span>'; }
@@ -1471,7 +1471,7 @@ function resForm(label){
 /* ---------- Plus (téléphone) ---------- */
 function vPlus(){
   var h=topbar("Plus")+'<h1 class="large-title">Plus</h1><p class="subtitle">Le reste de l\'app.</p><div class="stack">';
-  [["todo","To-Do","Toutes tes tâches",I.list],["echeances","Échéances","DST, colles, BJcolle",I.flag],["notes","Notes","Moyennes, évolution, objectifs",I.chart],["methodo","Méthodo","Méthode par épreuve, ressentis, conseils",I.book]].forEach(function(x){
+  [["grange","Grange","Sujets, oraux, DS et meilleures copies",GRANGE_IC],["todo","To-Do","Toutes tes tâches",I.list],["echeances","Échéances","DST, colles, BJcolle",I.flag],["notes","Objectifs","Moyenne HEC, barres, où gagner le plus",I.chart],["methodo","Méthodo","Méthode par épreuve, ressentis, conseils",I.book]].forEach(function(x){
     h+='<button class="ext" data-go="'+x[0]+'" style="border:0;text-align:left"><div class="row" style="gap:14px;flex-wrap:nowrap"><span class="icon-btn" style="color:var(--blue)">'+x[3]+'</span><div><b>'+x[1]+'</b><span class="small muted">'+x[2]+'</span></div></div>'+I.right+'</button>';
   });
   return h+'</div>';
@@ -1619,6 +1619,9 @@ document.addEventListener("click",function(ev){
   var g=ev.target.closest("[data-go]"); if(g){ ev.preventDefault(); closeSheet(); go(g.getAttribute("data-go"),g.getAttribute("data-p")); return; }
   var b=ev.target.closest("[data-a]"); if(!b) return;
   var a=b.getAttribute("data-a"), s=st();
+  if(mathsClick(a,b)) return;
+  if(runClick(a,b)) return;
+  if(grangeClick(a,b)) return;
   if(a==="close"){ closeSheet(); render(); return; }
   if(a==="quick"){ quickSheet(); return; }
   if(a==="gemini"){ geminiSheet(); return; }
@@ -1676,6 +1679,7 @@ document.addEventListener("click",function(ev){
   if(a==="bjfclr"){ S.bjF.colleur=""; render(); return; }
   if(a==="bjfcol"){ S.bjF=S.bjF||{disc:"",annee:"",q:"",n:80}; S.bjF.colleur=b.getAttribute("data-p"); go("bjclasse"); return; }
   if(a==="bjsum"){ bjSummary(b.getAttribute("data-p")); return; }
+  if(a==="objbar"){ objBarSheet(b.getAttribute("data-k")); return; }
   if(a==="notesmode"){ S.notesMode=b.getAttribute("data-m"); render(); return; }
   if(a==="methmode"){ S.methMode=b.getAttribute("data-m"); render(); return; }
   if(a==="notedetail"){ noteDetail(b.getAttribute("data-id")); return; }
@@ -1689,8 +1693,8 @@ document.addEventListener("click",function(ev){
   if(a==="exo"){ var ek=b.getAttribute("data-k"); if(s.mathsDone[ek]) delete s.mathsDone[ek]; else s.mathsDone[ek]=iso(today()); save(); render(); return; }
   if(a==="exomin"){ var em=b.getAttribute("data-k").split("#"), eo=((s.mathsEx[em[0]]||{}).exos||[])[+em[1]]; if(eo){ eo.minutes=Math.max(5,(eo.minutes||30)+(+b.getAttribute("data-v"))); eo.perso=true; save(); render(); } return; }
   if(a==="annopen"){ annSheet(b.getAttribute("data-id")); return; }
-  if(a==="annchk"){ var aid=b.getAttribute("data-id"); Ann.setStatus(aid,Ann.statusOf(aid)==="done"?"todo":"done"); if(Ann.statusOf(aid)==="done") toast("Bravo, exercice fait."); annRefresh(); return; }
-  if(a==="annst"){ Ann.setStatus(b.getAttribute("data-id"),b.getAttribute("data-v")); annRefresh(); return; }
+  if(a==="annchk"){ var aid=b.getAttribute("data-id"), was=Ann.statusOf(aid)==="done", gr=Ann.setStatus(aid,was?"todo":"done"); if(!was) gameToast(gr); annRefresh(); return; }
+  if(a==="annst"){ gameToast(Ann.setStatus(b.getAttribute("data-id"),b.getAttribute("data-v"))); annRefresh(); return; }
   if(a==="annnote"){ var nid=b.getAttribute("data-id"), rr=Ann.rec(nid)||{}, nn=rr.n==null?10:rr.n+(+b.getAttribute("data-v")); Ann.patch(nid,{n:Math.max(0,Math.min(20,nn))}); annRefresh(); return; }
   if(a==="anntime"){ Ann.addTime(b.getAttribute("data-id"),+b.getAttribute("data-v")); toast("+"+b.getAttribute("data-v")+" min"); annRefresh(); return; }
   if(a==="annfav"){ var fid2=b.getAttribute("data-id"); Ann.patch(fid2,{f:!((Ann.rec(fid2)||{}).f)}); annRefresh(); return; }
@@ -1714,6 +1718,7 @@ document.addEventListener("click",function(ev){
 });
 var annQT=null;
 document.addEventListener("input",function(ev){
+  if(ev.target.id==="gr-q"){ clearTimeout(annQT); annQT=setTimeout(function(){ (S.gr=S.gr||{q:"",sub:"",type:""}).q=ev.target.value; S.grN={}; render(); },220); return; }
   if(ev.target.id==="ann-q"){ clearTimeout(annQT); annQT=setTimeout(function(){ S.annQ=ev.target.value; if(S.annF) S.annF.n=60; render(); },220); return; }
   var r=ev.target.closest("[data-goal]"); if(!r) return;
   st().goals[r.getAttribute("data-goal")]=+r.value; save();
@@ -1760,13 +1765,14 @@ function start(){
   if(typeof Sync!=="undefined"){ var bjLoaded=false; Sync.on(function(stt,user){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); if(user && !bjLoaded && typeof BJ!=="undefined"){ bjLoaded=true; BJ.load(); setInterval(function(){ if(document.visibilityState==="visible") BJ.load(); },10*60000); } }); Sync.init(); }
   if(typeof BJ!=="undefined") BJ.on(function(){ window.__prepaRefresh(); });
   if(typeof Colles!=="undefined") Colles.on(function(){ if(S.view==="colles"||(S.view==="matiere"&&S.param==="maths")) window.__prepaRefresh(); });
-  var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus","bjclasse","bjcolleurs","bjcolleur","annales","colles"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p.length>1?decodeURIComponent(p.slice(1).join("-")):null; } }
+  var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus","bjclasse","bjcolleurs","bjcolleur","annales","colles","grange"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p.length>1?decodeURIComponent(p.slice(1).join("-")):null; } }
   render();
   if("serviceWorker" in navigator && location.protocol==="https:" && !window.claude){ try{ navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){} }
 }
 function confirmDel(f){ return window.confirm("Supprimer « "+f.name+" » ?"+(f.kind==="cours"?" Ses énoncés sortiront des quiz.":"")); }
 window.__toast=toast;
 window.__prepa={annSheet:function(i){ annSheet(i); },colleSheet:function(k){ colleSheet(k); },addNote:function(i){ addNoteSheet(i); },noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
+/*@@UI@@*/
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
 })();
 

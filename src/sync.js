@@ -21,7 +21,7 @@ var Sync = (function(){
     m["state|slotDone"]=s.slotDone||{};
     m["state|meta"]={cshSkip:s.cshSkip||0,seeded:!!s.seeded};
     if(s.news) m["state|news"]=s.news;
-    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg","methEdits","agendaEdits","ann","colleSujets","trin","gapi","press"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
+    ["files","mathsEx","mathsCours","mathsDone","mathsCfg","quiz","quizOff","hgg","methEdits","agendaEdits","ann","colleSujets","trin","gapi","press","runs"].forEach(function(k){ if(s[k]) m["state|"+k]=s[k]; });
     /* analyses des sujets de colle : un document par sujet (pour ne pas renvoyer tout à chaque changement) */
     Object.keys(s.colleEx||{}).forEach(function(k){ m["colle|"+k]=s.colleEx[k]; });
     return m;

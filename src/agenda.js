@@ -45,6 +45,9 @@ function dayEvents(dISO){
     add({kind:"fixed",s:"12:30",e:"13:00",t:"Déjeuner",sub:"neutral"});
   }
   pales.forEach(function(p){ add({kind:"exam",s:p.s,e:p.e,t:"DST · "+p.t,sub:p.sub}); });
+  /* running de la semaine (30 min, fixé sur l'accueil) */
+  var rr=(Store.get().runs||{})[iso(mondayOf(parseISO(dISO)))];
+  if(rr&&rr.d===dISO&&rr.s) add({kind:"fixed",s:rr.s,e:fromMin(Math.min(toMin(rr.s)+30,23*60+59)),t:"Running 30 min"+(rr.done?" ✓":""),sub:"perso",run:true,id:"run"});
   var vp=vac && typeof VAC_PLAN!=="undefined" && VAC_PLAN[dISO];
   if(vp){
     vp.slots.forEach(function(x,i){ var o={}; for(var k in x) o[k]=x[k]; o.kind=x.kind||"work"; o.id="vp"+i; o.vac=true; add(o); });
