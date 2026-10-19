@@ -79,7 +79,6 @@ for c, y, u, pdf, n, kw in C:
     e("hgg","copie",c,y,"Copie de géopolitique "+c+" "+str(y),u,pdf=pdf,n=n,kw=kw)
 
 # ---------------- HGG : oraux ----------------
-e("hgg","oral","HEC",None,"Sujets et rapports du jury des oraux HEC : géopolitique, triptyque et CSH",M+"/geopolitique/sujets-et-rapport-de-jury-des-oraux-hec-geopolitique-triptyque-et-csh/")
 e("hgg","oral","HEC",2023,"Oral HEC 2023 : sujet traité",M+"/geopolitique/croissance-decroissance-deux-visions-economiques-2000/",q="La croissance et la décroissance : deux visions économiques depuis le début des années 2000")
 e("hgg","oral","HEC",2023,"Oral HEC 2023 : sujet traité",M+"/geopolitique/origines-internet-developpement-oral-hec-2023/",q="Les origines d'Internet et son développement")
 e("hgg","oral","HEC",None,"Comment décrocher 20/20 à l'oral HGG HEC",M+"/geopolitique/comment-decrocher-20-oral-hgg-hec/",kw="méthode conseils")
@@ -127,7 +126,7 @@ for y, c, u, q, pdf in CG:
 for y, u in [(2026,"/synthese-textes-escp-hec-sujet-2026/"),(2025,"/sujet-synthese-textes-escp-hec-paris-2025/"),(2024,"/synthese-texte-escp-hec-sujet-2024/"),(2023,"/synthese-escp-hec-2023-sujet/")]:
     e("csh","sujet","ESCP / HEC",y,"Synthèse de textes ESCP / HEC "+str(y),P+u,kw="synthèse de textes dossier",dur="4 h")
 for y, u in [(2024,"/synthese-textes-escp-hec-2024-analyse/"),(2023,"/synthese-escp-hec-2023-analyse-sujet/")]:
-    e("csh","rapport","ESCP / HEC",y,"Synthèse de textes ESCP / HEC "+str(y)+" : analyse du sujet",P+u,kw="synthèse analyse")
+    e("csh","sujet","ESCP / HEC",y,"Synthèse de textes ESCP / HEC "+str(y)+" : analyse du sujet",P+u,kw="synthèse analyse")
 CC = [
  ("HEC / emlyon",2025,M+"/culture-generale/copie-culture-gnrale-hec-emlyon-2025-note-2020/",MU+"2026/02/Copie-Philo-Louis-Pogu-notee-20_20.pdf","Sauver les images"),
  ("HEC / emlyon",2025,M+"/culture-generale/copie-culture-gnrale-hec-emlyon-2025-note-2020-2/",MU+"2026/02/Philo-HEC.pdf","Sauver les images"),
@@ -190,12 +189,28 @@ e("all","oral","Toutes écoles",None,"Corrigé d'oral d'allemand",M+"/allemand/c
 e("all","oral","Toutes écoles",None,"Réussir l'oral d'allemand des écoles de commerce",M+"/allemand/reussir-oral-allemand-ecoles-de-commerce/",kw="méthode")
 e("all","oral","Toutes écoles",None,"Références littéraires et cinématographiques à utiliser à l'oral",M+"/allemand/references-litteraires-cinematographiques-utiliser-oral/",kw="références films littérature")
 
+# ---------------- Rapports du jury BCE 2025 (Major Prépa, page « Les rapports de jury ») ----------------
+for ti, u in [("Rapport du jury Maths I approfondies HEC / ESSEC 2025","/mathematiques/rapport-mathematiques-approfondies-hec-paris-essec/"),
+              ("Rapport du jury Maths II approfondies HEC / ESCP 2025","/mathematiques/rapport-de-jury-mathematiques-ii-approfondies-hec-paris-essec/"),
+              ("Rapport du jury maths approfondies emlyon 2025","/mathematiques/rapport-de-jury-mathematiques-approfondies-emlyon-bs/"),
+              ("Rapport du jury maths approfondies EDHEC 2025","/mathematiques/rapport-de-jury-mathematiques-approfondies-edhec/")]:
+    e("maths","rapport",ti.split("approfondies ")[1].split(" 2025")[0],2025,ti,M+u,kw="maths approfondies écrit")
+e("csh","rapport","HEC / emlyon",2025,"Rapport du jury dissertation de culture générale emlyon / HEC 2025",M+"/culture-generale/rapport-de-jury-dissertation-culture-generale-emlyon-bs-hec-paris/",kw="dissertation méthode")
+e("csh","rapport","ESSEC / EDHEC",2025,"Rapport du jury dissertation de culture générale ESSEC / EDHEC 2025",M+"/langues-rares/rapport-de-jury-culture-generale-essec-edhec/",kw="dissertation méthode")
+e("csh","rapport","ESCP / HEC",2025,"Rapport du jury synthèse de textes ESCP / HEC 2025",M+"/synthese-resume/rapport-de-jury-synthese-de-textes-escp-bs-hec-paris/",kw="synthèse de textes")
+e("all","rapport","ELVi LVA",2025,"Rapport du jury allemand LVA ELVi 2025",M+"/allemand/rapport-de-jury-elvi-lva-allemand/",kw="RAC essai thème")
+e("hgg","rapport","HEC",None,"Sujets et rapports du jury des oraux HEC (géopolitique, triptyque, CSH)",M+"/geopolitique/sujets-et-rapport-de-jury-des-oraux-hec-geopolitique-triptyque-et-csh/",kw="oral")
+
 # relie chaque copie au libellé de son sujet (même matière, même école, même année) pour la recherche
 SQ = {(x["s"], x["c"], x["y"]): x.get("q", "") for x in G if x["t"] == "sujet" and x.get("q")}
 for x in G:
     if x["t"] == "copie":
         q = SQ.get((x["s"], x["c"], x["y"]))
         if q: x["kw"] = ((x.get("kw") or "") + " " + q).strip(); x["sq"] = q
+# BCE seulement (pas Ecricome, GEM, Audencia, Excelia) et plus aucun sujet de dissertation de CG (thème annuel)
+LOW = ("Ecricome","GEM","Audencia","Excelia")
+G = [x for x in G if not (x["s"] in ("hgg","csh") and any(w in (x.get("c") or "") for w in LOW))
+     and not (x["s"]=="csh" and x["t"]=="sujet" and (x.get("kw") or "").startswith("dissertation CG"))]
 json.dump(G, open("src/grange-data.json","w"), ensure_ascii=False, separators=(",",":"))
 from collections import Counter
 print(len(G), Counter((x["s"],x["t"]) for x in G))

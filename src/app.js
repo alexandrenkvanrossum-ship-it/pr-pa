@@ -62,9 +62,9 @@ var NAV=[["home","Accueil",I.home],["agenda","Agenda",I.cal],["todo","To-Do",I.l
 function shell(){
   document.getElementById("root").innerHTML=
    '<div class="shell">'+
-   '<aside class="side" aria-label="Navigation"><div class="brand">Prépa<span>ECG2 · 2026–2027</span></div>'+
+   '<aside class="side" aria-label="Navigation"><div class="brand">Prépa<span>ECG2 · 2026–2027</span></div>'+'<div class="navs">'+
    NAV.map(function(n){ return '<button class="nav" data-go="'+n[0]+'">'+n[2]+'<span>'+n[1]+'</span></button>'+(n[0]==="matieres"?SUBJECT_ORDER.map(function(id){ var s=subj(id); return '<button class="nav" data-go="matiere" data-p="'+id+'" style="padding-left:18px"><span class="dot" style="background:var(--'+id+'-ink)"></span><span>'+s.name+'</span></button>'; }).join(""):""); }).join("")+
-   '<button class="add-side" data-a="quick">'+I.plus+' Nouvelle tâche</button></aside>'+
+   '</div><button class="add-side" data-a="quick">'+I.plus+' Nouvelle tâche</button></aside>'+
    '<main class="view" id="app"></main>'+
    '<div class="tabbar"><nav aria-label="Onglets">'+
    '<button data-go="home">'+I.home+'Accueil</button><button data-go="agenda">'+I.cal+'Agenda</button>'+
@@ -796,7 +796,7 @@ function sheetText(txt){ openSheet('<div class="sheet-h"><div class="ttl"><h2>Ta
 /* ---------- Fichiers, maths, HGG (parties 2 et 3) ---------- */
 function whenTxt(key){ var w=typeof Plan!=="undefined"?Plan.whenOf(key):null; if(!w) return ""; var a=w[0]; return (a.d===iso(today())?"auj.":fmtDay(a.d))+" "+hLabel(a.s)+(w.length>1?" (+"+(w.length-1)+")":""); }
 function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement(el||document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}],throwOnError:false}); }catch(e){} }
-var FILE_KINDS={maths:[["cours","Cours"],["td","TD"],["exos","Exercices d'accompagnement"],["dm","DM"],["corrige","Corrigé"],["autre","Autre"]],_:[["cours","Cours"],["doc","Document"],["autre","Autre"]]};
+var FILE_KINDS={maths:[["cours","Cours"],["td","TD"],["exos","Exercices d'accompagnement"],["dm","DM"],["corrige","Corrigé"],["copie","Copie de concours"],["autre","Autre"]],_:[["cours","Cours"],["doc","Document"],["copie","Copie de concours"],["autre","Autre"]]};
 function kindName(sub,k){ var l=(FILE_KINDS[sub]||FILE_KINDS._).filter(function(x){ return x[0]===k; })[0]; return l?l[1]:k; }
 function mathsChap(){ var c=st().mathsCfg||{}; if(c.chap) return c.chap; var d=typeof MATHS_DRIVE!=="undefined"?MATHS_DRIVE:null; var x=d&&d.chapitres.filter(function(y){ return y.n===d.en_cours; })[0]; return x?x.titre:""; }
 function mathsChaps(){ var a=(typeof MATHS_DRIVE!=="undefined"?MATHS_DRIVE.chapitres:[]).map(function(c){ return c.titre; }); Files.of("maths").forEach(function(f){ if(f.chap && a.indexOf(f.chap)<0) a.push(f.chap); }); return a; }
@@ -1445,27 +1445,37 @@ function methodeSheet(id,evKey,evLabel){
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+(id.charAt(0)==="e"?"Écrit":"Oral")+' · coef. '+(e.coefTxt||e.coef)+'</div><h2>'+esc(e.name)+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   var nx=echeances(iso(today()),"9999").filter(function(x){ return x.ep===id; })[0];
   if(nx) h+='<p class="small" style="margin:0 0 4px"><span class="tag '+s.cls+'">Prochaine : '+esc(nx.label)+' · '+esc(relDay(nx.date).toLowerCase())+' '+hLabel(nx.time)+'</span></p>';
+  /* 1. le ressenti d'abord : ce qu'il faut corriger par rapport à la dernière fois */
   if(evKey) h+=resForm(evLabel);
-  h+='<section class="card flat">'+eh("L\'essentiel, à relire en deux minutes","essentiel",!!mo.essentiel)+(m.essentiel.length?li(m.essentiel):'<p class="small muted" style="margin:6px 0 0">Vide : touche « Modifier » pour écrire tes points.</p>')+'</section>';
-  if(m.temps||mo.temps!=null) h+='<section class="card flat">'+eh("Gestion du temps","temps",mo.temps!=null)+'<p class="small meth" style="margin:6px 0 0;white-space:pre-wrap">'+mtx(m.temps||"")+'</p></section>';
-  m.sections.forEach(function(x,i){ h+='<details class="card flat"><summary style="cursor:pointer;font-weight:600">'+esc(x.titre)+' <span class="small muted">('+x.points.length+')</span></summary><div style="text-align:right"><button class="link-btn" data-a="methedit" data-id="'+id+'" data-f="sec:'+i+'">Modifier cette partie</button></div>'+li(x.points)+'</details>'; });
-  h+='<section class="card flat">'+eh("Pièges à éviter","pieges",!!mo.pieges)+(m.pieges.length?li(m.pieges):'<p class="small muted" style="margin:6px 0 0">Aucun pour l\'instant.</p>')+'</section>';
-  h+='<section class="card flat">'+eh("Conseils des profs","conseils",!!mo.conseils_profs)+(m.conseils_profs.length?m.conseils_profs.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.qui)+'</b></div><div class="small meth" style="white-space:pre-wrap">'+mtx(c.texte)+'</div></div>'; }).join(""):'<p class="small muted" style="margin:6px 0 0">Aucun pour l\'instant.</p>')+'</section>';
-  h+='<div class="row" style="gap:8px"><button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="newsec">'+I.plus+' Ajouter une partie</button>'+(m.temps||mo.temps!=null?'':'<button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="temps">'+I.plus+' Gestion du temps</button>')+'</div>';
-  if(id.charAt(0)==="o" && typeof BJ!=="undefined"){
-    var sub=e.sub, coms=BJ.mine().filter(function(c){ return BJ.epOf(c)===id && c.commentaire; }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,4);
-    if(coms.length) h+='<section class="card flat"><div class="eyebrow">Commentaires de tes colleurs (BJcolle, mot pour mot)</div>'+coms.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.colleur||"")+'</b> <span class="muted">· '+fmtDay(c.date)+(c.note?' · '+esc(c.note):'')+'</span></div><div class="small" style="white-space:pre-wrap">'+esc(c.commentaire)+'</div></div>'; }).join("")+'</section>';
+  if(rs.length){
+    var rl=rs.map(function(r,i){ return [r,i]; }).reverse(), last=rl[0];
+    h+='<section class="card flat mres"><div class="card-h" style="margin:0"><div class="eyebrow">Ton dernier ressenti · à corriger cette fois</div><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+last[1]+'">Modifier</button></div><div class="small muted" style="margin:4px 0 2px">'+fmtDay(last[0].date)+(last[0].l?' · '+esc(last[0].l):'')+'</div><div class="mres-t">'+esc(last[0].t)+'</div>';
+    if(rl.length>1) h+='<details class="mdet2"><summary>'+plural(rl.length-1,"ressenti")+' plus ancien'+(rl.length>2?'s':'')+'</summary>'+rl.slice(1).map(function(x){ var r=x[0]; return '<div class="mres-old"><div class="row" style="justify-content:space-between"><span class="small muted">'+fmtDay(r.date)+(r.l?' · '+esc(r.l):'')+'</span><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+x[1]+'">Modifier</button></div><div class="small" style="white-space:pre-wrap">'+esc(r.t)+'</div></div>'; }).join("")+'</details>';
+    h+='</section>';
   }
-  if(!m.essentiel.length && m.manque) h+='<section class="card flat"><p class="small muted" style="margin:0">'+esc(m.manque)+'</p></section>';
-  if(!evKey) h+=resForm(null);
-  if(rs.length) h+='<section class="card flat"><div class="eyebrow">Mes ressentis</div><div class="notes-list" style="margin-top:8px">'+rs.map(function(r,i){ return [r,i]; }).reverse().map(function(x){ var r=x[0]; return '<div class="it" style="display:block"><div class="row" style="justify-content:space-between"><span class="small muted">'+fmtDay(r.date)+(r.l?' · '+esc(r.l):'')+'</span><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+x[1]+'">Modifier</button></div><div style="white-space:pre-wrap">'+esc(r.t)+'</div></div>'; }).join("")+'</div></section>';
-  if(m.sources&&m.sources.length) h+='<section class="card flat"><div class="eyebrow">Sources (ton Drive)</div><ul class="small" style="margin:6px 0 0;padding-left:18px">'+m.sources.map(function(x){ var l=docLink(x); return l?'<li style="margin:3px 0">'+l+'</li>':''; }).join("")+'</ul></section>';
+  if(!evKey) h+='<details class="card flat mdet2"'+(rs.length?'':' open')+'><summary>Noter un ressenti</summary>'+resForm(null,true)+'</details>';
+  /* 2. l'essentiel */
+  h+='<section class="card flat">'+eh("L\'essentiel","essentiel",!!mo.essentiel)+(m.essentiel.length?li(m.essentiel):'<p class="small muted" style="margin:6px 0 0">Vide : touche « Modifier » pour écrire tes points.</p>')+(m.temps?'<div class="mtemps"><b>Temps</b> '+mtx(m.temps)+' <button class="link-btn" data-a="methedit" data-id="'+id+'" data-f="temps">Modifier</button></div>':'')+'</section>';
+  /* 3. le reste, replié */
+  if(m.pieges.length||mo.pieges) h+='<details class="card flat mdet2"><summary>Pièges à éviter <span class="small muted">('+m.pieges.length+')</span></summary><div style="text-align:right"><button class="link-btn" data-a="methedit" data-id="'+id+'" data-f="pieges">Modifier</button></div>'+li(m.pieges)+'</details>';
+  if(m.conseils_profs.length) h+='<details class="card flat mdet2"><summary>Conseils des profs <span class="small muted">('+m.conseils_profs.length+')</span></summary><div style="text-align:right"><button class="link-btn" data-a="methedit" data-id="'+id+'" data-f="conseils">Modifier</button></div>'+m.conseils_profs.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.qui)+'</b></div><div class="small meth" style="white-space:pre-wrap">'+mtx(c.texte)+'</div></div>'; }).join("")+'</details>';
+  m.sections.forEach(function(x,i){ h+='<details class="card flat mdet2"><summary>'+esc(x.titre)+' <span class="small muted">('+x.points.length+')</span></summary><div style="text-align:right"><button class="link-btn" data-a="methedit" data-id="'+id+'" data-f="sec:'+i+'">Modifier</button></div>'+li(x.points)+'</details>'; });
+  if(id.charAt(0)==="o" && typeof BJ!=="undefined"){
+    var coms=BJ.mine().filter(function(c){ return BJ.epOf(c)===id && c.commentaire; }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,4);
+    if(coms.length) h+='<details class="card flat mdet2" open><summary>Commentaires de tes colleurs</summary>'+coms.map(function(c){ return '<div style="margin-top:8px"><div class="small"><b>'+esc(c.colleur||"")+'</b> <span class="muted">· '+fmtDay(c.date)+(c.note?' · '+esc(c.note):'')+'</span></div><div class="small" style="white-space:pre-wrap">'+esc(c.commentaire)+'</div></div>'; }).join("")+'</details>';
+  }
+  if(!m.essentiel.length && m.manque) h+='<p class="small muted" style="margin:0 4px 10px">'+esc(m.manque)+'</p>';
+  var rap=(typeof grRapports==="function")?grRapports(id):[];
+  if(rap.length) h+='<details class="card flat mdet2"><summary>Rapports du jury <span class="small muted">('+rap.length+')</span></summary><div class="small" style="margin-top:6px">'+rap.map(function(r){ return '<div style="margin:4px 0"><a href="'+esc(r.pdf||r.u)+'" target="_blank" rel="noopener">'+esc(r.ti)+'</a></div>'; }).join("")+'</div></details>';
+  if(m.sources&&m.sources.length) h+='<details class="card flat mdet2"><summary>Sources (ton Drive)</summary><ul class="small" style="margin:6px 0 0;padding-left:18px">'+m.sources.map(function(x){ var l=docLink(x); return l?'<li style="margin:3px 0">'+l+'</li>':''; }).join("")+'</ul></details>';
+  h+='<div class="row" style="gap:8px;margin-top:4px"><button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="newsec">'+I.plus+' Ajouter une partie</button>'+(m.temps||mo.temps!=null?'':'<button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="temps">'+I.plus+' Gestion du temps</button>')+(m.pieges.length||mo.pieges?'':'<button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="pieges">'+I.plus+' Pièges</button>')+'</div>';
   h+='</div>';
   openSheet(h);
   document.getElementById("res-form").addEventListener("submit",function(ev){ ev.preventDefault(); var v=document.getElementById("res-txt").value.trim(); if(!v) return; var r={date:iso(today()),t:v}; if(evKey){ r.ev=evKey; r.l=evLabel; } (st().ressentis[id]=st().ressentis[id]||[]).push(r); save(); methodeSheet(id); toast("Ressenti enregistré."); if(S.view==="home"||!S.view) render(); });
 }
-function resForm(label){
-  return '<section class="card flat"><div class="eyebrow">'+(label?"Mon ressenti · "+esc(label):"Noter un ressenti")+'</div><form id="res-form" style="margin-top:8px" class="stack"><textarea class="field" id="res-txt" placeholder="Ce qui a marché, ce qui a bloqué, la gestion du temps, ce que je change la prochaine fois…"></textarea><button class="btn tint sm" type="submit" style="align-self:flex-start">Enregistrer</button></form></section>';
+function resForm(label,bare){
+  var f='<form id="res-form" style="margin-top:8px" class="stack"><textarea class="field" id="res-txt" placeholder="Ce qui a marché, ce qui a bloqué, la gestion du temps, ce que je change la prochaine fois…"></textarea><button class="btn tint sm" type="submit" style="align-self:flex-start">Enregistrer</button></form>';
+  return bare?f:'<section class="card flat"><div class="eyebrow">'+(label?"Mon ressenti · "+esc(label):"Noter un ressenti")+'</div>'+f+'</section>';
 }
 
 /* ---------- Plus (téléphone) ---------- */
