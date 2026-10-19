@@ -6,7 +6,7 @@ root = pathlib.Path(__file__).parent
 src = root / "src"
 css = (src / "styles.css").read_text()
 inl = "".join("var %s=%s;\n" % (v, json.dumps(json.loads((src / f).read_text()), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")) for v, f in [("METHODO", "methodo-data.json"), ("HGG_PROG", "hgg-data.json"), ("MATHS_DRIVE", "maths-data.json")])
-js = inl + "\n".join((src / f).read_text() for f in ["data.js", "core.js", "sync.js", "bj.js", "files.js", "annales.js", "agenda.js", "plan.js", "app.js"] if (src / f).exists())
+js = inl + "\n".join((src / f).read_text() for f in ["data.js", "vacplan.js", "core.js", "sync.js", "bj.js", "files.js", "annales.js", "agenda.js", "plan.js", "app.js"] if (src / f).exists())
 js = js.replace('if(typeof module!=="undefined") module.exports={parseTask:parseTask, iso:iso, parseISO:parseISO, norm:norm};', "")
 
 head = """<title>Prépa ECG2</title>

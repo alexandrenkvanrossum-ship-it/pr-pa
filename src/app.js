@@ -133,8 +133,30 @@ function morphTo(root,html,opts){
 
 /* ---------- objectifs et échéances du jour ---------- */
 function upcomingPales(n){ var t=iso(today()); return PALES.filter(function(p){ return p.date>=t; }).slice(0,n||99); }
+function vacDay(dISO){ return (typeof VAC_PLAN!=="undefined" && inVacances(dISO) && VAC_PLAN[dISO])||null; }
+/* progression du programme des vacances : chaque case cochée compte */
+function vacGoals(){
+  var G={exo:[0,0],hggch:[0,0],plan:[0,0],oeuvre:[0,0],txt:[0,0],theme:[0,0],rac:[0,0],synth:[0,0]};
+  Object.keys(VAC_PLAN).forEach(function(d){
+    dayEvents(d).forEach(function(e){
+      if(!e.items) return;
+      roadFor(e,d).forEach(function(r,ix){
+        var g=r.g||(r.sub==="maths"&&!r.quiz&&!r.filler?"exo":null); if(!g||!G[g]) return;
+        G[g][1]++; if(isDone(d,e,r,ix)) G[g][0]++;
+      });
+    });
+  });
+  return G;
+}
+function vacPlanCard(t){
+  var G=vacGoals(), L=[["exo","Maths","exercices et blocs"],["hggch","HGG","chapitres repris"],["plan","Plans HGG","plans détaillés"],["oeuvre","CSH","œuvres (7 duos)"],["txt","Allemand","textes du dossier"],["theme","Thèmes","anglais + allemand"],["rac","RAC","d'anglais"],["synth","Synthèse","entraînement"]];
+  var h='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Programme des vacances</h2><button class="link-btn" data-a="vacweek">Voir la semaine</button></div><div class="vgoals">';
+  L.forEach(function(x){ var g=G[x[0]]; if(!g[1]) return; var p=Math.round(g[0]/g[1]*100); h+='<div class="vg"><div class="row" style="justify-content:space-between"><b>'+x[1]+'</b><span class="small" style="font-weight:700">'+g[0]+'/'+g[1]+'</span></div><div class="bar"><i style="width:'+p+'%"></i></div><span class="small muted">'+x[2]+'</span></div>'; });
+  return h+'</div><p class="small muted" style="margin:10px 0 0">Chaque case cochée dans les feuilles de route de l\'agenda fait avancer ces compteurs.</p></section>';
+}
 function dayObjectives(dISO){
   var s=st(), out=[];
+  if(vacDay(dISO)) return vacDay(dISO).obj.map(function(o){ return {t:o,sub:"neutral"}; });
   var next=upcomingPales(1)[0];
   if(next){ var dd=diffDays(next.date,dISO); if(dd>=0 && dd<=7) out.push({t:"Préparer le DST de "+next.t.replace(/^Concours blanc · /,"")+" ("+relDay(next.date).toLowerCase()+")",sub:next.sub}); }
   s.tasks.filter(function(t){ return !t.done && !t.vac && (t.day===dISO || (t.due && diffDays(t.due,dISO)<=2 && diffDays(t.due,dISO)>=0)); })
@@ -164,7 +186,7 @@ function vHome(){
   h+='<div class="hello"><div><div class="eyebrow">'+esc(DAYS[d.getDay()])+'</div><h1 class="large-title">'+d.getDate()+' '+MONTHS[d.getMonth()]+'</h1></div>';
   var next=upcomingPales(1)[0];
   if(next) h+='<span class="tag '+subj(next.sub).cls+'">Prochain DST · '+esc(next.t)+' · '+(diffDays(next.date,t)===0?"aujourd'hui":"J-"+diffDays(next.date,t))+'</span>';
-  h+='</div><p class="subtitle">'+(inVacances(t)?"Vacances de la "+inVacances(t).name+" : régime à définir.":"Voici l'essentiel de ta journée.")+'</p>';
+  h+='</div><p class="subtitle">'+(vacDay(t)?esc(vacDay(t).lieu)+" · "+esc(vacDay(t).note):inVacances(t)?"Vacances de la "+inVacances(t).name+".":"Voici l'essentiel de ta journée.")+'</p>';
   h+=homeResAsk();
   h+='<div class="grid g2">';
   h+='<section class="card"><div class="card-h"><h2>Objectifs du jour</h2></div>';
@@ -176,7 +198,8 @@ function vHome(){
 
   h+=homeMethodoCards();
   var vt=inVacances(t), vl=st().tasks.filter(function(x){ return x.vac && !x.done; });
-  if(vl.length && (vt || (nextVac() && diffDays(nextVac().from,t)<=3))) h+='<section class="card s-hgg" style="margin-top:14px"><div class="card-h"><h2>'+(vt?"C'est les vacances":"Vacances dans "+plural(diffDays(nextVac().from,t),"jour"))+'</h2><span class="tag">'+plural(vl.length,"chose")+' à faire</span></div><p class="small muted" style="margin:0 0 10px">'+(vt?"Ta liste des vacances t'attend. Copie-la et envoie-la à Claude pour organiser ces deux semaines ensemble.":"Pense à finir d'y noter ce que tu veux faire ; on l'organisera ensemble dès le début des vacances.")+'</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="vaccopy">Copier pour Claude</button><button class="btn sm" data-go="todo">Voir la liste</button></div></section>';
+  if(vt && vacDay(t)) h+=vacPlanCard(t);
+  else if(vl.length && (vt || (nextVac() && diffDays(nextVac().from,t)<=3))) h+='<section class="card s-hgg" style="margin-top:14px"><div class="card-h"><h2>'+(vt?"C'est les vacances":"Vacances dans "+plural(diffDays(nextVac().from,t),"jour"))+'</h2><span class="tag">'+plural(vl.length,"chose")+' à faire</span></div><p class="small muted" style="margin:0 0 10px">'+(vt?"Ta liste des vacances t'attend. Copie-la et envoie-la à Claude pour organiser ces deux semaines ensemble.":"Pense à finir d'y noter ce que tu veux faire ; on l'organisera ensemble dès le début des vacances.")+'</p><div class="row" style="gap:8px"><button class="btn tint sm" data-a="vaccopy">Copier pour Claude</button><button class="btn sm" data-go="todo">Voir la liste</button></div></section>';
   if(hasCSH(t)){
     h+='<div style="margin-top:14px">'+'<a class="ext" href="https://claude.ai/artifact/TA1xcsk7H5jfrj7vcYsfwV" target="_blank" rel="noopener"><div><b>Atelier CSH</b><span class="small muted">'+"Journée de CSH : ton œuvre du jour et son parcours d'étude t'attendent dans l'atelier."+'</span></div><span class="btn tint sm">Ouvrir '+I.arrow+'</span></a>'+'</div>';
   }
@@ -379,7 +402,7 @@ function openSlot(dISO,id){
     road.forEach(function(r,ix){
       var dn1=isDone(dISO,e,r,ix), key=slotKey(dISO,e,r,ix);
       if(r.pause){ h+='<div class="road-it" style="background:var(--surface-2)"><span class="min">'+hLabel(fromMin(clock))+'</span><span class="lab muted">Pause '+r.min+' min · debout</span><span></span></div>'; clock+=r.min; return; }
-      h+='<div class="road-it'+(dn1?" done":"")+'"><button class="check'+(dn1?" on":"")+'" data-a="road" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'" data-ref="'+(r.ref&&r.ref.k!=="task"?esc(r.ref.k+":"+r.ref.id):"")+'" aria-label="Cocher">'+(dn1?I.check:"")+'</button><div><div class="lab">'+esc(r.lab)+'</div><div class="sub">'+hLabel(fromMin(clock))+' · '+r.min+' min'+(r.filler?" · proposition":"")+(r.partial?" · suite plus tard":"")+(r.late?' · <span style="color:var(--red)">en retard</span>':'')+(r.star?" · ★ classique":"")+'</div>'+(r.quiz&&!dn1?'<button class="btn tint sm" data-a="quiz" style="margin-top:6px">Lancer le quiz</button>':'')+(r.ref&&r.ref.k==="hgg"&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-ref="hgg:'+esc(r.ref.id)+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+(r.task&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-task="'+r.task+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+'</div>'+
+      h+='<div class="road-it'+(dn1?" done":"")+'"><button class="check'+(dn1?" on":"")+'" data-a="road" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'" data-ref="'+(r.ref&&r.ref.k!=="task"?esc(r.ref.k+":"+r.ref.id):"")+'" aria-label="Cocher">'+(dn1?I.check:"")+'</button><div><div class="lab">'+esc(r.lab)+(r.url?' <a class="link-btn" href="'+esc(r.url)+'" target="_blank" rel="noopener">ouvrir ↗</a>':'')+'</div><div class="sub">'+hLabel(fromMin(clock))+' · '+r.min+' min'+(r.filler?" · proposition":"")+(r.partial?" · suite plus tard":"")+(r.late?' · <span style="color:var(--red)">en retard</span>':'')+(r.star?" · ★ classique":"")+'</div>'+(r.quiz&&!dn1?'<button class="btn tint sm" data-a="quiz" style="margin-top:6px">Lancer le quiz</button>':'')+(r.ref&&r.ref.k==="hgg"&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-ref="hgg:'+esc(r.ref.id)+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+(r.task&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-task="'+r.task+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+'</div>'+
         (dn1?'<span></span>':'<button class="timer'+(S.timers[key]?" run":"")+'" data-a="timer" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'">'+(S.timers[key]?"0:00":"▶ "+r.min+"′")+'</button>')+'</div>';
       clock+=r.min;
     });
@@ -579,7 +602,7 @@ function moveSlot(d0,id,d1,s,e){
     } else {
       var src=dayEvents(d0).concat(timedTasks(d0)).find(function(x){ return x.id===id; })||{};
       var cp={id:uid("slot"),kind:src.kind==="fixed"?"fixed":"work",s:S1,e:E1,t:src.t||"Créneau",sub:src.sub||"neutral"};
-      ["subs","crit","soir","light","trad","rac","plan"].forEach(function(k){ if(src[k]!=null) cp[k]=src[k]; });
+      ["subs","crit","soir","light","trad","rac","plan","items","actu","bonus"].forEach(function(k){ if(src[k]!=null) cp[k]=src[k]; });
       if(own&&own.k===d0) A[d0].add=A[d0].add.filter(function(x){ return x.id!==base; }); else slotLayer("d",d0).hide[base]=true;
       slotLayer("d",d1).add.push(cp);
     }
@@ -1618,6 +1641,7 @@ document.addEventListener("click",function(ev){
   if(a==="panki"){ pressAnki(b.getAttribute("data-k"),b.getAttribute("data-l"),b.getAttribute("data-i")); return; }
   if(a==="slotdel"){ slotDel(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
   if(a==="unvac"){ var tv=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(tv){ tv.vac=false; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Remise dans la To-Do normale : elle sera planifiée."); } return; }
+  if(a==="vacweek"){ S.agMode="week"; S.agDate=iso(today()); go("agenda"); return; }
   if(a==="vaccopy"){ var txt=vacText(); (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){ toast("Liste copiée : colle-la à Claude pour organiser tes vacances."); },function(){ sheetText(txt); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }
   if(a==="del"){ s.tasks=s.tasks.filter(function(x){return x.id!==b.getAttribute("data-id");}); save(); render(); toast("Tâche supprimée."); return; }

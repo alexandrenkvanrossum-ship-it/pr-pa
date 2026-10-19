@@ -59,7 +59,7 @@ var Plan = (function(){
     for(var i=0;i<HORIZON;i++){
       var d=iso(addDays(parseISO(t),i)), wd=parseISO(d).getDay();
       dayEvents(d).forEach(function(ev){
-        if(ev.kind!=="work") return;
+        if(ev.kind!=="work" || ev.items) return;
         var s=toMin(ev.s), e=toMin(ev.e), state="future";
         if(d===t){ if(e<=nm) state="past"; else if(s<=nm) state="now"; }
         var cap=Math.max(0, Math.floor((e-s-fixedMin(ev))*(1-pauseRatio(ev))));

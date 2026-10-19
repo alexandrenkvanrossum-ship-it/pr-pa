@@ -45,6 +45,10 @@ function dayEvents(dISO){
     add({kind:"fixed",s:"12:30",e:"13:00",t:"Déjeuner",sub:"neutral"});
   }
   pales.forEach(function(p){ add({kind:"exam",s:p.s,e:p.e,t:"DST · "+p.t,sub:p.sub}); });
+  var vp=vac && typeof VAC_PLAN!=="undefined" && VAC_PLAN[dISO];
+  if(vp){
+    vp.slots.forEach(function(x,i){ var o={}; for(var k in x) o[k]=x[k]; o.kind=x.kind||"work"; o.id="vp"+i; o.vac=true; add(o); });
+  }
   if(!vac){
     (WORK[wd]||[]).forEach(function(w){
       if(wd===6 && pales.length){ return; }
@@ -52,7 +56,7 @@ function dayEvents(dISO){
     });
     if(wd===6 && pales.length) add({kind:"fixed",s:"13:00",e:"13:25",t:"Anki (facultatif)",sub:"neutral",anki:true});
   }
-  if(!(wd===6 && pales.length)){
+  if(!vp && !(wd===6 && pales.length)){
     if(wd===4 && !vac) add({kind:"fixed",s:"19:30",e:"21:30",t:"DDL",sub:"neutral",ddl:true});
     else add({kind:"fixed",s:"20:00",e:"20:40",t:"Dîner",sub:"neutral"});
     if(!vac || wd!==6) add({kind:"fixed",s:"23:00",e:"23:20",t:"Actualité",sub:"neutral",actu:true});
@@ -99,6 +103,7 @@ function openTasks(subs){
 function roadFor(ev,dISO){
   var items=[], cap=toMin(ev.e)-toMin(ev.s), used=0;
   function push(o){ items.push(o); used+=o.min; }
+  if(ev.items){ ev.items.forEach(function(x){ var o={}; for(var k in x) o[k]=x[k]; push(o); }); return items; }
   if(ev.anki){ push({lab:"Anki anglais",min:20}); push({lab:"Anki allemand",min:20}); return items; }
   if(ev.actu){ push({lab:"Lecture de l'actualité (HGG et langues)",min:20}); return items; }
   if(ev.kind!=="work") return items;
