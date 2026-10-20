@@ -79,7 +79,7 @@ var EPREUVES = {
     {id:"e-dissert",name:"CSH dissertation",sub:"csh",coef:4},
     {id:"e-synth",name:"Synthèse",sub:"csh",coef:3},
     {id:"e-ang",name:"Anglais",sub:"ang",coef:3,types:["Essay","RAC","Thème"]},
-    {id:"e-all",name:"Allemand",sub:"all",coef:4,types:["Essay","Version / Thème","Contraction"]}
+    {id:"e-all",name:"Allemand",sub:"all",coef:4,types:["Essay","RAC","Thème"]}
   ],
   oral:[
     {id:"o-maths",name:"Maths",sub:"maths",coef:9},

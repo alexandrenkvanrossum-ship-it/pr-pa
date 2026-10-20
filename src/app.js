@@ -91,6 +91,7 @@ function topbar(title){
 function go(v,p){ S.view=v; S.param=p||null; render(); window.scrollTo(0,0); try{ history.replaceState(null,"","#"+v+(p?"-"+encodeURIComponent(p):"")); }catch(e){} }
 
 function render(){
+  if(typeof migrateLangNotes==="function") migrateLangNotes();
   var html="";
   switch(S.view){
     case "agenda": html=vAgenda(); break;
@@ -494,13 +495,13 @@ function editTask(id){
 }
 function editNote(id,ep){
   var n=st().notes.find(function(x){ return x.id===id; }); if(!n) return; var e=epOfId(n.ep), fs=[
-    {k:"v",label:"Note /20"+(n.parts?" (globale)":""),type:"number",value:n.v},
+    {k:"v",label:"Note /20"+(n.parts?" (globale)":""),type:"number",value:n.v,hint:n.parts&&langW(n.ep,"Essay")?"Recalculée automatiquement (essai 50 %, RAC 30 %, thème 20 %) si tu modifies les exercices.":null},
     {k:"date",label:"Date",type:"date",value:n.date},
     {k:"label",label:"Intitulé",value:n.label||""},
     {k:"com",label:"Commentaire",type:"textarea",rows:3,value:n.com||""}];
-  if(n.parts) Object.keys(n.parts).forEach(function(k,i){ fs.splice(1+i,0,{k:"p"+i,label:k+" /20",type:"number",value:n.parts[k]}); });
+  if(n.parts) Object.keys(n.parts).forEach(function(k,i){ fs.splice(1+i,0,{k:"p"+i,label:k+(langW(n.ep,k)?" ("+Math.round(langW(n.ep,k)*100)+" %)":"")+" /20",type:"number",value:n.parts[k]}); });
   formSheet({title:"Modifier la note", eyebrow:e?e.name:"", cls:e?subj(e.sub).cls:"", fields:fs,
-    save:function(v){ var x=numOrNull(v.v); if(x==null||x<0||x>20) return "Note entre 0 et 20."; if(n.parts) Object.keys(n.parts).forEach(function(k,i){ var y=numOrNull(v["p"+i]); if(y!=null) n.parts[k]=y; }); n.v=x; n.date=v.date||n.date; n.label=v.label.trim(); n.com=v.com.trim(); },
+    save:function(v){ var x=numOrNull(v.v); if(x==null||x<0||x>20) return "Note entre 0 et 20."; if(n.parts) Object.keys(n.parts).forEach(function(k,i){ var y=numOrNull(v["p"+i]); if(y!=null) n.parts[k]=y; }); if(n.parts && Math.abs(x-n.v)<0.001){ var g=dstGlobal(n.ep,n.parts); if(g!=null) x=g; } n.v=x; n.date=v.date||n.date; n.label=v.label.trim(); n.com=v.com.trim(); },
     del:function(){ st().notes=st().notes.filter(function(x){ return x.id!==id; }); }, after:function(){ noteDetail(ep||n.ep); render(); }, toast:"Note modifiée." });
 }
 function editRessenti(ep,i){
@@ -1370,14 +1371,16 @@ function addNoteSheet(ep){
   var all=EPREUVES.ecrit.map(function(e){return ["Écrit",e];}).concat(EPREUVES.oral.map(function(e){return ["Oral",e];}));
   var h='<div class="sheet-h"><div class="ttl"><h2>Nouvelle note</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><form class="sheet-b" id="note-form">';
   h+='<div><label class="lbl" for="n-ep">Épreuve</label><select class="field" id="n-ep">'+all.map(function(x){ return '<option value="'+x[1].id+'"'+(x[1].id===(ep||(S.notesMode==="ecrit"?"e-maths":"o-maths"))?" selected":"")+'>'+x[0]+' · '+esc(x[1].name)+'</option>'; }).join("")+'</select></div>';
-  h+='<div id="n-type-wrap"></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl" for="n-v">Note /20</label><input class="field tab" id="n-v" inputmode="decimal" placeholder="13,5" required></div><div><label class="lbl" for="n-date">Date</label><input class="field" id="n-date" type="date" value="'+iso(today())+'" required></div></div>';
+  h+='<div id="n-type-wrap"></div><div class="grid nvd" style="gap:10px"><div><label class="lbl" for="n-v">Note /20</label><input class="field tab" id="n-v" inputmode="decimal" placeholder="13,5" required></div><div><label class="lbl" for="n-date">Date</label><input class="field" id="n-date" type="date" value="'+iso(today())+'" required></div></div>';
   h+='<div><label class="lbl" for="n-label">Intitulé (facultatif)</label><input class="field" id="n-label" placeholder="DST n°3, colle de M. X…"></div><div><label class="lbl" for="n-com">Commentaire (facultatif)</label><input class="field" id="n-com"></div>';
   h+='<button class="btn primary" type="submit">Enregistrer</button></form>';
   openSheet(h);
   var sel=document.getElementById("n-ep"), wrap=document.getElementById("n-type-wrap");
   var nv=document.getElementById("n-v");
-  function parts(){ var ty=document.getElementById("n-type"), pw=document.getElementById("n-parts"); if(!pw) return; var on=ty&&ty.value==="__dst"; pw.hidden=!on; nv.required=!on; nv.placeholder=on?"auto (moyenne)":"13,5"; document.querySelector('label[for="n-v"]').textContent=on?"Note globale /20":"Note /20"; }
-  function types(){ var e=epOfId(sel.value); wrap.innerHTML=e&&e.types?'<label class="lbl" for="n-type">Type</label><select class="field" id="n-type"><option value="__dst">DST complet (les 3 exercices)</option>'+e.types.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+' seul</option>';}).join("")+'</select><div id="n-parts" class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">'+e.types.map(function(t,i){ return '<div><label class="lbl" for="n-p'+i+'">'+esc(t)+'</label><input class="field tab" id="n-p'+i+'" inputmode="decimal" placeholder="/20"></div>'; }).join("")+'</div>':''; var ty=document.getElementById("n-type"); if(ty) ty.onchange=parts; parts(); if(!e||!e.types){ nv.required=true; nv.placeholder="13,5"; document.querySelector('label[for="n-v"]').textContent="Note /20"; } }
+  function parts(){ var ty=document.getElementById("n-type"), pw=document.getElementById("n-parts"); if(!pw) return; var on=ty&&ty.value==="__dst"; pw.hidden=!on; nv.required=!on; nv.placeholder=on?(langW(sel.value,"Essay")?"auto (50/30/20)":"auto (moyenne)"):"13,5"; document.querySelector('label[for="n-v"]').textContent=on?"Note globale /20":"Note /20"; livePreview(); }
+  function livePreview(){ var ty=document.getElementById("n-type"), e=epOfId(sel.value); if(!ty||ty.value!=="__dst"||!e||!e.types) return; var pr={}; e.types.forEach(function(t,i){ var x=numOrNull((document.getElementById("n-p"+i)||{}).value); if(x!=null&&x>=0&&x<=20) pr[t]=x; }); var g=dstGlobal(sel.value,pr); nv.placeholder=g!=null?"auto : "+f1(g):(langW(sel.value,"Essay")?"auto (50/30/20)":"auto (moyenne)"); }
+  wrap.addEventListener("input",livePreview);
+  function types(){ var e=epOfId(sel.value); wrap.innerHTML=e&&e.types?'<label class="lbl" for="n-type">Type</label><select class="field" id="n-type"><option value="__dst">DST complet (les 3 exercices)</option>'+e.types.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+' seul</option>';}).join("")+'</select><div id="n-parts" class="grid" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">'+e.types.map(function(t,i){ return '<div><label class="lbl" for="n-p'+i+'">'+esc(t)+(langW(e.id,t)?' <span class="faint" style="font-weight:600">'+Math.round(langW(e.id,t)*100)+' %</span>':'')+'</label><input class="field tab" id="n-p'+i+'" inputmode="decimal" placeholder="/20"></div>'; }).join("")+'</div>':''; var ty=document.getElementById("n-type"); if(ty) ty.onchange=parts; parts(); if(!e||!e.types){ nv.required=true; nv.placeholder="13,5"; document.querySelector('label[for="n-v"]').textContent="Note /20"; } }
   sel.onchange=types; types();
   document.getElementById("note-form").addEventListener("submit",function(ev){
     ev.preventDefault();
@@ -1386,11 +1389,11 @@ function addNoteSheet(ep){
     if(ty && ty.value==="__dst"){
       pr={}; var got=[]; e.types.forEach(function(t,i){ var x=num(document.getElementById("n-p"+i).value); if(x!=null){ if(x<0||x>20){ got=null; return; } pr[t]=x; if(got) got.push(x); } });
       if(got===null){ toast("Chaque note d'exercice doit être entre 0 et 20."); return; }
-      if(v==null && got.length) v=Math.round(got.reduce(function(a,b){ return a+b; },0)/got.length*10)/10;
+      if(v==null && got.length) v=dstGlobal(sel.value,pr);
       if(!got.length) pr=null;
     }
     if(v==null||v<0||v>20){ toast("Entre une note entre 0 et 20."); return; }
-    st().notes.push({id:uid("n"),ep:sel.value,v:v,date:document.getElementById("n-date").value,label:document.getElementById("n-label").value.trim(),com:document.getElementById("n-com").value.trim(),type:ty&&ty.value!=="__dst"?ty.value:null,parts:pr});
+    st().notes.push({id:uid("n"),w:1,ep:sel.value,v:v,date:document.getElementById("n-date").value,label:document.getElementById("n-label").value.trim(),com:document.getElementById("n-com").value.trim(),type:ty&&ty.value!=="__dst"?ty.value:null,parts:pr});
     save(); closeSheet(); S.notesMode=sel.value.charAt(0)==="e"?"ecrit":"oral"; if(S.view==="notes") render(); toast("Note enregistrée.");
   });
 }
@@ -1493,6 +1496,7 @@ function openSheet(html){
   /* fiche déjà ouverte : mise à jour sur place, sans rejouer l'animation (les fiches à formulaire sont reconstruites pour leurs écouteurs) */
   if(cur && window.morphdom && html.indexOf("<form")<0 && !cur.querySelector("form")){ morphTo(cur,GRAB+html,{quiet:true}); return; }
   layer.innerHTML='<div class="scrim'+(cur?' still':'')+'" data-a="close"></div><div class="sheet'+(cur?' still':'')+'" role="dialog" aria-modal="true">'+GRAB+html+'</div>';
+  if(typeof enhanceDates==="function") enhanceDates(layer);
   var f=layer.querySelector(".sheet input:not([type=range]),.sheet button"); if(f && window.innerWidth>=600) try{ f.focus({preventScroll:true}); }catch(e){}
 }
 var sheetCloseT=null;
