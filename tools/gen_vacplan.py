@@ -133,8 +133,22 @@ day("2026-10-19", "Bruxelles", "Grosse journée de travail chez tes grands-paren
     M("17:15", "19:00", "Q1"),
     F_("19:00", "22:30", "Cinéma puis dîner"),
     S("22:30", "22:50", "Actualité", "neutral", [actu(20)], actu=True)])
-day("2026-10-20", "Bruxelles", "Réveil 8 h. Journée complète, fin à 20 h.",
-    ["4 h 20 de maths : fin de VA à densité", "Plan HGG n° 1 et la France puissance mondiale", "CSH : Pic de la Mirandole (fin du duo 1)"], [
+# ---------- HGG : la Q3 avant tout (chapitres nouveaux), puis la Q2, puis la Q1 et la France ----------
+Q3C = ["L'Union européenne, puissance mondiale (Europe de la sécurité et de la défense)", "L'Union européenne dans la mondialisation (forces et faiblesses)",
+       "Les relations Union européenne / États-Unis", "La puissance russe depuis 1991", "Les relations UE / Russie et les marges orientales",
+       "Géopolitique de l'Europe centrale", "L'Europe et la mer", "L'Union européenne et la Méditerranée", "Les Balkans", "L'espace nordique (géopolitique de l'Europe nordique)"]
+Q3F = [2, 2, 1, 3, 4, 0, 0, 0, 0, 0]
+Q3N = [0]
+def q3(m=120):
+    k = Q3N[0]; Q3N[0] += 1
+    src = "fichiers du prof dans Matières → HGG (Q3)" if Q3F[k] else "pas encore de fichier du prof : manuel, Atelier HGG, Géoconfluences / Diploweb"
+    return it("HGG Q3 · chapitre %d/10 « %s » : étudier le chapitre (%s) ; fiche : problématique, plan, notions, 5 exemples datés et chiffrés, une carte ; puis cartes Anki" % (k+1, Q3C[k], src), m, "hgg", g="q3")
+def ankiH(m=60): return it("Anki HGG : révision seule, 1 h (toutes les cartes dues, puis les cartes récentes de la Q3)", m, "hgg", g="ankih")
+def q2(k, m): return it("HGG Q2 · reprendre « %s » : plan du cours, notions, 5 exemples et chiffres clés, puis feuille blanche" % HCH[k], m, "hgg", g="hggch")
+PLANS.update({3: "L'Union européenne est-elle une puissance géopolitique ?", 4: "L'Union européenne face à la Russie : quelle sécurité pour l'Europe ?"})
+
+day("2026-10-20", "Bruxelles", "Réveil 8 h. Journée complète, fin à 20 h 30.",
+    ["4 h 20 de maths : fin de VA à densité", "HGG : la France puissance mondiale, puis Q3 chapitre 1", "1 h d'Anki HGG"], [
     M("08:30", "10:30", "Q1", quiz=True),
     F_("10:30", "10:40", "Pause"),
     M("10:40", "12:30", "Q1"),
@@ -143,25 +157,24 @@ day("2026-10-20", "Bruxelles", "Réveil 8 h. Journée complète, fin à 20 h.",
     S("15:05", "16:30", "HGG", "hgg", [anki_h(), chap("q1#1", 65)]),
     M("16:30", "17:00", "Q1"),
     F_("17:00", "17:30", "Pause"),
-    S("17:30", "19:00", "HGG · plan", "hgg", [plan(1)]),
-    S("19:00", "20:00", "CSH", "csh", [oeuvre(60)]),
+    S("17:30", "19:30", "HGG · Q3", "hgg", [q3()]),
+    S("19:30", "20:30", "Anki HGG", "hgg", [ankiH()]),
     S("21:15", "21:45", "Actualité", "neutral", [actu(30)], actu=True)])
-trip_ch = {"2026-10-21": "q1#2", "2026-10-22": "q1#3", "2026-10-23": "q1#4", "2026-10-24": "q1#5"}
-for d, k in trip_ch.items():
+for d in ("2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24"):
     last = d == "2026-10-24"
-    extra = [theme("all")] if d == "2026-10-21" else []
-    day(d, "Voyage en famille", ("Retour en France. " if last else "") + "Horaires indicatifs : envoie-moi le programme et je cale les créneaux. Minimum : 3 h de maths + 1 h 30.",
-        ["3 h de maths", "HGG : Anki + « %s »" % HCH[k], "Allemand : un texte du dossier"], [
+    day(d, "Voyage en famille", ("Retour en France. " if last else "") + "Horaires indicatifs : envoie-moi le programme et je cale les créneaux. Minimum : 3 h de maths, 2 h de Q3 et 1 h d'Anki HGG.",
+        ["3 h de maths", "HGG : un chapitre de la Q3 (2 h)", "1 h d'Anki HGG"], [
         M("09:00", "12:00", "Q1", quiz=True),
-        S("16:30", "17:45", "CSH (si le programme le permet)", "csh", [oeuvre(75, bonus=True)], bonus=True),
-        S("18:00", "19:30" if not extra else "20:10", "HGG + allemand", "hgg", [anki_h(), chap(k, 45), texte()] + extra, subs=["hgg", "all"]),
+        S("16:00", "18:00", "HGG · Q3", "hgg", [q3()]),
+        S("18:00", "19:00", "Anki HGG", "hgg", [ankiH()]),
+        S("19:00", "19:25", "Allemand", "all", [texte()]),
         S("21:30", "22:00", "Actualité", "neutral", [actu(30)], actu=True)])
 day("2026-10-25", "Chez toi, puis départ pour l'abbaye", "Train Paris-Est 16 h 36 → 17 h 44. Travail le soir après l'installation.",
-    ["Plan HGG n° 2 (construction européenne)", "Maths : fin des révisions de la semaine 1", "Thème d'anglais n° 2"], [
-    S("08:30", "10:00", "HGG · plan", "hgg", [plan(2)]),
-    M("10:00", "11:30", "Q1", quiz=True),
+    ["HGG : Q3 chapitre 6 (2 h) + 1 h d'Anki", "Maths : fin des révisions de la semaine 1"], [
+    S("08:30", "10:30", "HGG · Q3", "hgg", [q3()]),
+    M("10:30", "11:30", "Q1", quiz=True),
     F_("11:30", "13:30", "Déjeuner"),
-    S("13:30", "14:30", "Anglais + HGG", "ang", [theme("ang"), anki_h(20)], subs=["ang", "hgg"]),
+    S("13:30", "14:30", "Anki HGG", "hgg", [ankiH()]),
     F_("14:30", "15:30", "Valise"),
     F_("15:30", "16:36", "Trajet jusqu'à Paris-Est"),
     F_("16:36", "17:44", "Train"),
@@ -170,71 +183,82 @@ day("2026-10-25", "Chez toi, puis départ pour l'abbaye", "Train Paris-Est 16 h 
     S("21:15", "22:00", "Allemand + actu", "all", [texte(), actu(20)], subs=["all"])])
 
 # ---------- semaine 2 : abbaye ----------
-def abbaye(d, obj, lang, hgg, cshA, soir):
+def abbaye(d, obj, lang, hgg, apres, soir):
     day(d, "Abbaye", "Horaires monastiques : lever tôt, petit-déjeuner 7 h 45, au travail à 8 h 15.", obj, [
         F_("07:45", "08:15", "Petit-déjeuner"),
         M("08:15", "10:15", "Q2", quiz=True),
         F_("10:15", "10:25", "Pause"),
         M("10:25", "12:30", "Q2"),
-        F_("12:30", "13:30", "Déjeuner"),
-        lang, hgg,
-        F_("16:30", "16:45", "Pause") if hgg["e"] == "16:30" else None,
-        cshA,
+        F_("12:30", "13:30", "Déjeuner")] + lang + [hgg,
+        F_("16:15", "16:30", "Pause"),
+        S("16:30", "17:30", "Anki HGG", "hgg", [ankiH()])] + apres + [
         F_("18:15", "19:15", "Dîner"),
         S("19:15", "20:00", "Actualité", "neutral", [actu(45)], actu=True)] + soir)
-def lang_std(l):
-    return S("13:30", "15:00", "Langues", "all", [texte(), texte(), theme(l)], subs=["all", "ang"])
-def hgg_std(k): return S("15:00", "16:30", "HGG", "hgg", [anki_h(), chap(k, 70)])
+def lang_s(l):
+    if l == "theme_ang": return [S("13:30", "14:15", "Anglais", "ang", [theme("ang")])]
+    if l == "theme_all": return [S("13:30", "14:15", "Allemand", "all", [theme("all")])]
+    return [S("13:30", "14:15", "Allemand", "all", [texte(20), texte(20)])]
+def hggQ3(): return S("14:15", "16:15", "HGG · Q3", "hgg", [q3()])
+def q2s(k): return [S("17:30", "18:15", "HGG · Q2", "hgg", [q2(k, 45)])]
 def csh_slot(s, e): return S(s, e, "CSH", "csh", [oeuvre(mins(s, e))])
 
-abbaye("2026-10-26", ["Diagonalisation : cours + premiers exercices", "CSH : duo 4 complet (Kafka, Kant)", "HGG : les villes"],
-       lang_std("ang"), hgg_std("q1#6"), csh_slot("16:45", "18:15"),
+abbaye("2026-10-26", ["Diagonalisation : cours + premiers exercices", "HGG : Q3 chapitre 7 + Q2 (États-nations)", "1 h d'Anki HGG"],
+       lang_s("texte"), hggQ3(), q2s("q2#0"),
        [csh_slot("20:00", "21:15"), M("21:15", "22:00", "LB")])
-abbaye("2026-10-27", ["Diagonalisation : exercices", "RAC n° 1 d'anglais", "Plan HGG n° 3"],
-       S("13:30", "15:30", "RAC d'anglais", "ang", [it("RAC n° 1 : sujet ELVi LVB anglais 2025 (résumé analytique comparatif + essai, 2 h chrono)", 120, "ang", g="rac", url="https://misterprepa.net/sujet-anglais-lv2-elvi-2025/")]),
-       S("15:30", "16:45", "HGG", "hgg", [anki_h(15), chap("q2#0", 60)]), csh_slot("16:45", "18:15"),
-       [S("20:00", "21:30", "HGG · plan", "hgg", [plan(3)]), S("21:30", "22:00", "Allemand", "all", [texte()])])
-abbaye("2026-10-28", ["Diagonalisation : exercices et TD", "Entraînement de synthèse (idées seulement)", "HGG : l'Europe monétaire"],
-       lang_std("all"), hgg_std("q2#1"),
-       S("16:45", "18:15", "Synthèse de textes", "csh", [it("Synthèse ESCP-HEC 2025 : seulement la prise en charge du dossier (problème, thèse de chaque auteur, chaînage logique, plan), sans rédiger ; puis comparer avec la copie notée 19", 90, "csh", g="synth", url="https://misterprepa.net/synthese-textes-escp-hec-2025-bonne-copie-19-2/")]),
-       [csh_slot("20:00", "21:15"), M("21:15", "22:00", "LB")])
-abbaye("2026-10-29", ["Diagonalisation : TD + TD de l'autre classe", "CSH : duo 6 complet (Pascal, Camus)", "HGG : l'énergie en Europe"],
-       lang_std("ang"), hgg_std("q2#2"), csh_slot("16:45", "18:15"),
-       [csh_slot("20:00", "21:15"), M("21:15", "22:00", "LB")])
-abbaye("2026-10-30", ["Maths : TD de l'autre classe + livre blanc", "CSH : duo 7 complet (Descartes, La Mettrie)", "HGG : démographie et migrations"],
-       lang_std("all"), hgg_std("q2#3"), csh_slot("16:45", "18:15"),
-       [csh_slot("20:00", "21:15"), M("21:15", "22:00", "LB")])
-# remplacer les None (pause absente)
-for d in P: P[d]["slots"] = [x for x in P[d]["slots"] if x]
-day("2026-10-31", "Abbaye, puis retour", "Train 15 h 22 → Paris 16 h 23, à la maison vers 17 h 30. Soirée libre après 20 h.",
-    ["2 h de maths le matin", "HGG : l'industrie et l'espace européen", "Plan HGG n° 4"], [
+day("2026-10-27", "Abbaye", "Horaires monastiques : lever tôt, petit-déjeuner 7 h 45, au travail à 8 h 15.",
+    ["Diagonalisation : exercices", "RAC n° 1 d'anglais", "HGG : Q3 chapitre 8, Anki, plan n° 3"], [
     F_("07:45", "08:15", "Petit-déjeuner"),
     M("08:15", "10:15", "Q2", quiz=True),
     F_("10:15", "10:25", "Pause"),
-    S("10:25", "12:30", "HGG", "hgg", [anki_h(), chap("q2#4", 50), chap("q2#5", 55)]),
+    M("10:25", "12:30", "Q2"),
+    F_("12:30", "13:30", "Déjeuner"),
+    S("13:30", "15:30", "RAC d'anglais", "ang", [it("RAC n° 1 : sujet ELVi LVB anglais 2025 (résumé analytique comparatif + essai, 2 h chrono)", 120, "ang", g="rac", url="https://misterprepa.net/sujet-anglais-lv2-elvi-2025/")]),
+    S("15:30", "17:30", "HGG · Q3", "hgg", [q3()]),
+    S("17:30", "18:15", "HGG · Q2", "hgg", [q2("q2#1", 45)]),
+    F_("18:15", "19:15", "Dîner"),
+    S("19:15", "20:00", "Actualité", "neutral", [actu(45)], actu=True),
+    S("20:00", "21:00", "Anki HGG", "hgg", [ankiH()]),
+    S("21:00", "22:00", "HGG · plan", "hgg", [plan(3, 60)])])
+abbaye("2026-10-28", ["Diagonalisation : exercices et TD", "HGG : Q3 chapitre 9 + Q2 (énergie)", "Entraînement de synthèse (idées seulement)"],
+       lang_s("theme_all"), hggQ3(), q2s("q2#2"),
+       [S("20:00", "21:30", "Synthèse de textes", "csh", [it("Synthèse ESCP-HEC 2025 : seulement la prise en charge du dossier (problème, thèse de chaque auteur, chaînage logique, plan), sans rédiger ; puis comparer avec la copie notée 19", 90, "csh", g="synth", url="https://misterprepa.net/synthese-textes-escp-hec-2025-bonne-copie-19-2/")]),
+        M("21:30", "22:00", "LB")])
+abbaye("2026-10-29", ["Diagonalisation : TD + TD de l'autre classe", "HGG : Q3 chapitre 10 (fin de la Q3) + Q2 (démographie)", "1 h d'Anki HGG"],
+       lang_s("texte"), hggQ3(), q2s("q2#3"),
+       [csh_slot("20:00", "21:15"), M("21:15", "22:00", "LB")])
+abbaye("2026-10-30", ["Maths : TD de l'autre classe + livre blanc", "HGG Q2 : industrie et espace européen (2 h)", "1 h d'Anki HGG"],
+       lang_s("theme_ang"), S("14:15", "16:15", "HGG · Q2", "hgg", [q2("q2#4", 60), q2("q2#5", 60)]), [csh_slot("17:30", "18:15")],
+       [S("20:00", "21:15", "HGG · Q2", "hgg", [q2("q2#6", 35), q2("q2#7", 40)]), M("21:15", "22:00", "LB")])
+day("2026-10-31", "Abbaye, puis retour", "Train 15 h 22 → Paris 16 h 23, à la maison vers 17 h 30. Soirée libre après 20 h.",
+    ["2 h de maths le matin", "HGG : Q1 et France (2 h) + Anki", "Plan HGG n° 4 (Q3)"], [
+    F_("07:45", "08:15", "Petit-déjeuner"),
+    M("08:15", "10:15", "Q2", quiz=True),
+    F_("10:15", "10:25", "Pause"),
+    S("10:25", "12:30", "HGG · Q1 et France", "hgg", [chap("q1#2", 40), chap("q1#4", 45), chap("q1#3", 40)]),
     F_("12:30", "13:30", "Déjeuner"),
     S("13:30", "14:00", "HGG · concepts", "hgg", [it("Grands concepts HGG (choc chinois, souveraineté, sécurité économique, populisme, voisinage) : lexique et références", 30, "hgg", task=TASK["concepts"])]),
     F_("14:00", "15:22", "Départ et gare"),
     F_("15:22", "16:23", "Train"),
     F_("16:23", "17:30", "Retour à la maison"),
-    S("18:00", "19:30", "HGG · plan", "hgg", [plan(4)]),
-    S("19:30", "20:00", "Allemand + actu", "all", [texte(), actu(5)])])
+    S("17:30", "18:30", "Anki HGG", "hgg", [ankiH()]),
+    S("18:30", "20:00", "HGG · plan", "hgg", [plan(4)])])
 day("2026-11-01", "Maison", "Dernier jour : du travail doux, pour arriver frais à la rentrée.",
-    ["Bilan maths : fiche méthodes et exos ratés", "HGG : finir les chapitres (rhénan, agriculture) + corrigé du DST 1", "Allemand : derniers textes du dossier"], [
+    ["Bilan maths : fiche méthodes et exos ratés", "HGG : corrigé du DST 1, Q1 (fin) et 1 h d'Anki", "Allemand : derniers textes du dossier"], [
     M("09:30", "10:35", "Q2", t="Maths (léger)"),
-    S("10:35", "12:00", "Allemand + HGG", "all", [texte(), texte(), anki_h(20), it("Anki anglais + allemand", 15, "ang")], subs=["all", "hgg", "ang"]),
+    S("10:35", "12:00", "HGG · Q1 et France", "hgg", [chap("q1#5", 40), chap("q1#6", 40)], light=True),
     F_("12:00", "14:00", "Déjeuner"),
-    S("14:00", "15:30", "HGG (léger)", "hgg", [chap("q2#6", 40), chap("q2#7", 50)], light=True),
-    F_("15:30", "15:45", "Pause"),
-    S("15:45", "17:15", "HGG · DST 1", "hgg", [it("Reprendre le corrigé du DST 1 (diaporama ; géopolitique des petites et moyennes puissances)", 90, "hgg", task=TASK["dst1"])], light=True),
-    F_("17:15", "17:30", "Pause"),
-    S("17:30", "18:30", "Allemand (léger)", "all", [texte(), it("Reprendre Viktor Klemperer : lexique nazi et lexique de l'AfD", 35, "all", task=TASK["klemp"])], light=True),
-    S("18:30", "19:30", "Allemand · civi", "all", [it("Civi allemande : les coalitions précédentes et l'actuelle", 60, "all", task=TASK["coal"])], light=True),
-    S("19:30", "20:00", "CSH + rentrée", "csh", [it("CSH : lire les textes du dossier 4 pour le prochain cours", 30, "csh", task=TASK["csh4"])], light=True)])
+    S("14:00", "15:00", "Anki HGG", "hgg", [ankiH()]),
+    F_("15:00", "15:15", "Pause"),
+    S("15:15", "16:45", "HGG · DST 1", "hgg", [it("Reprendre le corrigé du DST 1 (diaporama ; géopolitique des petites et moyennes puissances)", 90, "hgg", task=TASK["dst1"])], light=True),
+    F_("16:45", "17:00", "Pause"),
+    S("17:00", "18:00", "Allemand (léger)", "all", [texte(), it("Reprendre Viktor Klemperer : lexique nazi et lexique de l'AfD", 35, "all", task=TASK["klemp"])], light=True),
+    S("18:00", "19:00", "Allemand · civi", "all", [it("Civi allemande : les coalitions précédentes et l'actuelle", 60, "all", task=TASK["coal"])], light=True),
+    S("19:00", "19:30", "CSH + rentrée", "csh", [it("CSH : lire les textes du dossier 4 pour le prochain cours", 30, "csh", task=TASK["csh4"])], light=True)])
+for d in P: P[d]["slots"] = [x for x in P[d]["slots"] if x]
 
 # vérifs
-assert TXT[0] == 20, TXT[0]
-assert OE[0] == 14, OE[0]
+assert Q3N[0] == 10, Q3N[0]
+print("textes :", TXT[0], "œuvres CSH :", OE[0])
 for d, v in P.items():
     for s in v["slots"]:
         if "items" in s and s["kind"] == "work":
@@ -245,4 +269,6 @@ mt = {d: sum(x["min"] for s in v["slots"] for x in s.get("items", []) if x["sub"
 print("reste dans les files :", left, [x["lab"][:50] for x in Q1][:5])
 print("maths/jour :", mt)
 print("thèmes :", THEME)
+hg = {d: sum(x["min"] for s in v["slots"] for x in s.get("items", []) if x["sub"] == "hgg") for d, v in P.items()}
+print("HGG/jour :", hg)
 open("src/vacplan.js", "w").write("/* Programme des vacances de la Toussaint (généré par tools/gen_vacplan.py) */\nvar VAC_PLAN=" + json.dumps(P, ensure_ascii=False, separators=(",", ":")) + ";\n")

@@ -139,7 +139,7 @@ function upcomingPales(n){ var t=iso(today()); return PALES.filter(function(p){ 
 function vacDay(dISO){ return (typeof VAC_PLAN!=="undefined" && inVacances(dISO) && VAC_PLAN[dISO])||null; }
 /* progression du programme des vacances : chaque case cochée compte */
 function vacGoals(){
-  var G={exo:[0,0],hggch:[0,0],plan:[0,0],oeuvre:[0,0],txt:[0,0],theme:[0,0],rac:[0,0],synth:[0,0]};
+  var G={exo:[0,0],q3:[0,0],ankih:[0,0],hggch:[0,0],plan:[0,0],oeuvre:[0,0],txt:[0,0],theme:[0,0],rac:[0,0],synth:[0,0]};
   Object.keys(VAC_PLAN).forEach(function(d){
     dayEvents(d).forEach(function(e){
       if(!e.items) return;
@@ -152,7 +152,7 @@ function vacGoals(){
   return G;
 }
 function vacPlanCard(t){
-  var G=vacGoals(), L=[["exo","Maths","exercices et blocs"],["hggch","HGG","chapitres repris"],["plan","Plans HGG","plans détaillés"],["oeuvre","CSH","œuvres (7 duos)"],["txt","Allemand","textes du dossier"],["theme","Thèmes","anglais + allemand"],["rac","RAC","d'anglais"],["synth","Synthèse","entraînement"]];
+  var G=vacGoals(), L=[["exo","Maths","exercices et blocs"],["q3","HGG Q3","chapitres étudiés"],["ankih","Anki HGG","séances"],["hggch","HGG","chapitres repris (Q2, Q1)"],["plan","Plans HGG","plans détaillés"],["oeuvre","CSH","œuvres"],["txt","Allemand","textes du dossier"],["theme","Thèmes","anglais + allemand"],["rac","RAC","d'anglais"],["synth","Synthèse","entraînement"]];
   var h='<section class="card" style="margin-top:14px"><div class="card-h"><h2>Programme des vacances</h2><button class="link-btn" data-a="vacweek">Voir la semaine</button></div><div class="vgoals">';
   L.forEach(function(x){ var g=G[x[0]]; if(!g[1]) return; var p=Math.round(g[0]/g[1]*100); h+='<div class="vg"><div class="row" style="justify-content:space-between"><b>'+x[1]+'</b><span class="small" style="font-weight:700">'+g[0]+'/'+g[1]+'</span></div><div class="bar"><i style="width:'+p+'%"></i></div><span class="small muted">'+x[2]+'</span></div>'; });
   return h+'</div><p class="small muted" style="margin:10px 0 0">Chaque case cochée dans les feuilles de route de l\'agenda fait avancer ces compteurs.</p></section>';
