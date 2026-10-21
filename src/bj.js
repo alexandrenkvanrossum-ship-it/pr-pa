@@ -56,7 +56,8 @@ var BJ = (function(){
   function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
     if(isAumonier(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+45))};
     var s=subOf(c), end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0), start;
-    if(isAnticipe(c)) start=toMin(c.debut)-(isFri(c)?35:10); // vendredi : préparation 35 min avant ; sinon déjà préparée le midi
+    if(isAnticipe(c)&&!isFri(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+25)), prep:prepMidi(c)}; // préparée le midi, premier à passer : passage pile à l'heure, 20 min + 5 min, sans marge
+    if(isAnticipe(c)) start=toMin(c.debut)-35; // vendredi : préparation 35 min avant le passage
     else { var prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20); start=toMin(c.debut)-prep-10; }
     return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end)), prep:prepMidi(c)};
   }
