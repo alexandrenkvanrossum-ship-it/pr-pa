@@ -171,7 +171,7 @@ function dayObjectives(dISO){
 function dueToday(dISO){
   var s=st(), out=[];
   paleOn(dISO).forEach(function(p){ out.push({when:hLabel(p.s),t:"DST · "+p.t,sub:p.sub}); });
-  if(typeof BJ!=="undefined") BJ.mineOn(dISO).forEach(function(c){ var pr=colleurLine(c.colleur); out.push({when:hLabel(c.debut),t:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle de "+c.discipline)+(c.colleur?" avec "+c.colleur:"")+(/^\d/.test(c.tirage||"")?" · tirage "+hLabel(c.tirage):"")+(c.salle?" · "+c.salle:"")+(pr?" — "+pr:""),sub:BJ.subOf(c)}); });
+  if(typeof BJ!=="undefined") BJ.mineOn(dISO).forEach(function(c){ var pr=colleurLine(c.colleur); out.push({when:hLabel(c.debut),t:(BJ.isEntretien(c)?"Entretien de personnalité":"Colle de "+c.discipline)+(c.colleur?" avec "+c.colleur:"")+(/^\d/.test(c.tirage||"")?" · tirage "+hLabel(c.tirage):BJ.isAnticipe(c)?(BJ.prepMidi(c)?" · tirage anticipé : préparation "+hLabel(BJ.prepMidi(c).s)+"–"+hLabel(BJ.prepMidi(c).e):" · préparation 35 min avant (vendredi)"):"")+(c.salle?" · "+c.salle:"")+(pr?" — "+pr:""),sub:BJ.subOf(c)}); });
   s.tasks.filter(function(t){ return !t.done && !t.vac && t.time && t.day===dISO; }).forEach(function(t){ out.push({when:hLabel(t.time),t:t.title+" · rappel "+t.remind+" min avant",sub:t.sub}); });
   s.tasks.filter(function(t){ return !t.done && !t.vac && t.due===dISO; }).forEach(function(t){ out.push({when:"Pour auj.",t:t.title,sub:t.sub}); });
   return out;

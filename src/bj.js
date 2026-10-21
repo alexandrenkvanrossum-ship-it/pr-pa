@@ -48,11 +48,17 @@ var BJ = (function(){
   function upcoming(){ var t=iso(today()); return mine().filter(function(c){ return (c.scope==="moi"||c.scope==="kore") && c.date>=t; }).sort(function(a,b){ return (a.date+a.debut).localeCompare(b.date+b.debut); }); }
   /* colle aumônier (deux dans l'année) : commence à l'heure exacte, 45 min bloquées */
   function isAumonier(c){ return !!c && /aum[oô]nier/i.test(c.discipline||""); }
+  /* tirage anticipé : préparation le midi du jour même (13h20-13h50 en HGG/CSH/maths, 13h30-13h50 en langues).
+     Exception : le vendredi (pas de cours), on prépare normalement, 35 min avant le passage. */
+  function isAnticipe(c){ return !!c && /anticip/i.test(c.tirage||""); }
+  function isFri(c){ return !!c.date && parseISO(c.date).getDay()===5; }
+  function prepMidi(c){ if(!isAnticipe(c)||isFri(c)) return null; var s=subOf(c); return {s:(s==="ang"||s==="all")?"13:30":"13:20", e:"13:50"}; }
   function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
     if(isAumonier(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+45))};
-    var s=subOf(c), prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20);
-    var start=toMin(c.debut)-prep-10, end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0);
-    return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end))};
+    var s=subOf(c), end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0), start;
+    if(isAnticipe(c)) start=toMin(c.debut)-(isFri(c)?35:10); // vendredi : préparation 35 min avant ; sinon déjà préparée le midi
+    else { var prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20); start=toMin(c.debut)-prep-10; }
+    return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end)), prep:prepMidi(c)};
   }
   function colleurKey(n){ return String(n||"").replace(/\s+[A-Z]$/,"").trim(); }
   function colleurs(){
@@ -69,5 +75,5 @@ var BJ = (function(){
   function ready(){ return !!(data.state && data.state.last_ok); }
 
   return {data:function(){ return data; }, load:load, checkNow:checkNow, markRead:markRead, on:function(f){ listeners.push(f); },
-    mine:mine, gone:gone, mineOn:mineOn, upcoming:upcoming, block:block, isAumonier:isAumonier, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
+    mine:mine, gone:gone, mineOn:mineOn, upcoming:upcoming, block:block, isAnticipe:isAnticipe, prepMidi:prepMidi, isAumonier:isAumonier, subOf:subOf, isEntretien:isEntretien, label:label, epOf:epOf, colleurs:colleurs, colleur:colleur, collesDe:collesDe, colleurKey:colleurKey, classAvg:classAvg, avg:avgN, unread:unread, ready:ready};
 })();

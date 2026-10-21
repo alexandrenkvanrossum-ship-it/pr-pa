@@ -68,13 +68,16 @@ function dayEvents(dISO){
   // Colles BJcolle : bloquées de 10 min avant la préparation à la fin du passage ; le travail qui chevauche est raccourci
   if(typeof BJ!=="undefined"){
     BJ.mineOn(dISO).forEach(function(c){
-      var b=BJ.block(c), cs=toMin(b.s), ce=toMin(b.e);
-      ev=ev.reduce(function(acc,w){
+      var b=BJ.block(c);
+      function carve(cs,ce){ ev=ev.reduce(function(acc,w){
         if(w.kind!=="work" || toMin(w.e)<=cs || toMin(w.s)>=ce){ acc.push(w); return acc; }
         if(toMin(w.s)<cs && cs-toMin(w.s)>=20){ var a={}; for(var k in w) a[k]=w[k]; a.e=fromMin(cs); a.id=w.id+"-a"; acc.push(a); }
         if(toMin(w.e)>ce && toMin(w.e)-ce>=20){ var z={}; for(var k2 in w) z[k2]=w[k2]; z.s=fromMin(ce); z.id=w.id+"-z"; acc.push(z); }
         return acc;
-      },[]);
+      },[]); }
+      carve(toMin(b.s),toMin(b.e));
+      if(b.prep){ carve(toMin(b.prep.s),toMin(b.prep.e));
+        add({kind:"exam",s:b.prep.s,e:b.prep.e,t:"Préparation colle – "+c.discipline.replace(/ LV\d$/,"")+" (tirage anticipé, passage "+hLabel(c.debut)+")",sub:BJ.subOf(c),colle:c.id,prepColle:true,lieu:""}); }
       add({kind:"exam",s:b.s,e:b.e,t:(BJ.isAumonier(c)?"Colle aumônier":BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
     });
   }
