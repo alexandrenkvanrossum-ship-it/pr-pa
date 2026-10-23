@@ -707,3 +707,9 @@ details.mdet2:not(.card){margin-top:10px}
 .nvd>div{min-width:0}
 @media (max-width:599px){.nvd{grid-template-columns:1fr}}
 .dp{min-width:0}
+/* assistant : modifications appliquées */
+.as-ap{margin-top:8px;padding-top:8px;border-top:.5px solid var(--line);display:flex;flex-direction:column;gap:4px;font-size:13px;white-space:normal}
+.as-ap .btn{align-self:flex-start;margin-top:4px}
+.as-ok{color:var(--green,#2e8b57)}
+.as-ko{color:var(--red,#c0392b)}
+.as-ap.undone .as-ok{text-decoration:line-through;opacity:.6}

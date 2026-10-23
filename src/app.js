@@ -1526,37 +1526,7 @@ function quickSheet(){
   openSheet('<div class="sheet-h"><div class="ttl"><h2>Nouvelle tâche</h2><div class="small muted">Écris naturellement : date, « pour », « ! », mots-clés réf, ex, civi, DM…</div></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">'+quickBox("sheet")+'</div>');
   bindQuick(); var i=document.getElementById("q-sheet"); if(i) i.focus();
 }
-var chat=[];
-function pageContext(){
-  var t=iso(today()), parts=["Page : "+S.view+(S.param?" ("+subj(S.param).name+")":""),"Date : "+fmtLong(t)];
-  var ev=dayEvents(t).filter(function(e){ return e.kind!=="fixed"; }).map(function(e){ return hLabel(e.s)+"-"+hLabel(e.e)+" "+e.t; });
-  parts.push("Programme du jour : "+ev.join(" ; "));
-  var tasks=st().tasks.filter(function(x){ return !x.done && (!S.param || x.sub===S.param); }).slice(0,15).map(function(x){ return x.title+" ["+subj(x.sub).name+(x.due?", pour le "+x.due:"")+(x.prio?", priorité "+x.prio:"")+"]"; });
-  parts.push("Tâches ouvertes : "+(tasks.join(" ; ")||"aucune"));
-  var p=upcomingPales(3).map(function(x){ return x.date+" "+x.t; }); parts.push("Prochains DST : "+p.join(" ; "));
-  if(S.view==="matiere"&&S.param==="csh") parts.push("Thème de CSH de l'année : L'humanité.");
-  return parts.join("\n");
-}
 function fmtMsg(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[-*] /gm,"• "); }
-function geminiSheet(){
-  var u=typeof Sync!=="undefined"&&Sync.user();
-  var h='<div class="sheet-h"><div class="ttl"><div class="eyebrow" style="color:var(--blue)">Assistant · '+esc(S.view==="matiere"?subj(S.param).name:({home:"Accueil",agenda:"Agenda",todo:"To-Do",matieres:"Matières",echeances:"Échéances",notes:"Notes",methodo:"Méthodo",plus:"Plus"})[S.view]||"")+'</div><h2>Demander à Gemini</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b" id="chat-log">';
-  if(!u) h+='<div class="gem-msg">Connecte-toi (bouton en haut à droite) pour utiliser l\'assistant.</div>';
-  else if(!chat.length) h+='<div class="gem-msg small muted">Pose une question ou une petite demande. Gemini connaît la page ouverte, ton programme du jour, tes tâches et tes prochains DST. Il peut se tromper : vérifie toujours une citation ou un chiffre.</div>';
-  chat.forEach(function(m){ h+='<div class="msg '+(m.role==="user"?"u":"a")+'">'+fmtMsg(m.text)+'</div>'; });
-  h+='</div><form class="quick" id="chat-form" style="margin:0 18px 18px"><input id="chat-in" autocomplete="off" placeholder="Pose ta question…" aria-label="Question"'+(u?'':' disabled')+'><button class="go" type="submit"'+(u?'':' disabled')+' aria-label="Envoyer">'+I.send+'</button></form>';
-  openSheet(h);
-  var log=document.getElementById("chat-log"); log.scrollTop=log.scrollHeight;
-  var f=document.getElementById("chat-form"), inp=document.getElementById("chat-in");
-  if(u && window.innerWidth>=600) inp.focus();
-  f.addEventListener("submit",function(ev){
-    ev.preventDefault(); var q=inp.value.trim(); if(!q||!u) return;
-    chat.push({role:"user",text:q}); chat.push({role:"assistant",text:"…",pending:true}); geminiSheet();
-    Sync.invoke({mode:"chat",context:pageContext(),messages:chat.filter(function(m){ return !m.pending; })}).then(function(r){
-      chat.pop(); chat.push({role:"assistant",text:r.text||"(pas de réponse)"}); if(document.getElementById("chat-log")) geminiSheet();
-    },function(e){ chat.pop(); chat.push({role:"assistant",text:"Gemini n'a pas répondu ("+e.message+")."}); if(document.getElementById("chat-log")) geminiSheet(); });
-  });
-}
 
 /* ---------- actualité du jour (Gemini + recherche Google) ---------- */
 var newsLoading=false, newsErr=null;
@@ -1785,7 +1755,7 @@ function start(){
 }
 function confirmDel(f){ return window.confirm("Supprimer « "+f.name+" » ?"+(f.kind==="cours"?" Ses énoncés sortiront des quiz.":"")); }
 window.__toast=toast;
-window.__prepa={annSheet:function(i){ annSheet(i); },colleSheet:function(k){ colleSheet(k); },addNote:function(i){ addNoteSheet(i); },noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
+window.__prepa={as:{asEvents:asEvents,asApply:asApply,asParse:asParse,geminiSheet:geminiSheet,pageContext:pageContext,st:st}, annSheet:function(i){ annSheet(i); },colleSheet:function(k){ colleSheet(k); },addNote:function(i){ addNoteSheet(i); },noteDetail:function(i){ noteDetail(i); },go:go, S:S, openSlot:function(d,i){ openSlot(d,i); }, quizSheet:quizSheet, methodeSheet:methodeSheet, closeSheet:function(){ closeSheet(); }};
 /*@@UI@@*/
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
 })();
