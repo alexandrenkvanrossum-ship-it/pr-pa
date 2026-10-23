@@ -14,25 +14,36 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-async function callGemini(body: unknown) {
+// Supabase coupe la fonction après 150 s : chaque modèle a un délai maximal, puis on passe au suivant.
+// fast = réponse courte attendue (conversation) : sans « réflexion » et avec un délai plus court.
+async function callGemini(body: unknown, fast = false) {
   let last: unknown = null;
   const tried: string[] = [];
+  const t0 = Date.now(), BUDGET = 135000, PER = fast ? 25000 : 70000;
   for (const m of MODELS) {
+    const left = BUDGET - (Date.now() - t0);
+    if (left < 8000) break;
     tried.push(m);
     const b: any = structuredClone(body);
     if (b.generationConfig?.maxOutputTokens && !/2\.5|latest/.test(m)) b.generationConfig.maxOutputTokens = Math.min(b.generationConfig.maxOutputTokens, 8192);
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
-      body: JSON.stringify(b),
-    });
-    const j = await r.json();
+    if (fast && /2\.5/.test(m)) b.generationConfig = { ...(b.generationConfig ?? {}), thinkingConfig: { thinkingBudget: 0 } };
+    let r: Response;
+    try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
+        body: JSON.stringify(b),
+        signal: AbortSignal.timeout(Math.min(PER, left)),
+      });
+    } catch (_) { last = { message: `${m} trop lent` }; continue; } // délai dépassé : modèle suivant
+    const j = await r.json().catch(() => ({}));
     if (r.ok) return j;
     last = j;
-    // modèle inconnu (404), sans quota gratuit (429) ou indisponible (503) : on essaie le suivant
-    if (![404, 429, 503].includes(r.status)) break;
+    // modèle inconnu (404), sans quota gratuit (429), surchargé (500, 503) : on essaie le suivant
+    if (![404, 429, 500, 503].includes(r.status)) break;
   }
   const err = (last as any)?.error ?? last;
+  if (!tried.length) throw new Error("Gemini trop lent aujourd'hui : réessaie dans un moment.");
   throw new Error(`Modèles essayés : ${tried.join(", ")}. Dernière erreur : ${err?.code ?? ""} ${err?.message ?? JSON.stringify(err)}`.slice(0, 600));
 }
 const textOf = (j: any) =>
@@ -63,8 +74,8 @@ Deno.serve(async (req) => {
           role: m.role === "assistant" ? "model" : "user",
           parts: [{ text: String(m.text ?? "") }],
         })),
-        generationConfig: { temperature: 0.6, maxOutputTokens: 1500 },
-      });
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2500 },
+      }, true);
       out = { text: textOf(j) };
     } else if (mode === "news") {
       // Flux RSS (Le Monde International, France 24 en secours) : Gemini choisit et résume
