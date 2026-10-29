@@ -3875,8 +3875,8 @@ function mathsSpace(){
   return h+({today:mToday,grange:mGrange,plan:mPlanning,stats:mStats,prog:mProgress}[t]||mToday)();
 }
 function mCours(){
-  var h='<section class="card"><div class="card-h"><h2>Chapitre en cours</h2></div><input class="field" id="m-chap" list="m-chaps" value="'+esc(mathsChap())+'"><datalist id="m-chaps">'+mathsChaps().map(function(c){ return '<option value="'+esc(c)+'">'; }).join("")+'</datalist><p class="small muted" style="margin:6px 0 0">Sert de chapitre par défaut pour tes dépôts et met en avant ses énoncés dans les quiz.</p></section>';
-  h+='<div class="grid g2">'+mathsTodayCard()+quizCard()+'</div>'+exoCard()+filesCard("maths");
+  var h=filesCard("maths")+'<section class="card"><div class="card-h"><h2>Chapitre en cours</h2></div><input class="field" id="m-chap" list="m-chaps" value="'+esc(mathsChap())+'"><datalist id="m-chaps">'+mathsChaps().map(function(c){ return '<option value="'+esc(c)+'">'; }).join("")+'</datalist><p class="small muted" style="margin:6px 0 0">Sert de chapitre par défaut pour tes dépôts et met en avant ses énoncés dans les quiz.</p></section>';
+  h+='<div class="grid g2">'+mathsTodayCard()+quizCard()+'</div>'+exoCard();
   return h+'<div class="note-box">DM : dépose-le en type « DM » avec sa date de rendu ; il devient une tâche découpée sur jeudi, vendredi et dimanche (2 h max par créneau).</div>';
 }
 function ringsSVG(vals,size){
