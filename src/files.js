@@ -17,6 +17,22 @@ var Files = (function(){
     });
   }
   function analysable(f){ return f && f.sub==="maths" && ["cours","td","exos","dm"].indexOf(f.kind)>=0; }
+  /* Recueil des TD de l'autre classe pour toute l'année (kind « tdannee ») : rien n'est affiché d'avance.
+     À chaque nouveau chapitre en cours, une « tranche » (TD virtuel) est créée avec les seuls exercices de ce chapitre. */
+  function norm(x){ return String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim(); }
+  function syncYear(chap){
+    var s=S(), out=[]; if(!chap || !sb()) return out;
+    Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(f){ return f.kind==="tdannee"; }).forEach(function(P){
+      P.chaps=P.chaps||[]; if(P.chaps.some(function(c){ return norm(c)===norm(chap); })) return;
+      P.chaps.push(chap);
+      var vid=P.id+"~"+P.chaps.length, d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+13);
+      s.files[vid]={id:vid, sub:"maths", kind:"td", chap:chap, name:"TD de l'autre classe", label:"", path:P.path, mime:P.mime, size:0, at:new Date().toISOString(), parent:P.id, virtual:true,
+        target:iso(d), status:"stored"};
+      Store.save(); out.push(analyze(vid).catch(function(){}));
+    });
+    if(out.length) emit();
+    return out;
+  }
   function analyze(id, onStep){
     var s=S(), f=s.files[id]; if(!f) return Promise.reject(new Error("Fichier introuvable."));
     if(f.kind==="corrige"){ return f.pair? analyze(f.pair,onStep) : Promise.resolve(); }
@@ -35,9 +51,11 @@ var Files = (function(){
       }); };
       p=step(0).then(function(){ S().mathsCours[id]={chap:f.chap||chap, items:items, at:new Date().toISOString()}; f.n=items.length; setTimeout(titles,500); });
     } else {
-      var corr=Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(x){ return x.kind==="corrige" && x.pair===id; });
+      var corr=Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(x){ return x.kind==="corrige" && (x.pair===id || (f.parent && x.pair===f.parent)); });
       var list=[{path:f.path,name:f.name,mime:f.mime,role:"enonce"}].concat(corr.slice(0,2).map(function(x){ return {path:x.path,name:x.name,mime:x.mime,role:"corrige"}; }));
-      p=Sync.invoke({mode:"doc",kind:f.kind==="dm"?"dm":"exos",chap:f.chap,files:list}).then(function(r){
+      p=Sync.invoke({mode:"doc",kind:f.kind==="dm"?"dm":"exos",chap:f.chap,only:f.parent?f.chap:undefined,files:list}).then(function(r){
+        /* tranche d'un recueil annuel : une fonction Gemini pas encore redéployée renverrait TOUS les exercices de l'année */
+        if(f.parent && r.only!==f.chap) throw new Error("Redéploie la fonction « gemini » dans Supabase : elle ne sait pas encore extraire un seul chapitre du recueil.");
         var old=(S().mathsEx[id]||{}).exos||[];
         S().mathsEx[id]={chap:f.chap||r.chapitre||"", exos:(r.exercices||[]).map(function(e,i){ var o=old[i]; if(o && o.num===e.num && o.perso) e.minutes=o.minutes, e.perso=true; return e; }), corrige:!!r.corrige, at:new Date().toISOString()};
         f.n=(r.exercices||[]).length; f.corrige=!!r.corrige;
@@ -62,7 +80,8 @@ var Files = (function(){
   }
   function remove(id){
     var s=S(), f=s.files[id]; if(!f) return;
-    var c=sb(); if(c) c.storage.from(BUCKET).remove([f.path]).then(function(){});
+    var c=sb(); if(c && !f.virtual) c.storage.from(BUCKET).remove([f.path]).then(function(){});
+    if(f.kind==="tdannee") Object.keys(s.files).forEach(function(k){ if(s.files[k].parent===id){ delete s.files[k]; delete s.mathsEx[k]; } });
     delete s.files[id]; delete s.mathsEx[id]; delete s.mathsCours[id];
     Object.keys(s.files).forEach(function(k){ if(s.files[k].pair===id) s.files[k].pair=null; });
     s.tasks=s.tasks.filter(function(t){ return t.file!==id || t.done; });
@@ -92,5 +111,5 @@ var Files = (function(){
   function titleOne(fid,i){ var it=((S().mathsCours[fid]||{}).items||[])[i]; if(!it||it.titre||!sb()) return Promise.resolve(); return askTitles([{fid:fid,i:i,it:it}]); }
   var ls=[]; function emit(){ ls.forEach(function(f){ try{ f(); }catch(e){} }); }
   function of(sub){ var s=S(); return Object.keys(s.files).map(function(k){ return s.files[k]; }).filter(function(f){ return f.sub===sub; }).sort(function(a,b){ return b.at.localeCompare(a.at); }); }
-  return {titles:titles, titleOne:titleOne, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
+  return {syncYear:syncYear, titles:titles, titleOne:titleOne, upload:upload, analyze:analyze, analysable:analysable, open:open, remove:remove, of:of, on:function(f){ ls.push(f); }, busy:function(id){ return !!running[id]; }};
 })();

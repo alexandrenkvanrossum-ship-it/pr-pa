@@ -273,10 +273,17 @@ async function analyseDoc(b: any, auth: string) {
     parts.push({ text: `\n--- ${f.role === "corrige" ? "CORRIGÉ" : "ÉNONCÉ"} : « ${f.name} » ---` }, p.text != null ? { text: p.text.slice(0, 120000) } : p.part);
   }
   const hasCorr = files.some((f) => f.role === "corrige");
+  // « only » : recueil d'exercices de toute l'année, dont on ne veut que la partie d'un chapitre
+  const only = String(b.only ?? "").trim();
+  const scope = only
+    ? " C'est un RECUEIL qui couvre toute l'année : ne retiens QUE les exercices du chapitre « " + only + " » " +
+      "(repère la partie du document consacrée à ce chapitre, même si son intitulé diffère un peu, d'après son contenu mathématique) et ignore tous les autres chapitres. " +
+      "Si aucun exercice ne relève de ce chapitre, renvoie une liste vide."
+    : "";
   const j = await callGemini({
     contents: [{ role: "user", parts: [{ text:
       "Tu reçois une feuille d'exercices de mathématiques de prépa ECG2 (" + (b.kind === "dm" ? "devoir maison" : "TD ou dossier d'exercices") + ")" +
-      (hasCorr ? " ET son corrigé" : "") + ". Liste chaque exercice dans l'ordre de l'énoncé. Pour chacun : " +
+      (hasCorr ? " ET son corrigé" : "") + "." + scope + " Liste chaque exercice" + (only ? " retenu" : "") + " dans l'ordre de l'énoncé. Pour chacun : " +
       "num (numéro tel qu'écrit), titre (thème en 6 mots maximum, tiré de l'énoncé), questions (nombre de questions et sous-questions), " +
       "difficulte (1 facile, 2 moyen, 3 difficile), minutes (temps réaliste pour un bon élève de prépa qui cherche, calcule puis rédige proprement ; " +
       (hasCorr ? "appuie-toi sur la longueur des calculs et des raisonnements du corrigé" : "appuie-toi sur la longueur des calculs prévisibles") + "), " +
@@ -285,5 +292,5 @@ async function analyseDoc(b: any, auth: string) {
     generationConfig: { temperature: 0.2, maxOutputTokens: 16000, responseMimeType: "application/json", responseSchema: EXO_SCHEMA },
   });
   const o = jsonOf(textOf(j));
-  return { chapitre: o.chapitre ?? "", exercices: o.exercices ?? [], corrige: hasCorr };
+  return { chapitre: o.chapitre ?? "", exercices: o.exercices ?? [], corrige: hasCorr, only: only || undefined };
 }

@@ -797,22 +797,32 @@ function sheetText(txt){ openSheet('<div class="sheet-h"><div class="ttl"><h2>Ta
 /* ---------- Fichiers, maths, HGG (parties 2 et 3) ---------- */
 function whenTxt(key){ var w=typeof Plan!=="undefined"?Plan.whenOf(key):null; if(!w) return ""; var a=w[0]; return (a.d===iso(today())?"auj.":fmtDay(a.d))+" "+hLabel(a.s)+(w.length>1?" (+"+(w.length-1)+")":""); }
 function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement(el||document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false},{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}],throwOnError:false}); }catch(e){} }
-var FILE_KINDS={maths:[["cours","Cours"],["td","TD"],["exos","Exercices d'accompagnement"],["dm","DM"],["corrige","Corrigé"],["copie","Copie de concours"],["autre","Autre"]],_:[["cours","Cours"],["doc","Document"],["copie","Copie de concours"],["autre","Autre"]]};
+var FILE_KINDS={maths:[["cours","Cours"],["td","TD"],["tdannee","TD de l'autre classe (toute l'année)"],["exos","Exercices d'accompagnement"],["dm","DM"],["corrige","Corrigé"],["copie","Copie de concours"],["autre","Autre"]],_:[["cours","Cours"],["doc","Document"],["copie","Copie de concours"],["autre","Autre"]]};
 function kindName(sub,k){ var l=(FILE_KINDS[sub]||FILE_KINDS._).filter(function(x){ return x[0]===k; })[0]; return l?l[1]:k; }
 function mathsChap(){ var c=st().mathsCfg||{}; if(c.chap) return c.chap; var d=typeof MATHS_DRIVE!=="undefined"?MATHS_DRIVE:null; var x=d&&d.chapitres.filter(function(y){ return y.n===d.en_cours; })[0]; return x?x.titre:""; }
 function mathsChaps(){ var a=(typeof MATHS_DRIVE!=="undefined"?MATHS_DRIVE.chapitres:[]).map(function(c){ return c.titre; }); Files.of("maths").forEach(function(f){ if(f.chap && a.indexOf(f.chap)<0) a.push(f.chap); }); return a; }
+/* recueil annuel des TD de l'autre classe : ajoute les exercices du chapitre en cours, une seule fois par chapitre */
+var yearBusy=false;
+function yearSync(){
+  if(yearBusy || typeof Sync==="undefined" || !Sync.user() || typeof Files==="undefined") return;
+  var chap=mathsChap(), ps=Files.syncYear(chap); if(!ps.length) return;
+  yearBusy=true; toast("Nouveau chapitre : j'ajoute les exercices « "+chap+" » du TD de l'autre classe…");
+  Promise.all(ps).then(function(){ yearBusy=false; if(typeof Plan!=="undefined") Plan.invalidate(); var n=Files.of("maths").filter(function(f){ return f.virtual && f.chap===chap; }).reduce(function(a,f){ return a+(f.n||0); },0);
+    toast(n?plural(n,"exercice")+" de l'autre classe ajouté"+(n>1?"s":"")+" pour « "+chap+" ».":"Aucun exercice trouvé pour « "+chap+" » dans le TD de l'autre classe."); window.__prepaRefresh&&window.__prepaRefresh(); });
+}
 function nextMonday(){ var d=today(), k=(8-d.getDay())%7||7; return iso(addDays(d,k)); }
 function fileStatus(f){
   if(f.status==="analyse" && (Files.busy(f.id) || Date.now()-new Date(f.at)<5*60000)) return '<span class="meta">analyse en cours'+(f.progress&&f.progress<100?" · "+f.progress+" %":"")+'…</span>';
   if(f.status==="err"||f.status==="analyse") return '<span class="meta late">analyse échouée</span> <button class="link-btn" data-a="freanalyse" data-id="'+f.id+'">Réessayer</button>'+(f.err?'<div class="small faint">'+esc(f.err)+'</div>':'');
   if(f.status==="ok" && f.kind==="cours") return '<span class="meta">'+plural(f.n||0,"énoncé")+' relevé'+((f.n||0)>1?"s":"")+'</span>';
   if(f.status==="ok") return '<span class="meta">'+plural(f.n||0,"exercice")+(f.corrige?" · temps estimé avec le corrigé":" · sans corrigé")+'</span>';
+  if(f.kind==="tdannee") return '<span class="meta">'+((f.chaps||[]).length?"chapitres extraits : "+f.chaps.map(esc).join(", "):"les exercices s'ajouteront chapitre par chapitre")+'</span>';
   if(f.kind==="corrige") return f.pair?'<span class="meta">corrigé de « '+esc((st().files[f.pair]||{}).name||"?")+' »</span>':'<span class="meta">corrigé non rattaché</span>';
   return '';
 }
 function filesCard(sub){
   var fs=Files.of(sub), kinds=FILE_KINDS[sub]||FILE_KINDS._, isM=sub==="maths";
-  var ex=fs.filter(function(f){ return ["td","exos","dm"].indexOf(f.kind)>=0; });
+  var ex=fs.filter(function(f){ return ["td","tdannee","exos","dm"].indexOf(f.kind)>=0 && !f.virtual; });
   var h='<section class="card"><div class="card-h"><h2>Mes fichiers</h2><span class="small muted">'+fs.length+'</span></div>';
   h+='<p class="small muted" style="margin:0 0 10px">'+(isM?"Dépose ici cours, TD, exercices, DM et corrigés du chapitre en cours (PDF, photo, Word). L'app compte les exercices, estime leur durée (avec le corrigé si tu le donnes), les répartit sur tes créneaux de maths, et tire de ton cours les quiz de début de séance.":sub==="hgg"?"Dépose ici tes documents d'HGG (photos de cours, polycopiés…). Tes chapitres du Drive sont déjà connus de l'app.":"Dépose ici tes documents de "+subj(sub).name+" pour les retrouver partout.")+'</p>';
   if(!Sync.user()) return h+'<div class="empty"><b>Connecte-toi pour déposer des fichiers</b>Plus → Compte.</div></section>';
@@ -853,13 +863,14 @@ function bindUpload(){
     if(sub==="maths" && meta.chap){ st().mathsCfg=st().mathsCfg||{}; }
     go.disabled=true; go.textContent="Envoi…";
     var chain=Promise.resolve(), n=0;
-    files.forEach(function(file){ chain=chain.then(function(){ return Files.upload(file,meta).then(function(rec){ n++; if(Files.analysable(rec)||(rec.kind==="corrige"&&rec.pair)){ Files.analyze(rec.id).then(function(){ toast("Analyse terminée : "+rec.name); Plan.invalidate(); window.__prepaRefresh(); },function(e){ toast("Analyse impossible : "+(e&&e.message||e)); window.__prepaRefresh(); }); } }); }); });
+    files.forEach(function(file){ chain=chain.then(function(){ return Files.upload(file,meta).then(function(rec){ n++; if(rec.kind==="tdannee") setTimeout(yearSync,300); if(Files.analysable(rec)||(rec.kind==="corrige"&&rec.pair)){ Files.analyze(rec.id).then(function(){ toast("Analyse terminée : "+rec.name); Plan.invalidate(); window.__prepaRefresh(); },function(e){ toast("Analyse impossible : "+(e&&e.message||e)); window.__prepaRefresh(); }); } }); }); });
     chain.then(function(){ toast(plural(n,"fichier")+" envoyé"+(n>1?"s":"")+(sub==="maths"&&meta.kind!=="autre"?" · analyse en cours (jusqu'à une minute)":"")+"."); render(); },function(e){ toast(e&&e.message||"Envoi impossible."); render(); });
   });
 }
 
 /* ---------- Maths : exercices et quiz ---------- */
 function exoCard(){
+  setTimeout(yearSync,400);
   var s=st(), fs=Files.of("maths").filter(function(f){ return (f.kind==="td"||f.kind==="exos") && s.mathsEx[f.id]; });
   var h='<section class="card"><div class="card-h"><h2>Exercices à faire</h2></div>';
   if(!fs.length) return h+'<div class="empty"><b>Aucun TD analysé</b>Dépose ton TD (et son corrigé) dans « Mes fichiers » : l\'app compte les exercices et les répartit sur tes créneaux de maths.</div></section>';
@@ -1728,7 +1739,7 @@ document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-
   else if(id==="colf-an"){ S.colF.an=ev.target.value; render(); }
   else if(id==="ann-notes"){ Ann.patch(ev.target.getAttribute("data-id"),{c:ev.target.value}); }
   else if(ev.target.hasAttribute("data-annp")){ Ann.patch(ev.target.getAttribute("data-annp"),{p:+ev.target.value}); annRefresh(); }
-  else if(id==="m-chap"){ st().mathsCfg=st().mathsCfg||{}; st().mathsCfg.chap=ev.target.value.trim(); save(); render(); }
+  else if(id==="m-chap"){ st().mathsCfg=st().mathsCfg||{}; st().mathsCfg.chap=ev.target.value.trim(); save(); render(); yearSync(); }
   else if(ev.target.hasAttribute("data-hggfait")){ var H=hggState(), k=ev.target.getAttribute("data-hggfait"); if(ev.target.checked) H.fait[k]=iso(today()); else delete H.fait[k]; H.ask=iso(today()); save(); render(); }
   else if(ev.target.hasAttribute("data-qsec")){ var qk=ev.target.getAttribute("data-qsec"); if(ev.target.checked) delete st().quizOff[qk]; else st().quizOff[qk]=true; save(); }
 });
@@ -1746,7 +1757,7 @@ function start(){
   shell(); seed();
   setInterval(function(){ if(document.visibilityState==="visible" && (S.view==="home"||S.view==="agenda") && window.__prepaRefresh) window.__prepaRefresh(); },30000);
   window.__prepaRefresh=function(){ var a=document.activeElement; if(layer.innerHTML || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return; render(); };
-  if(typeof Sync!=="undefined"){ var bjLoaded=false; Sync.on(function(stt,user){ var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); if(user && !bjLoaded && typeof BJ!=="undefined"){ bjLoaded=true; BJ.load(); setInterval(function(){ if(document.visibilityState==="visible") BJ.load(); },10*60000); } }); Sync.init(); }
+  if(typeof Sync!=="undefined"){ var bjLoaded=false; Sync.on(function(stt,user){ if(user) setTimeout(yearSync,2000); var p=document.getElementById("sync-pill"); if(p) p.innerHTML=syncLabel(); if(user && !bjLoaded && typeof BJ!=="undefined"){ bjLoaded=true; BJ.load(); setInterval(function(){ if(document.visibilityState==="visible") BJ.load(); },10*60000); } }); Sync.init(); }
   if(typeof BJ!=="undefined") BJ.on(function(){ window.__prepaRefresh(); });
   if(typeof Colles!=="undefined") Colles.on(function(){ if(S.view==="colles"||(S.view==="matiere"&&S.param==="maths")) window.__prepaRefresh(); });
   var h=(location.hash||"").replace("#",""); if(h){ var p=h.split("-"); if(["home","agenda","todo","matieres","matiere","echeances","notes","methodo","plus","bjclasse","bjcolleurs","bjcolleur","annales","colles","grange"].indexOf(p[0])>=0){ S.view=p[0]; S.param=p.length>1?decodeURIComponent(p.slice(1).join("-")):null; } }
