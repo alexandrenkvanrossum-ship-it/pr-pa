@@ -9,6 +9,8 @@ var Files = (function(){
   function mimeOf(f){ if(f.type) return f.type; var e=(f.name.split(".").pop()||"").toLowerCase(); return {pdf:"application/pdf",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",pptx:"application/vnd.openxmlformats-officedocument.presentationml.presentation",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",heic:"image/heic",txt:"text/plain"}[e]||"application/octet-stream"; }
   function upload(file, meta){
     var c=sb(); if(!c) return Promise.reject(new Error("Connecte-toi d'abord (Plus → Compte)."));
+    if(!file.size) return Promise.reject(new Error("« "+file.name+" » est vide (0 octet) : il n'est sans doute pas téléchargé sur cet appareil (iCloud, Drive…). Ouvre-le une fois pour le télécharger, puis redépose-le."));
+    if(file.size>50*1024*1024) return Promise.reject(new Error("« "+file.name+" » dépasse 50 Mo, la limite de ton espace Supabase : compresse le PDF puis redépose-le."));
     var id=uid("f"), path=Sync.user().id+"/"+(meta.sub||"autre")+"/"+id+"-"+clean(file.name);
     return c.storage.from(BUCKET).upload(path,file,{contentType:mimeOf(file),upsert:false}).then(function(r){
       if(r.error) throw new Error(/bucket/i.test(r.error.message||"")?"Espace « fichiers » absent : lance le script fichiers.sql dans Supabase.":r.error.message);
