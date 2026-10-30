@@ -45,6 +45,7 @@ var Plan = (function(){
       if(x.done || x.vac || x.time || x.memo || !x.sub || x.sub==="perso") return;
       var tot=x.dur||DEF[x.sub]||30, left=Math.round(tot*(1-(x.progress||0)/100)); if(left<5) return;
       var o={key:"task|"+x.id, ref:{k:"task",id:x.id}, lab:x.title, sub:x.sub, min:left, prio:x.prio||0, created:x.created||"", chunk:15, dm:x.action==="dm"};
+      if(x.slot) o.slot=x.slot;
       if(x.day){ o.day=x.day<t?t:x.day; o.late=x.day<t; o.cls=0; }
       else if(x.due){ var dl=iso(addDays(parseISO(x.due),-1)); if(dl<t){ dl=t; o.late=x.due<t; } o.dl=dl; o.cls=1; }
       else o.cls=3;
@@ -70,6 +71,7 @@ var Plan = (function(){
   }
   function fits(sl, it){
     if(sl.left<10 || sl.subs.indexOf(it.sub)<0) return false;
+    if(it.ban && it.ban.indexOf(sl.id)>=0) return false;
     if(it.day && sl.d!==it.day) return false;
     if(it.dl && sl.d>it.dl) return false;
     if(it.dm && [4,5,0].indexOf(sl.wd)<0) return false;
@@ -122,6 +124,10 @@ var Plan = (function(){
     var list=slots(t,nm);
     var items=taskItems(s,t).concat(exoItems(s,t)).concat(hggItems(s,t));
     var byKey={}; items.forEach(function(it){ byKey[it.key]=it; it.min0=it.min; });
+    /* épingles (« mets ceci dans ce créneau ») et exclusions (« pas dans ce créneau »), décidées depuis la feuille de route */
+    var pins=s.slotPins||{}, bans=s.slotBans||{};
+    items.forEach(function(it){ if(!it.slot && pins[it.key]) it.slot=pins[it.key]; if(bans[it.key]) it.ban=bans[it.key]; });
+    res.items=items.map(function(it){ return {key:it.key, ref:it.ref, lab:it.lab, sub:it.sub, min:it.min}; });
     /* créneau en cours : figé d'après la dernière photo */
     list.forEach(function(sl){
       if(sl.state!=="now") return;
@@ -129,7 +135,18 @@ var Plan = (function(){
       if(sn && sn.items){ sl.items=sn.items.map(function(x){ var it=byKey[x.key]; if(it){ var m=Math.min(it.min,x.min); it.min-=m; (res.byRef[x.key]=res.byRef[x.key]||[]).push({d:sl.d,s:sl.ev.s,t:sl.ev.t,min:m}); } return x; }); sl.frozen=true; }
       else { sl.left=Math.max(0, Math.floor((toMin(sl.ev.e)-nm)*(1-pauseRatio(sl.ev)))); }
     });
-    var fixed=items.filter(function(x){ return x.cls===0; }).sort(function(a,b){ return b.prio-a.prio; });
+    /* éléments épinglés : placés d'abord dans leur créneau (le reste, s'il déborde, se replace normalement) */
+    items.filter(function(x){ return x.slot; }).forEach(function(it){
+      var sl=list.filter(function(z){ return z.id===it.slot; })[0];
+      if(sl && !sl.frozen && sl.left>=5){ put(sl,it,Math.min(sl.left,it.min),res); }
+      else if(!sl){ /* épinglé dans un créneau au contenu fixé (vacances) : il y est affiché, on ne le place pas ailleurs */
+        var pd=it.slot.slice(0,10), pid=it.slot.slice(11);
+        if(pd>=t && pd<=iso(addDays(parseISO(t),HORIZON-1)) && dayEvents(pd).some(function(ev){ return ev.id===pid && ev.items; })){ var evx=dayEvents(pd).filter(function(ev){ return ev.id===pid; })[0]; (res.byRef[it.key]=res.byRef[it.key]||[]).push({d:pd,s:evx.s,t:evx.t,min:it.min}); it.min=0; }
+      }
+      if(sl && sl.d===it.day) delete it.day;
+      delete it.slot;
+    });
+    var fixed=items.filter(function(x){ return x.cls===0 && x.min>0; }).sort(function(a,b){ return b.prio-a.prio; });
     var due=items.filter(function(x){ return x.cls===1; }).sort(function(a,b){ return a.dl.localeCompare(b.dl) || b.prio-a.prio; });
     var free=items.filter(function(x){ return x.cls===3; }).sort(function(a,b){ return b.prio-a.prio || a.created.localeCompare(b.created); });
     fixed.forEach(function(it){ asap(list,it,res); });
@@ -151,7 +168,7 @@ var Plan = (function(){
   }
   function sig(){
     var s=Store.get();
-    return [iso(today()), Math.floor(nowMin()/5), JSON.stringify(s.tasks), JSON.stringify(s.mathsDone||{}), JSON.stringify(s.hgg||{}), Object.keys(s.mathsEx||{}).join(","), JSON.stringify(s.files||{}), JSON.stringify(s.agendaEdits||{}), typeof BJ!=="undefined"?BJ.data().at:""].join("§");
+    return [iso(today()), Math.floor(nowMin()/5), JSON.stringify(s.tasks), JSON.stringify(s.mathsDone||{}), JSON.stringify(s.hgg||{}), Object.keys(s.mathsEx||{}).join(","), JSON.stringify(s.files||{}), JSON.stringify(s.agendaEdits||{}), JSON.stringify(s.slotPins||{})+JSON.stringify(s.slotBans||{})+JSON.stringify(s.slotItems||{}), typeof BJ!=="undefined"?BJ.data().at:""].join("§");
   }
   function get(){ var k=sig(); if(memo.k!==k){ memo.v=compute(); memo.k=k; } return memo.v; }
   function forSlot(dISO, ev){
@@ -168,5 +185,6 @@ var Plan = (function(){
         bumped:r.unplaced.filter(function(x){ return x.key!==k; }).length-base.unplaced.length, pushed:r.dropped.filter(function(x){ return x.key!==k; }).length-base.dropped.length}; }
     finally{ s.tasks.pop(); }
   }
-  return {get:get, forSlot:forSlot, whenOf:whenOf, preview:preview, invalidate:function(){ memo.k=null; }};
+  function unfreeze(id){ var m=snapGet(); if(m[id]){ delete m[id]; snapSet(m); } memo.k=null; }
+  return {unfreeze:unfreeze, get:get, forSlot:forSlot, whenOf:whenOf, preview:preview, invalidate:function(){ memo.k=null; }};
 })();

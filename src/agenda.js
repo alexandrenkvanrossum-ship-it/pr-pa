@@ -109,7 +109,15 @@ function openTasks(subs){
 function roadFor(ev,dISO){
   var items=[], cap=toMin(ev.e)-toMin(ev.s), used=0;
   function push(o){ items.push(o); used+=o.min; }
-  if(ev.items){ ev.items.forEach(function(x){ var o={}; for(var k in x) o[k]=x[k]; push(o); }); return items; }
+  if(ev.items){
+    /* créneau au contenu fixé (plan de vacances) : version modifiée depuis la feuille de route, puis éléments épinglés ici */
+    var St=Store.get(), sid=dISO+"|"+ev.id, base=(St.slotItems||{})[sid]||ev.items;
+    base.forEach(function(x,bi){ var o={}; for(var k in x) o[k]=x[k]; o.bi=bi; push(o); });
+    St.tasks.forEach(function(t){ if(t.slot===sid && !t.vac) push({lab:t.title,min:t.dur||30,sub:t.sub,task:t.id,ref:{k:"task",id:t.id},pinned:true}); });
+    var pins=St.slotPins||{}, PI=(typeof Plan!=="undefined")?(Plan.get().items||[]):[];
+    Object.keys(pins).forEach(function(k){ if(pins[k]!==sid) return; var it=PI.filter(function(x){ return x.key===k; })[0]; if(it) push({lab:it.lab,min:it.min,sub:it.sub,ref:it.ref,pinned:true}); });
+    return items;
+  }
   if(ev.anki){ push({lab:"Anki anglais",min:20}); push({lab:"Anki allemand",min:20}); return items; }
   if(ev.actu){ push({lab:"Lecture de l'actualité (HGG et langues)",min:20}); return items; }
   if(ev.kind!=="work") return items;

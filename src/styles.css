@@ -713,3 +713,11 @@ details.mdet2:not(.card){margin-top:10px}
 .as-ok{color:var(--green,#2e8b57)}
 .as-ko{color:var(--red,#c0392b)}
 .as-ap.undone .as-ok{text-decoration:line-through;opacity:.6}
+/* feuille de route : remplacer / retirer / ajouter */
+.road-act{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.road-mini{display:flex;gap:10px;font-size:12px}
+.road-mini .link-btn{font-size:12px;color:var(--ink-3)}
+.road-mini .link-btn:hover{color:var(--blue)}
+.road-it.rep{box-shadow:inset 0 0 0 1.5px var(--blue)}
+.slot-add{margin:4px 0 10px;flex-wrap:wrap}
+.toast{border-radius:16px;max-width:min(92vw,520px);line-height:1.4}

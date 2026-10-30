@@ -406,14 +406,78 @@ function openSlot(dISO,id){
     road.forEach(function(r,ix){
       var dn1=isDone(dISO,e,r,ix), key=slotKey(dISO,e,r,ix);
       if(r.pause){ h+='<div class="road-it" style="background:var(--surface-2)"><span class="min">'+hLabel(fromMin(clock))+'</span><span class="lab muted">Pause '+r.min+' min · debout</span><span></span></div>'; clock+=r.min; return; }
-      h+='<div class="road-it'+(dn1?" done":"")+'"><button class="check'+(dn1?" on":"")+'" data-a="road" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'" data-ref="'+(r.ref&&r.ref.k!=="task"?esc(r.ref.k+":"+r.ref.id):"")+'" aria-label="Cocher">'+(dn1?I.check:"")+'</button><div><div class="lab">'+esc(r.lab)+(r.url?' <a class="link-btn" href="'+esc(r.url)+'" target="_blank" rel="noopener">ouvrir ↗</a>':'')+'</div><div class="sub">'+hLabel(fromMin(clock))+' · '+r.min+' min'+(r.filler?" · proposition":"")+(r.partial?" · suite plus tard":"")+(r.late?' · <span style="color:var(--red)">en retard</span>':'')+(r.star?" · ★ classique":"")+'</div>'+(r.quiz&&!dn1?'<button class="btn tint sm" data-a="quiz" style="margin-top:6px">Lancer le quiz</button>':'')+(r.ref&&r.ref.k==="hgg"&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-ref="hgg:'+esc(r.ref.id)+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+(r.task&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-task="'+r.task+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+'</div>'+
-        (dn1?'<span></span>':'<button class="timer'+(S.timers[key]?" run":"")+'" data-a="timer" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'">'+(S.timers[key]?"0:00":"▶ "+r.min+"′")+'</button>')+'</div>';
+      var rkey=roadKey(r), fixedIt=!!e.items&&r.bi!=null, canRep=!dn1&&(rkey||r.filler||fixedIt);
+      h+='<div class="road-it'+(dn1?" done":"")+(S.slotRep&&S.slotRep.ix===ix&&S.slotRep.d===dISO&&S.slotRep.id===e.id?" rep":"")+'"><button class="check'+(dn1?" on":"")+'" data-a="road" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'" data-ref="'+(r.ref&&r.ref.k!=="task"?esc(r.ref.k+":"+r.ref.id):"")+'" aria-label="Cocher">'+(dn1?I.check:"")+'</button><div><div class="lab">'+esc(r.lab)+(r.url?' <a class="link-btn" href="'+esc(r.url)+'" target="_blank" rel="noopener">ouvrir ↗</a>':'')+'</div><div class="sub">'+hLabel(fromMin(clock))+' · '+r.min+' min'+(r.filler?" · proposition":"")+(r.partial?" · suite plus tard":"")+(r.late?' · <span style="color:var(--red)">en retard</span>':'')+(r.star?" · ★ classique":"")+'</div>'+(r.quiz&&!dn1?'<button class="btn tint sm" data-a="quiz" style="margin-top:6px">Lancer le quiz</button>':'')+(r.ref&&r.ref.k==="hgg"&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-ref="hgg:'+esc(r.ref.id)+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+(r.task&&!dn1?'<div class="partial" style="margin-top:6px"><span class="sub">Pas fini ?</span>'+[25,50,75].map(function(v){ return '<button class="chip" data-a="partial" data-task="'+r.task+'" data-v="'+v+'">'+v+' %</button>'; }).join("")+'</div>':'')+'</div>'+
+        (dn1?'<span></span>':'<div class="road-act"><button class="timer'+(S.timers[key]?" run":"")+'" data-a="timer" data-k="'+esc(key)+'" data-task="'+(r.task||"")+'">'+(S.timers[key]?"0:00":"▶ "+r.min+"′")+'</button>'+(canRep?'<span class="road-mini"><button class="link-btn" data-a="roadrep" data-d="'+dISO+'" data-id="'+esc(e.id)+'" data-ix="'+ix+'" title="Remplacer par autre chose">Remplacer</button>'+(rkey||fixedIt?'<button class="link-btn" data-a="roadban" data-d="'+dISO+'" data-id="'+esc(e.id)+'" data-key="'+esc(rkey||"")+'" data-bi="'+(fixedIt&&!r.pinned?r.bi:"")+'" title="Retirer de ce créneau">Retirer</button>':'')+'</span>':'')+'</div>')+'</div>';
       clock+=r.min;
     });
-    h+='</div><p class="small muted" style="margin:0">Le chrono démarre quand tu commences une tâche et s\'arrête quand tu la coches : le temps réel nourrit le diagnostic.</p>';
+    var R=S.slotRep&&S.slotRep.d===dISO&&S.slotRep.id===e.id?road[S.slotRep.ix]:null;
+    h+='</div><form class="quick slot-add" id="slot-form" data-d="'+dISO+'" data-id="'+esc(e.id)+'">'+(R?'<div class="small" style="width:100%;margin-bottom:6px">Remplacer « '+esc(R.lab)+' » par… <button type="button" class="link-btn" data-a="roadrep-x">annuler</button></div>':'')+'<input id="slot-in" autocomplete="off" placeholder="'+(R?"Ce que tu veux faire à la place…":"Ajouter : « ex 4 TD2 », « fiche Q3 chap 2 45 min »…")+'" aria-label="Ajouter dans ce créneau"><button class="go" type="submit" aria-label="Ajouter">'+I.send+'</button></form>';
+    h+='<p class="small muted" style="margin:0">Le chrono démarre quand tu commences une tâche et s\'arrête quand tu la coches : le temps réel nourrit le diagnostic.</p>';
   }
   h+='</div>';
   openSheet(h);
+}
+
+/* ---------- modifier l'intérieur d'un créneau ----------
+   Ce qu'on tape est reconnu : si c'est déjà une tâche, un exercice ou un chapitre d'HGG prévu ailleurs (plus tard),
+   il est avancé dans ce créneau et sa place d'origine est rendue au planificateur, qui la remplit avec autre chose.
+   Sinon une nouvelle tâche est créée (matière, type, durée détectés) et épinglée ici. */
+function roadKey(r){ if(!r||!r.ref) return null; return r.ref.k==="task"? "task|"+r.ref.id : r.ref.k+"|"+r.ref.id; }
+function tokNorm(x){ return norm(String(x||"")).replace(/[^a-z0-9 ]+/g," ").split(/\s+/).filter(function(w){ return w.length>=2 || /\d/.test(w); }).filter(function(w){ return ["le","la","les","de","du","des","un","une","et","en","a","au","aux","sur","pour","partie","min","h"].indexOf(w)<0; }); }
+function matchScore(q,lab){
+  var a=tokNorm(q), b=tokNorm(lab); if(!a.length||!b.length) return 0;
+  var hit=a.filter(function(w){ return b.some(function(x){ return x===w || (w.length>=4 && (x.indexOf(w)===0 || w.indexOf(x)===0) && x.length>=4); }); }).length;
+  var num=a.filter(function(w){ return /^\d+$/.test(w); }); if(num.length && !num.every(function(w){ return b.indexOf(w)>=0; })) return 0; /* « ex 4 » ≠ « Ex. 5 » */
+  return hit/a.length;
+}
+function slotFindExisting(q,slotId){
+  var P=Plan.get(), best=null;
+  (P.items||[]).forEach(function(it){
+    var sc=matchScore(q,it.lab); if(sc<0.75) return;
+    if(!best || sc>best.sc) best={it:it, sc:sc};
+  });
+  if(!best){ st().tasks.filter(function(t){ return !t.done; }).forEach(function(t){ var sc=matchScore(q,t.title); if(sc>=0.75 && (!best||sc>best.sc)) best={it:{key:"task|"+t.id, ref:{k:"task",id:t.id}, lab:t.title, sub:t.sub}, sc:sc}; }); }
+  if(!best) return null;
+  best.where=(P.byRef[best.it.key]||[]).slice(); return best;
+}
+function slotBan(key,slotId,on){ var B=st().slotBans=st().slotBans||{}, l=B[key]=B[key]||[]; var i=l.indexOf(slotId); if(on&&i<0) l.push(slotId); if(!on&&i>=0) l.splice(i,1); if(!l.length) delete B[key]; }
+function slotPin(key,slotId,dISO){
+  if(key.indexOf("task|")===0){ var t=st().tasks.find(function(x){ return "task|"+x.id===key; }); if(t){ t.slot=slotId; if(t.time){ t.time=null; } } }
+  else { st().slotPins=st().slotPins||{}; st().slotPins[key]=slotId; }
+  slotBan(key,slotId,false);
+}
+function slotUnpin(key,slotId){
+  if(key.indexOf("task|")===0){ var t=st().tasks.find(function(x){ return "task|"+x.id===key; }); if(t && t.slot===slotId) delete t.slot; }
+  else if(st().slotPins && st().slotPins[key]===slotId) delete st().slotPins[key];
+}
+function whereTxt(list){ var o=(list||[]).map(function(w){ return fmtDay(w.d)+" "+hLabel(w.s); }); return o.slice(0,2).join(", "); }
+function slotDropFixed(dISO,e,bi){ var sid=dISO+"|"+e.id, O=st().slotItems=st().slotItems||{}, base=(O[sid]||e.items).slice(); base.splice(bi,1); O[sid]=base; }
+function slotAdd(dISO,evId,text){
+  var e=dayEvents(dISO).find(function(x){ return x.id===evId; }); if(!e) return;
+  var slotId=dISO+"|"+evId, rep=S.slotRep&&S.slotRep.d===dISO&&S.slotRep.id===evId? roadFor(e,dISO)[S.slotRep.ix] : null;
+  var found=slotFindExisting(text,slotId), msg;
+  if(found){
+    var before=(found.where||[]).filter(function(w){ return !(w.d===dISO && w.s===e.s); });
+    slotPin(found.it.key,slotId,dISO);
+    msg="« "+found.it.lab+" » avancé ici"+(before.length?" ; sa place du "+whereTxt(before)+" sera remplie par autre chose":"")+".";
+  } else {
+    var p=parseTask(text), t=taskFrom(p), subs=e.subs||[e.sub];
+    if(!p.sub || p.sub==="perso") t.sub=subs.indexOf(p.sub)>=0?p.sub:e.sub;
+    t.dur=p.dur||Math.min(45,Math.max(15,toMin(e.e)-toMin(e.s)-10)); t.day=null; t.time=null; t.slot=slotId;
+    st().tasks.push(t);
+    msg="Ajouté ici : « "+t.title+" » ("+t.dur+" min, "+subj(t.sub).name+").";
+  }
+  if(rep && e.items && rep.bi!=null && !rep.pinned){ slotDropFixed(dISO,e,rep.bi); msg+=" « "+rep.lab+" » retiré."; rep=null; }
+  if(rep){ var rk=roadKey(rep); if(rk && (!found || found.it.key!==rk)){ slotUnpin(rk,slotId); slotBan(rk,slotId,true); msg+=" « "+rep.lab.replace(/ \(une partie\)$/,"")+" » est replacé plus tard."; } }
+  S.slotRep=null; Plan.unfreeze(slotId); save(); Plan.invalidate(); render(); openSlot(dISO,evId); var sh=layer.querySelector(".sheet"); if(sh) sh.style.animation="none"; toast(msg);
+}
+function slotRemove(dISO,evId,key,bi){
+  var slotId=dISO+"|"+evId;
+  if(bi!=null && bi!==""){ var e=dayEvents(dISO).find(function(x){ return x.id===evId; }); if(e&&e.items) slotDropFixed(dISO,e,+bi); }
+  if(key){ slotUnpin(key,slotId); slotBan(key,slotId,true); } Plan.unfreeze(slotId); save(); Plan.invalidate(); render(); openSlot(dISO,evId);
+  var sh=layer.querySelector(".sheet"); if(sh) sh.style.animation="none";
+  var w=Plan.whenOf(key); toast("Retiré de ce créneau"+(w&&w.length?" : replacé "+whereTxt(w,slotId)+".":"."));
 }
 
 /* ---------- Matières ---------- */
@@ -1649,7 +1713,10 @@ document.addEventListener("click",function(ev){
   if(a==="agstep"){ S.agDate=iso(addDays(parseISO(S.agDate),+b.getAttribute("data-n"))); render(); return; }
   if(a==="agtoday"){ S.agDate=iso(today()); render(); return; }
   if(a==="agday"){ S.agDate=b.getAttribute("data-d"); render(); return; }
-  if(a==="slot"){ openSlot(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
+  if(a==="slot"){ S.slotRep=null; openSlot(b.getAttribute("data-d"),b.getAttribute("data-id")); return; }
+  if(a==="roadrep"){ S.slotRep={d:b.getAttribute("data-d"),id:b.getAttribute("data-id"),ix:+b.getAttribute("data-ix")}; openSlot(S.slotRep.d,S.slotRep.id); var sh1=layer.querySelector(".sheet"); if(sh1) sh1.style.animation="none"; var si=document.getElementById("slot-in"); if(si) si.focus(); return; }
+  if(a==="roadrep-x"){ var sr=S.slotRep; S.slotRep=null; if(sr){ openSlot(sr.d,sr.id); var sh2=layer.querySelector(".sheet"); if(sh2) sh2.style.animation="none"; } return; }
+  if(a==="roadban"){ slotRemove(b.getAttribute("data-d"),b.getAttribute("data-id"),b.getAttribute("data-key"),b.getAttribute("data-bi")); return; }
   if(a==="road"||a==="timer"||a==="partial"){
     var cur=layer.querySelector(".sheet"); var reopen=cur?cur.innerHTML:"";
     var tid=b.getAttribute("data-task"), k=b.getAttribute("data-k"), rf=b.getAttribute("data-ref");
@@ -1744,6 +1811,7 @@ document.addEventListener("change",function(ev){ var r=ev.target.closest("[data-
   else if(ev.target.hasAttribute("data-qsec")){ var qk=ev.target.getAttribute("data-qsec"); if(ev.target.checked) delete st().quizOff[qk]; else st().quizOff[qk]=true; save(); }
 });
 document.addEventListener("keydown",function(ev){ if(ev.key==="Escape" && layer.innerHTML){ closeSheet(); render(); } });
+document.addEventListener("submit",function(ev){ var f=ev.target; if(!f||f.id!=="slot-form") return; ev.preventDefault(); var v=(document.getElementById("slot-in")||{}).value||""; if(!v.trim()) return; slotAdd(f.getAttribute("data-d"),f.getAttribute("data-id"),v.trim()); });
 window.addEventListener("scroll",function(){ var tb=document.getElementById("topbar"); if(tb) tb.classList.toggle("scrolled",window.scrollY>40); },{passive:true});
 
 /* mémorise le créneau ouvert pour pouvoir le rafraîchir */
