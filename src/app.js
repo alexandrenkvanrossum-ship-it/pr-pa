@@ -522,7 +522,8 @@ function formSheet(o){
     var idf='ef-'+f.k, v=f.value==null?"":f.value;
     if(f.type==="hidden") return;
     h+='<div>'+(f.label?'<label class="lbl" for="'+idf+'">'+esc(f.label)+'</label>':'');
-    if(f.type==="textarea") h+='<textarea class="field" id="'+idf+'" rows="'+(f.rows||5)+'" style="min-height:'+((f.rows||5)*22)+'px">'+esc(v)+'</textarea>';
+    if(f.type==="rich") h+=richEditor(idf,v,f.placeholder);
+    else if(f.type==="textarea") h+='<textarea class="field" id="'+idf+'" rows="'+(f.rows||5)+'" style="min-height:'+((f.rows||5)*22)+'px">'+esc(v)+'</textarea>';
     else if(f.type==="select") h+='<select class="field" id="'+idf+'">'+f.options.map(function(x){ return '<option value="'+esc(x[0])+'"'+(String(x[0])===String(v)?" selected":"")+'>'+esc(x[1])+'</option>'; }).join("")+'</select>';
     else if(f.type==="radio") h+='<div class="seg" style="display:flex;width:100%">'+f.options.map(function(x){ return '<label style="flex:1;text-align:center;cursor:pointer" class="segl"><input type="radio" name="'+idf+'" value="'+esc(x[0])+'"'+(String(x[0])===String(v)?" checked":"")+' style="position:absolute;opacity:0">'+esc(x[1])+'</label>'; }).join("")+'</div>';
     else h+='<input class="field'+(f.type==="number"?" tab":"")+'" id="'+idf+'" type="'+(f.type==="number"?"text":(f.type||"text"))+'"'+(f.type==="number"?' inputmode="decimal"':'')+' value="'+esc(v)+'"'+(f.placeholder?' placeholder="'+esc(f.placeholder)+'"':'')+'>';
@@ -532,7 +533,7 @@ function formSheet(o){
   h+='<div class="row" style="gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:4px"><button class="btn primary" type="submit">Enregistrer</button><div class="row" style="gap:8px">'+(o.reset?'<button class="btn" type="button" id="edit-reset">'+esc(o.resetLabel||"Rétablir l\'original")+'</button>':'')+(o.del?'<button class="btn danger" type="button" id="edit-del">'+esc(o.delLabel||"Supprimer")+'</button>':'')+'</div></div></form>';
   openSheet(h); S.formBack=o.after||null;
   var f=document.getElementById("edit-form");
-  function vals(){ var v={}; o.fields.forEach(function(fl){ if(fl.type==="hidden"){ v[fl.k]=fl.value; return; } if(fl.type==="radio"){ var c=f.querySelector('input[name="ef-'+fl.k+'"]:checked'); v[fl.k]=c?c.value:null; } else v[fl.k]=f.querySelector("#ef-"+fl.k).value; }); return v; }
+  function vals(){ var v={}; o.fields.forEach(function(fl){ if(fl.type==="hidden"){ v[fl.k]=fl.value; return; } if(fl.type==="radio"){ var c=f.querySelector('input[name="ef-'+fl.k+'"]:checked'); v[fl.k]=c?c.value:null; } else if(fl.type==="rich") v[fl.k]=richVal("ef-"+fl.k).h; else v[fl.k]=f.querySelector("#ef-"+fl.k).value; }); return v; }
   function done(msg){ save(); if(typeof Plan!=="undefined") Plan.invalidate(); if(o.after) o.after(); else { closeSheet(); render(); } toast(msg); }
   f.onsubmit=function(ev){ ev.preventDefault(); var r=o.save(vals()); if(r===false) return; if(typeof r==="string"){ toast(r); return; } done(o.toast||"Modifié."); };
   f.querySelectorAll(".segl input").forEach(function(r){ r.onchange=function(){ f.querySelectorAll(".segl").forEach(function(l){ l.classList.toggle("on",l.querySelector("input").checked); }); }; if(r.checked) r.parentNode.classList.add("on"); });
@@ -570,8 +571,8 @@ function editNote(id,ep){
 }
 function editRessenti(ep,i){
   var r=(st().ressentis[ep]||[])[i]; if(!r) return;
-  formSheet({title:"Modifier le ressenti", eyebrow:(epOfId(ep)||{}).name, fields:[{k:"t",label:"Ressenti",type:"textarea",rows:7,value:r.t},{k:"date",label:"Date",type:"date",value:r.date}],
-    save:function(v){ if(!v.t.trim()) return "Le texte est vide."; r.t=v.t.trim(); r.date=v.date||r.date; },
+  formSheet({title:"Modifier le ressenti", eyebrow:(epOfId(ep)||{}).name, fields:[{k:"t",label:"Ressenti",type:"rich",value:richOf(r)},{k:"date",label:"Date",type:"date",value:r.date}],
+    save:function(v){ var t=richText(v.t); if(!t) return "Le texte est vide."; r.h=v.t; r.t=t; r.date=v.date||r.date; },
     del:function(){ st().ressentis[ep].splice(i,1); }, after:function(){ methodeSheet(ep); }, toast:"Ressenti modifié." });
 }
 function linesOf(a){ return (a||[]).join("\n"); }
@@ -1527,8 +1528,8 @@ function methodeSheet(id,evKey,evLabel){
   if(evKey) h+=resForm(evLabel);
   if(rs.length){
     var rl=rs.map(function(r,i){ return [r,i]; }).reverse(), last=rl[0];
-    h+='<section class="card flat mres"><div class="card-h" style="margin:0"><div class="eyebrow">Ton dernier ressenti · à corriger cette fois</div><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+last[1]+'">Modifier</button></div><div class="small muted" style="margin:4px 0 2px">'+fmtDay(last[0].date)+(last[0].l?' · '+esc(last[0].l):'')+'</div><div class="mres-t">'+esc(last[0].t)+'</div>';
-    if(rl.length>1) h+='<details class="mdet2"><summary>'+plural(rl.length-1,"ressenti")+' plus ancien'+(rl.length>2?'s':'')+'</summary>'+rl.slice(1).map(function(x){ var r=x[0]; return '<div class="mres-old"><div class="row" style="justify-content:space-between"><span class="small muted">'+fmtDay(r.date)+(r.l?' · '+esc(r.l):'')+'</span><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+x[1]+'">Modifier</button></div><div class="small" style="white-space:pre-wrap">'+esc(r.t)+'</div></div>'; }).join("")+'</details>';
+    h+='<section class="card flat mres"><div class="card-h" style="margin:0"><div class="eyebrow">Ton dernier ressenti · à corriger cette fois</div><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+last[1]+'">Modifier</button></div><div class="small muted" style="margin:4px 0 2px">'+fmtDay(last[0].date)+(last[0].l?' · '+esc(last[0].l):'')+'</div><div class="mres-t">'+richOf(last[0])+'</div>';
+    if(rl.length>1) h+='<details class="mdet2"><summary>'+plural(rl.length-1,"ressenti")+' plus ancien'+(rl.length>2?'s':'')+'</summary>'+rl.slice(1).map(function(x){ var r=x[0]; return '<div class="mres-old"><div class="row" style="justify-content:space-between"><span class="small muted">'+fmtDay(r.date)+(r.l?' · '+esc(r.l):'')+'</span><button class="link-btn" data-a="resedit" data-id="'+id+'" data-i="'+x[1]+'">Modifier</button></div><div class="small mres-t">'+richOf(r)+'</div></div>'; }).join("")+'</details>';
     h+='</section>';
   }
   if(!evKey) h+='<details class="card flat mdet2"'+(rs.length?'':' open')+'><summary>Noter un ressenti</summary>'+resForm(null,true)+'</details>';
@@ -1549,10 +1550,10 @@ function methodeSheet(id,evKey,evLabel){
   h+='<div class="row" style="gap:8px;margin-top:4px"><button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="newsec">'+I.plus+' Ajouter une partie</button>'+(m.temps||mo.temps!=null?'':'<button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="temps">'+I.plus+' Gestion du temps</button>')+(m.pieges.length||mo.pieges?'':'<button class="btn sm" data-a="methedit" data-id="'+id+'" data-f="pieges">'+I.plus+' Pièges</button>')+'</div>';
   h+='</div>';
   openSheet(h);
-  document.getElementById("res-form").addEventListener("submit",function(ev){ ev.preventDefault(); var v=document.getElementById("res-txt").value.trim(); if(!v) return; var r={date:iso(today()),t:v}; if(evKey){ r.ev=evKey; r.l=evLabel; } (st().ressentis[id]=st().ressentis[id]||[]).push(r); save(); methodeSheet(id); toast("Ressenti enregistré."); if(S.view==="home"||!S.view) render(); });
+  document.getElementById("res-form").addEventListener("submit",function(ev){ ev.preventDefault(); var rv=richVal("res-txt"); if(!rv.t) return; var r={date:iso(today()),t:rv.t,h:rv.h}; if(evKey){ r.ev=evKey; r.l=evLabel; } (st().ressentis[id]=st().ressentis[id]||[]).push(r); save(); methodeSheet(id); toast("Ressenti enregistré."); if(S.view==="home"||!S.view) render(); });
 }
 function resForm(label,bare){
-  var f='<form id="res-form" style="margin-top:8px" class="stack"><textarea class="field" id="res-txt" placeholder="Ce qui a marché, ce qui a bloqué, la gestion du temps, ce que je change la prochaine fois…"></textarea><button class="btn tint sm" type="submit" style="align-self:flex-start">Enregistrer</button></form>';
+  var f='<form id="res-form" style="margin-top:8px" class="stack">'+richEditor("res-txt","","Ce qui a marché, ce qui a bloqué, la gestion du temps, ce que je change la prochaine fois…")+'<button class="btn tint sm" type="submit" style="align-self:flex-start">Enregistrer</button></form>';
   return bare?f:'<section class="card flat"><div class="eyebrow">'+(label?"Mon ressenti · "+esc(label):"Noter un ressenti")+'</div>'+f+'</section>';
 }
 

@@ -721,3 +721,15 @@ details.mdet2:not(.card){margin-top:10px}
 .road-it.rep{box-shadow:inset 0 0 0 1.5px var(--blue)}
 .slot-add{margin:4px 0 10px;flex-wrap:wrap}
 .toast{border-radius:16px;max-width:min(92vw,520px);line-height:1.4}
+/* éditeur de texte enrichi (ressentis) */
+.rte-wrap{display:flex;flex-direction:column;gap:6px}
+.rte-bar{display:flex;gap:4px;flex-wrap:wrap}
+.rte-b{border:0;background:var(--surface-2,#f2f2f5);color:var(--ink);border-radius:9px;padding:5px 10px;font-size:13px;cursor:pointer;min-width:34px;line-height:1.2}
+.rte-b:hover{background:var(--line)}
+.rte-b.on{background:var(--blue);color:#fff}
+.rte-hl{background:#FFE58F;color:#1d1d1f;border-radius:3px;padding:0 3px}
+.rte{min-height:110px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45;outline:none;cursor:text}
+.rte:empty::before{content:attr(data-ph);color:var(--ink-3)}
+.rte ul,.mres-t ul{margin:4px 0;padding-left:20px}
+.mres-t mark{background:#FFE58F;color:inherit;border-radius:3px;padding:0 2px}
+.mres-t b{font-weight:750}
