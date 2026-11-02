@@ -958,13 +958,29 @@ function quizPool(){
   Object.keys(s.mathsCours||{}).forEach(function(fid){ if(!s.files[fid]) return; (s.mathsCours[fid].items||[]).forEach(function(it,i){ if(s.quizOff[fid+"|"+it.section] || it.off) return; out.push({k:fid+"#"+i, it:it, fid:fid, chap:s.mathsCours[fid].chap}); }); });
   return out;
 }
+/* Composition d'un quiz : on AVANCE dans le chapitre en cours (énoncés nouveaux, dans l'ordre du cours, environ 60 %),
+   puis les révisions dues (chapitre en cours d'abord, les plus fragiles d'abord), puis, s'il reste de la place,
+   des énoncés jamais vus des autres chapitres (en alternant) et enfin les moins récemment revus. Jamais deux fois le même énoncé le même jour. */
 function quizPick(n){
-  var s=st(), t=iso(today()), due=[], fresh=[], cur=mathsChap();
-  quizPool().forEach(function(x){ var q=s.quiz[x.k]; if(!q) fresh.push(x); else if(q.n<=t) due.push(x); });
-  due.sort(function(a,b){ return s.quiz[a.k].l-s.quiz[b.k].l; });
-  fresh.sort(function(a,b){ return (b.chap===cur)-(a.chap===cur); });
-  var out=due.slice(0,n); return out.concat(fresh.slice(0,Math.max(0,Math.min(5,n-out.length)))).map(function(x){ return x.k; });
+  var s=st(), t=iso(today()), cur=norm(mathsChap()), pool=quizPool(), got=[], has={};
+  function isCur(x){ return norm(x.chap||"")===cur; }
+  function add(x){ if(got.length<n && !has[x.k]){ has[x.k]=1; got.push(x.k); } }
+  var freshCur=pool.filter(function(x){ return !s.quiz[x.k] && isCur(x); });
+  var freshOther=pool.filter(function(x){ return !s.quiz[x.k] && !isCur(x); });
+  var due=pool.filter(function(x){ var q=s.quiz[x.k]; return q && q.n<=t && q.d!==t; })
+    .sort(function(a,b){ var qa=s.quiz[a.k], qb=s.quiz[b.k]; return (isCur(b)-isCur(a)) || (qa.l-qb.l) || String(qa.n).localeCompare(String(qb.n)); });
+  freshCur.slice(0,Math.max(Math.ceil(n*0.6), n-due.length)).forEach(add);
+  due.forEach(add);
+  freshCur.forEach(add);
+  /* autres chapitres : un énoncé nouveau de chacun à tour de rôle */
+  var byCh={}; freshOther.forEach(function(x){ (byCh[x.chap]=byCh[x.chap]||[]).push(x); }); var chs=Object.keys(byCh), i=0;
+  while(got.length<n && chs.some(function(c){ return byCh[c].length; })){ var c=chs[i++%chs.length]; if(byCh[c].length) add(byCh[c].shift()); }
+  /* pour varier : les énoncés revus il y a le plus longtemps (jamais ceux du jour) */
+  pool.filter(function(x){ var q=s.quiz[x.k]; return q && q.d!==t; }).sort(function(a,b){ return String(s.quiz[a.k].d).localeCompare(String(s.quiz[b.k].d)); }).forEach(add);
+  /* ordre de passage : on alterne nouveaux et révisions pour ne pas enchaîner les mêmes */
+  return got;
 }
+function quizCover(){ var s=st(), cur=norm(mathsChap()), all=quizPool().filter(function(x){ return norm(x.chap||"")===cur; }); return {n:all.length, seen:all.filter(function(x){ return s.quiz[x.k]; }).length}; }
 /* ---------- mise en page d'un énoncé, façon cours : hypothèses, énumérations (i), (ii)…, formules centrées ---------- */
 function thmKind(t){ t=norm(t||""); return /defin/.test(t)?"def":/theor|corol|lemm/.test(t)?"thm":/method/.test(t)?"meth":/remar/.test(t)?"rem":"prop"; }
 function fmtEnonce(src){
@@ -1026,6 +1042,8 @@ function quizCard(){
   if(!pool.length) return h+'<div class="empty"><b>Pas encore de cours</b>Dépose ton cours (type « Cours ») : les définitions, propriétés et théorèmes sont relevés tels qu\'ils sont écrits.</div>'+quizSections()+'</section>';
   var seen=pool.filter(function(x){ return s.quiz[x.k]; }), due=seen.filter(function(x){ return s.quiz[x.k].n<=t; }).length, ok=seen.filter(function(x){ return s.quiz[x.k].l>=3; }).length;
   h+='<div class="row" style="gap:16px;flex-wrap:wrap;margin-bottom:10px"><div><div style="font-size:24px;font-weight:800">'+pool.length+'</div><div class="small muted">énoncés</div></div><div><div style="font-size:24px;font-weight:800">'+due+'</div><div class="small muted">à revoir aujourd\'hui</div></div><div><div style="font-size:24px;font-weight:800">'+ok+'</div><div class="small muted">bien sus</div></div></div>';
+  var cv=quizCover(); if(cv.n) h+='<p class="small" style="margin:0 0 10px"><b>'+esc(mathsChap())+'</b> : '+cv.seen+' / '+cv.n+' énoncés déjà travaillés'+(cv.seen<cv.n?' · environ 6 nouveaux par quiz':' · tout est couvert, place aux révisions')+'</p><div class="bar" style="margin:-4px 0 12px"><i style="width:'+Math.round(cv.seen/cv.n*100)+'%"></i></div>';
+  else if(mathsChap()) h+='<p class="small muted" style="margin:0 0 10px">Pas encore de cours déposé pour « '+esc(mathsChap())+' » : le quiz pioche dans les chapitres précédents.</p>';
   h+='<button class="btn tint" data-a="quiz">Lancer le quiz</button>'+quizSections()+'</section>';
   return h;
 }
@@ -1038,7 +1056,7 @@ function quizSections(){
 var QINT=[1,2,4,8,16,32];
 function quizSheet(){
   if(Sync.user()) Files.titles();
-  var Q=S.quiz; if(!Q){ var ks=quizPick(8); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
+  var Q=S.quiz; if(!Q){ var ks=quizPick(10); if(!ks.length){ toast("Rien à réviser aujourd'hui : tout est à jour."); return; } Q=S.quiz={list:ks,i:0,show:false,res:{},again:{}}; }
   var s=st(), h='<div class="band s-maths"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">Quiz de cours · '+Math.min(Q.i+1,Q.list.length)+'/'+Q.list.length+'</div><h2>'+(Q.i>=Q.list.length?"Terminé":"Énonce-le de tête")+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(Q.i>=Q.list.length){
     var r=Q.res, c=[0,0,0,0]; Object.keys(r).forEach(function(k){ c[r[k]]++; });
@@ -1061,7 +1079,7 @@ function quizSheet(){
 function quizRate(v){
   var Q=S.quiz, s=st(), k=Q.list[Q.i], q=s.quiz[k]||{l:-1,h:[]}, t=today();
   var l=v===3?Math.min(5,q.l+2):v===2?Math.min(5,q.l+1):v===1?Math.max(0,q.l):0; if(l<0) l=0;
-  q.l=l; q.n=iso(addDays(t, v>=2?QINT[l]:1)); q.d=iso(t); q.h=(q.h||[]).concat([v]).slice(-8); s.quiz[k]=q;
+  q.l=l; q.n=iso(addDays(t, v>=2?QINT[l]:v===1?2:1)); q.d=iso(t); q.h=(q.h||[]).concat([v]).slice(-8); s.quiz[k]=q;
   Q.res[k]=v; if(v===0 && !Q.again[k]){ Q.again[k]=1; Q.list.push(k); }
   Q.i++; Q.show=false; save(); quizSheet();
 }
