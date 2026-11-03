@@ -1119,7 +1119,33 @@
     "1dGBM6L4R1d3n2ri1mFYlYM2gpDFuwolc",
     "1VM-Ib0wScZiok0J2hxRGz-N-Z6-Osmsr"
    ],
-   "manque": ""
+   "manque": "",
+   "officiel": {
+    "annee": "2027",
+    "source": {
+     "titre": "METHODO (ton Drive, dossier Anglais)",
+     "lien": "https://docs.google.com/document/d/1YHBgWrQR2dbehiJOk594P6-fH9t7zys8MOpVZIOwCFA/edit"
+    },
+    "ecoles": [
+     {
+      "ecole": "ESSEC",
+      "points": [
+       "**ALWAYS DEFEND A CLEAR-CUT POV !** Toujours défendre un point de vue tranché.",
+       "**Étudier le dossier** : les **docs 3, 4 et 5 sont OBLIGATOIRES** (« MANDATORY ») ; on peut ensuite **développer un POV**.",
+       "Essay : **utiliser le contenu** des documents, mais **NEVER QUOTING !!!** Même pas un peu, **jamais de calque**.",
+       "**Préparer une vraie conclusion** : ne pas se répéter, jamais « In a nutshell » et consorts.",
+       "**Jamais de buzzwords ni de catchphrases gratuites.** En faire trop (overdoing) est mal vu : **empty rhetoric et phrases apprises par cœur = USELESS**.",
+       "Sujet de l'année : **l'actualité d'août à février** (Andy Burnham, midterms, Jason Arday / Cambridge / éducation…), **SAUF Epstein et les très grosses affaires**. Donc : **lire les revues de presse**.",
+       "Références : **séries Netflix OK**, **musique OK, SAUF le rap**."
+      ]
+     },
+     {
+      "ecole": "ESCP",
+      "points": [],
+      "vide": "Rien pour l'écrit dans ton document pour l'instant."
+     }
+    ]
+   }
   },
   "e-all": {
    "essentiel": [
@@ -1718,7 +1744,32 @@
     "1dGBM6L4R1d3n2ri1mFYlYM2gpDFuwolc",
     "1VM-Ib0wScZiok0J2hxRGz-N-Z6-Osmsr"
    ],
-   "manque": ""
+   "manque": "",
+   "officiel": {
+    "annee": "2027",
+    "source": {
+     "titre": "METHODO (ton Drive, dossier Anglais)",
+     "lien": "https://docs.google.com/document/d/1YHBgWrQR2dbehiJOk594P6-fH9t7zys8MOpVZIOwCFA/edit"
+    },
+    "ecoles": [
+     {
+      "ecole": "ESCP",
+      "points": [
+       "**Seule attente concrète de l'épreuve : DONNER SON AVIS, son POV CRITIQUE sur le contenu de l'article** (en fin de commentaire ou en conclusion).",
+       "Articles **d'août à mars**, sur le **Canada, la Nouvelle-Zélande, l'Inde et l'Australie** !",
+       "**Mêmes articles en LVA et en LVB**, mais attentes différentes.",
+       "L'entretien reste **sur le contenu et le sujet du texte**.",
+       "**Attention au formalisme excessif** : « I deem… » (plutôt que « I think »), langue trop châtiée…",
+       "Temps de passage : **non précisé**."
+      ]
+     },
+     {
+      "ecole": "ESSEC",
+      "points": [],
+      "vide": "Rien pour l'oral dans ton document pour l'instant."
+     }
+    ]
+   }
   },
   "o-all": {
    "essentiel": [

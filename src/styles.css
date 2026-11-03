@@ -733,3 +733,12 @@ details.mdet2:not(.card){margin-top:10px}
 .rte ul,.mres-t ul{margin:4px 0;padding-left:20px}
 .mres-t mark{background:#FFE58F;color:inherit;border-radius:3px;padding:0 2px}
 .mres-t b{font-weight:750}
+/* infos officielles des concours (méthodo) */
+.off{border-radius:var(--r);padding:12px 14px;margin:8px 0 12px;background:linear-gradient(180deg,rgba(255,59,48,.07),rgba(255,59,48,.03));box-shadow:inset 0 0 0 1px rgba(255,59,48,.28)}
+.off-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.off-t{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--red,#d70015)}
+.off-ec+.off-ec{margin-top:10px;padding-top:10px;border-top:.5px solid rgba(255,59,48,.25)}
+.off-n{font-weight:800;font-size:15px;margin-bottom:2px}
+.off ul{margin:2px 0 0;padding-left:18px;font-size:14px;line-height:1.45}
+.off li{margin:3px 0}
+.off-c{margin:6px 0 10px}.off-c ul{font-size:13px}

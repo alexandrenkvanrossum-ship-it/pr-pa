@@ -1539,10 +1539,20 @@ function homeMethodoCards(){
   soon.forEach(function(x){ if(seen[x.ep]) return; seen[x.ep]=1; var m=methOf(x.ep), dd=diffDays(x.date,t);
     var ess=(m.essentiel||[]).slice(0,3);
     h+='<section class="card '+subj(x.sub).cls+'" style="margin-top:14px"><div class="card-h"><h2>À relire avant '+(/^DST/.test(x.label)?'ton ':'ta ')+esc(lcFirst(x.label))+'</h2><span class="tag '+subj(x.sub).cls+'">'+(dd===0?"aujourd'hui "+hLabel(x.time):dd===1?"demain "+hLabel(x.time):"J-"+dd)+'</span></div>';
+    h+=offHTML(x.ep,true);
     h+=ess.length?'<ul class="small" style="margin:4px 0 10px;padding-left:18px">'+ess.map(function(e){ return '<li style="margin:3px 0">'+mtx(e)+'</li>'; }).join("")+'</ul>':'<p class="small muted">'+esc(m.manque||"Pas encore de fiche de méthode pour cette épreuve.")+'</p>';
     var last=(st().ressentis[x.ep]||[]).slice(-1)[0]; if(last) h+='<p class="small muted" style="margin:0 0 10px"><b>Ton dernier ressenti</b> ('+fmtDay(last.date)+') : '+esc(last.t.length>160?last.t.slice(0,160)+"…":last.t)+'</p>';
     h+='<button class="btn tint sm" data-a="methode" data-id="'+x.ep+'">Relire toute la synthèse</button></section>'; });
   return h;
+}
+/* Infos officielles des concours (par école), placées en tête de la méthodo et dans « À relire avant… » */
+function offHTML(id,compact){
+  var m=METHODO.epreuves[id]||{}, o=m.officiel; if(!o||!o.ecoles) return "";
+  var ec=o.ecoles.filter(function(e){ return e.points.length || !compact; });
+  if(!ec.length) return "";
+  var h='<div class="off'+(compact?" off-c":"")+'"><div class="off-h"><span class="off-t">Infos officielles · concours '+esc(o.annee||"")+'</span>'+(o.source&&!compact?'<a class="link-btn" href="'+esc(o.source.lien)+'" target="_blank" rel="noopener">ton doc ↗</a>':'')+'</div>';
+  ec.forEach(function(e){ h+='<div class="off-ec"><div class="off-n">'+esc(e.ecole)+'</div>'+(e.points.length?'<ul>'+e.points.map(function(x){ return '<li>'+mtx(x)+'</li>'; }).join("")+'</ul>':'<p class="small muted" style="margin:2px 0 0">'+esc(e.vide||"Rien pour l\'instant.")+'</p>')+'</div>'; });
+  return h+'</div>';
 }
 function mtx(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong class="hl">$1</strong>'); }
 function docLink(id){ var d=(METHODO.documents||[]).find(function(x){ return x.id===id; }); return d?'<a href="'+esc(d.lien)+'" target="_blank" rel="noopener">'+esc(d.titre)+'</a>'+(d.dossier?' <span class="muted">· '+esc(d.dossier)+'</span>':''):''; }
@@ -1553,7 +1563,9 @@ function methodeSheet(id,evKey,evLabel){
   var li=function(a){ return '<ul class="small meth" style="margin:6px 0 0;padding-left:18px">'+a.map(function(x){ return '<li style="margin:5px 0">'+mtx(x)+'</li>'; }).join("")+'</ul>'; };
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+(id.charAt(0)==="e"?"Écrit":"Oral")+' · coef. '+(e.coefTxt||e.coef)+'</div><h2>'+esc(e.name)+'</h2></div><button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   var nx=echeances(iso(today()),"9999").filter(function(x){ return x.ep===id; })[0];
+  var offB=offHTML(id,false);
   if(nx) h+='<p class="small" style="margin:0 0 4px"><span class="tag '+s.cls+'">Prochaine : '+esc(nx.label)+' · '+esc(relDay(nx.date).toLowerCase())+' '+hLabel(nx.time)+'</span></p>';
+  h+=offB;
   /* 1. le ressenti d'abord : ce qu'il faut corriger par rapport à la dernière fois */
   if(evKey) h+=resForm(evLabel);
   if(rs.length){
