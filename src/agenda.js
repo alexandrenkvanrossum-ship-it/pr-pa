@@ -106,6 +106,21 @@ function openTasks(subs){
     .sort(function(a,b){ return (b.prio||0)-(a.prio||0) || String(a.day||a.due||"9999").localeCompare(String(b.day||b.due||"9999")); });
 }
 
+/* Petits moments (moins de 20 min) : Anki de langue (moins de 10 min), Anki de langue ou de géopo (moins de 20 min) ;
+   juste avant une colle ou une épreuve (dans les 2 h) : Anki de cette matière, ou revoir vite le cours en maths. */
+function soonExam(dISO,ev){
+  var end=toMin(ev.e), c=dayEvents(dISO).filter(function(x){ return x.kind==="exam" && toMin(x.s)>=end && toMin(x.s)-end<=120; }).sort(function(a,b){ return toMin(a.s)-toMin(b.s); })[0];
+  return c||null;
+}
+function tinyItem(min,dISO,ev){
+  var x=soonExam(dISO,ev);
+  if(x){ var sb=x.sub, nm=x.t.replace(/^Colle – /,"");
+    if(sb==="maths") return {lab:"Avant "+nm+" : revoir rapidement le cours (définitions, théorèmes, méthodes)",min:min,sub:"maths"};
+    return {lab:"Avant "+nm+" : Anki "+({hgg:"d'HGG",csh:"de CSH",ang:"d'anglais",all:"d'allemand"}[sb]||"de la matière"),min:min,sub:sb||ev.sub}; }
+  var lang=parseISO(dISO).getDate()%2?"d'allemand":"d'anglais";
+  if(min<10) return {lab:"Anki "+lang+" (petit moment)",min:min,sub:lang==="d'anglais"?"ang":"all"};
+  return {lab:"Anki "+lang+" ou de géopo (petit moment)",min:min,sub:ev.sub};
+}
 function roadFor(ev,dISO){
   var items=[], cap=toMin(ev.e)-toMin(ev.s), used=0;
   function push(o){ items.push(o); used+=o.min; }
@@ -122,6 +137,7 @@ function roadFor(ev,dISO){
   if(ev.actu){ push({lab:"Lecture de l'actualité (HGG et langues)",min:20}); return items; }
   if(ev.kind!=="work") return items;
   var subs=ev.subs||[ev.sub];
+  if(cap<20 && !ev.preColle){ if(cap>=3) push(tinyItem(cap,dISO,ev)); return items; }
   if(ev.preColle){ var pg=(typeof Ann!=="undefined")?Ann.progAt(dISO):null; push({lab:"Avant la colle : revoir le cours et les démonstrations"+(pg?" ("+pg.t+")":""),min:Math.min(40,Math.max(15,Math.round(cap/2))),sub:"maths"}); }
   else if(ev.sub==="maths" && ev.crit) push({lab:"Quiz de cours (partie vue en classe)",min:15,sub:"maths",quiz:true});
   if(ev.rac) push({lab:"RAC d'anglais (objectif : 2h, puis 1h45)",min:110,sub:"ang"});
@@ -137,7 +153,10 @@ function roadFor(ev,dISO){
     if(p.ref&&p.ref.k==="task") o.task=p.ref.id;
     push(o); sinceP+=m;
   });
-  if(used<cap-10){
+  if(cap-used>=3 && cap-used<20 && (used>0)){
+    if(sinceP>pauseEvery-10 && used+pauseLen<cap-5){ push({lab:"Pause",min:pauseLen,pause:true}); }
+    push(Object.assign(tinyItem(cap-used,dISO,ev),{filler:true}));
+  } else if(used<cap-10){
     var fill={maths:"Exercices du chapitre en cours (ajoute ton TD dans la page Maths pour un plan précis)",hgg:ev.soir?"HGG : travail actif d'abord (plan, problématique), lecture de fiches à la fin":"HGG : fiches et exemples",csh:"Œuvre du jour (encart CSH)",ang:"Anki d'anglais et CIVI",all:"Anki d'allemand et CIVI"}[ev.sub]||"Travail libre";
     if(sinceP>pauseEvery-10 && used+pauseLen<cap){ push({lab:"Pause",min:pauseLen,pause:true}); }
     push({lab:fill,min:cap-used,sub:ev.sub,filler:true});

@@ -53,7 +53,7 @@ function seed(){
   s.seeded=true; save();
 }
 function taskFrom(p){
-  return {id:uid("t"),title:p.title,sub:p.sub||"perso",type:p.type,dur:p.dur,due:p.due,day:p.day,time:p.time,remind:p.remind,prio:p.prio,action:p.action,devoir:!!p.devoir,memo:!!p.memo,vac:!!p.vac,done:false,created:new Date().toISOString(),progress:0,spent:0};
+  return {id:uid("t"),title:p.title,sub:p.sub||"perso",type:p.type,dur:p.dur,due:p.due,hard:p.due?!!p.hard:undefined,day:p.day,time:p.time,remind:p.remind,prio:p.prio,action:p.action,devoir:!!p.devoir,memo:!!p.memo,vac:!!p.vac,done:false,created:new Date().toISOString(),progress:0,spent:0};
 }
 
 /* ---------- coquille ---------- */
@@ -90,7 +90,10 @@ function topbar(title){
 }
 function go(v,p){ S.view=v; S.param=p||null; render(); window.scrollTo(0,0); try{ history.replaceState(null,"","#"+v+(p?"-"+encodeURIComponent(p):"")); }catch(e){} }
 
+/* une fois par tâche : les échéances déjà saisies reçoivent leur nature (stricte ou souple) d'après leur intitulé */
+function migrateHard(){ var ch=false; st().tasks.forEach(function(t){ if(t.due && t.hard==null){ t.hard=dueHard(t.title+" "+(t.type||"")); ch=true; } }); if(ch){ save(); if(typeof Plan!=="undefined") Plan.invalidate(); } }
 function render(){
+  try{ migrateHard(); }catch(e){}
   if(typeof migrateLangNotes==="function") migrateLangNotes();
   var html="";
   switch(S.view){
@@ -240,11 +243,12 @@ function bindQuick(){
       cur=parseTask(v); if(f._sub) cur.sub=f._sub; if(f._g){ if(!cur.type&&f._g.type) cur.type=f._g.type; if(!cur.dur&&f._g.dur){ cur.dur=f._g.dur; cur.durEstimee=true; } }
       if(f._dur){ cur.dur=f._dur; cur.durEstimee=false; }
       if(f._vac!=null) cur.vac=f._vac;
+      if(f._hard!=null && cur.due) cur.hard=f._hard;
       box.innerHTML=parseChips(cur)+placeChip(cur);
       var sel=box.querySelector("select"); if(sel) sel.onchange=function(){ f._sub=sel.value; upd(); };
     }
     var gT=null;
-    box.addEventListener("click",function(ev){ var vb=ev.target.closest("[data-qvac]"); if(vb){ ev.preventDefault(); f._vac=!(cur&&cur.vac); upd(); inp.focus(); return; } var d=ev.target.closest("[data-qdur]"); if(!d) return; ev.preventDefault(); f._dur=+d.getAttribute("data-qdur"); upd(); inp.focus(); });
+    box.addEventListener("click",function(ev){ var hb=ev.target.closest("[data-qhard]"); if(hb){ ev.preventDefault(); f._hard=!(cur&&cur.hard); upd(); inp.focus(); return; } var vb=ev.target.closest("[data-qvac]"); if(vb){ ev.preventDefault(); f._vac=!(cur&&cur.vac); upd(); inp.focus(); return; } var d=ev.target.closest("[data-qdur]"); if(!d) return; ev.preventDefault(); f._dur=+d.getAttribute("data-qdur"); upd(); inp.focus(); });
     inp.addEventListener("input",function(){ f._sub=null; f._g=null; upd(); clearTimeout(gT);
       var v=inp.value.trim();
       if(cur && !cur.sub && v.length>6 && typeof Sync!=="undefined" && Sync.user()){
@@ -257,7 +261,7 @@ function bindQuick(){
     f.addEventListener("submit",function(e){
       e.preventDefault(); if(!inp.value.trim()) return; upd();
       var t=taskFrom(cur); st().tasks.push(t); save(); if(typeof Plan!=="undefined") Plan.invalidate();
-      inp.value=""; f._sub=null; f._dur=null; f._g=null; f._vac=null; box.innerHTML=""; btn.disabled=true;
+      inp.value=""; f._sub=null; f._dur=null; f._g=null; f._vac=null; f._hard=null; box.innerHTML=""; btn.disabled=true;
       toast(t.vac?"Ajoutée à ta liste des vacances"+(nextVac()?" ("+nextVac().name+")":"")+".":actionToast(t)+placeToast(t)); closeSheet(); render();
     });
   });
@@ -270,7 +274,7 @@ function parseChips(p){
   if(p.devoir && p.action!=="dm") h+='<span class="chip">'+(p.memo?"rappel de devoir":"devoir")+'</span>';
   if(p.sub && p.sub!=="perso" && !p.time && !p.memo && p.action!=="rappel") h+='<span class="chip" style="background:none;padding-left:0">'+(p.dur&&!p.durEstimee?"Durée :":p.dur?"Durée estimée "+durTxt(p.dur)+", à ajuster :":"Combien de temps ?")+'</span>'+[15,30,45,60,90,120].map(function(m){ return '<button type="button" class="chip'+(p.dur===m&&!p.durEstimee?" on":"")+'" data-qdur="'+m+'">'+durTxt(m)+'</button>'; }).join("");
   else if(p.dur) h+='<span class="chip">'+durTxt(p.dur)+'</span>';
-  if(p.due) h+='<span class="chip">avant le '+fmtDay(p.due)+'</span>';
+  if(p.due) h+='<span class="chip">pour le '+fmtDay(p.due)+'</span><button type="button" class="chip'+(p.hard?" on":"")+'" data-qhard="1" title="Toucher pour changer">'+(p.hard?"date limite stricte : rien après":"échéance souple : rattrapable après")+'</button>';
   if(p.day) h+='<span class="chip">'+fmtDay(p.day)+(p.time?' · '+hLabel(p.time):'')+'</span>';
   if(p.prio) h+='<span class="chip"><span class="prio">'+"!!!".slice(0,p.prio)+'</span>'+["","important","prioritaire","impératif"][p.prio]+'</span>';
   h+='<button type="button" class="chip'+(p.vac?" on":"")+'" data-qvac="1" title="Ranger dans la liste des vacances">Vacances</button>';
@@ -309,16 +313,17 @@ function actionToast(t){
 function taskRows(list){
   if(!list.length) return '<div class="empty"><b>Rien pour l\'instant</b>Ajoute une tâche avec la barre ci-dessus.</div>';
   return list.map(function(t){
-    var late=t.due && t.due<iso(today()) && !t.done;
+    var late=t.due && t.due<iso(today()) && !t.done, gone=late && t.hard;
     var meta=[];
-    if(t.due) meta.push('<span class="meta'+(late?" late":"")+'">'+(late?"En retard · ":"Pour ")+(late?fmtDay(t.due):relDay(t.due).toLowerCase())+'</span>');
+    if(gone) meta.push('<span class="meta late">Date limite passée ('+fmtDay(t.due)+') : c\'était fait ?</span>');
+    else if(t.due) meta.push('<span class="meta'+(late?" late":"")+'">'+(late?"En retard · ":"Pour ")+(late?fmtDay(t.due):relDay(t.due).toLowerCase())+'</span>');
     if(t.day) meta.push('<span class="meta">'+relDay(t.day)+(t.time?" · "+hLabel(t.time):"")+'</span>');
     if(t.dur) meta.push('<span class="meta">'+durTxt(t.dur)+'</span>');
     if(t.progress && !t.done) meta.push('<span class="meta">fait à '+t.progress+' %</span>');
-    if(!t.done && !t.time && !t.memo && !t.vac && typeof Plan!=="undefined" && t.sub!=="perso"){ var wt=whenTxt("task|"+t.id); meta.push(wt?'<span class="meta">prévu '+esc(wt)+'</span>':'<span class="meta late">sans créneau</span>'); }
+    if(!gone && !t.done && !t.time && !t.memo && !t.vac && typeof Plan!=="undefined" && t.sub!=="perso"){ var wt=whenTxt("task|"+t.id); meta.push(wt?'<span class="meta">prévu '+esc(wt)+'</span>':'<span class="meta late">sans créneau</span>'); }
     return '<div class="task p'+(t.prio||0)+(t.done?" done":"")+'" data-key="tk-'+t.id+'"><button class="check'+(t.done?" on":"")+'" data-a="toggle" data-id="'+t.id+'" aria-label="'+(t.done?"Rouvrir":"Terminer")+'">'+(t.done?I.check:"")+'</button>'+
       '<div class="tt"><span class="tedit" data-a="edittask" data-id="'+t.id+'" role="button" tabindex="0">'+esc(t.title)+'</span><div class="tm">'+tag(t.sub)+(t.type?'<span class="meta">'+esc(t.type)+'</span>':'')+meta.join("")+(t.prio?'<span class="prio">'+"!!!".slice(0,t.prio)+'</span>':'')+(t.example?'<span class="badge-ex">exemple</span>':'')+'</div></div>'+
-      (t.vac&&!t.done?'<button class="chip" data-a="unvac" data-id="'+t.id+'" title="Sortir de la liste des vacances">Faire avant</button>':'')+'<button class="del" data-a="del" data-id="'+t.id+'" aria-label="Supprimer">'+I.trash+'</button></div>';
+      (gone?'<span class="row" style="gap:6px;flex-wrap:wrap"><button class="chip" data-a="toggle" data-id="'+t.id+'">Oui, fait</button><button class="chip" data-a="unhard" data-id="'+t.id+'" title="La replanifier sur les prochaines séances">Non, à rattraper</button></span>':'')+(t.vac&&!t.done?'<button class="chip" data-a="unvac" data-id="'+t.id+'" title="Sortir de la liste des vacances">Faire avant</button>':'')+'<button class="del" data-a="del" data-id="'+t.id+'" aria-label="Supprimer">'+I.trash+'</button></div>';
   }).join("");
 }
 function vTodo(){
@@ -550,12 +555,13 @@ function editTask(id){
     {k:"sub",label:"Matière",type:"select",options:SUB_OPTS,value:t.sub||"perso"},
     {k:"dur",label:"Durée (min)",type:"number",value:t.dur||""},
     {k:"due",label:"À rendre / échéance (« pour … »)",type:"date",value:t.due||""},
+    {k:"hard",label:"Si l'échéance passe sans que ce soit fait",type:"radio",options:[["1","Date limite stricte : rien après"],["0","Souple : à rattraper"]],value:t.hard?"1":"0"},
     {k:"day",label:"Jour où la faire",type:"date",value:t.day||""},
     {k:"time",label:"Heure précise (rendez-vous, rappel)",type:"time",value:t.time||""},
     {k:"prio",label:"Priorité",type:"select",options:[[0,"Normale"],[1,"! Importante"],[2,"!! Prioritaire"],[3,"!!! Impérative"]],value:t.prio||0},
     {k:"vac",label:"Liste",type:"radio",options:[["0","Planning"],["1","Vacances"]],value:t.vac?"1":"0"},
     {k:"progress",label:"Avancement (%)",type:"number",value:t.progress||0}
-  ], save:function(v){ if(!v.title.trim()) return "L'intitulé est vide."; t.title=v.title.trim(); t.sub=v.sub; t.dur=numOrNull(v.dur); t.due=v.due||null; t.day=v.day||null; t.time=v.time||null; t.prio=+v.prio||0; t.vac=v.vac==="1"; t.progress=Math.max(0,Math.min(100,numOrNull(v.progress)||0)); },
+  ], save:function(v){ if(!v.title.trim()) return "L'intitulé est vide."; t.title=v.title.trim(); t.sub=v.sub; t.dur=numOrNull(v.dur); t.due=v.due||null; t.hard=v.hard==="1"; t.day=v.day||null; t.time=v.time||null; t.prio=+v.prio||0; t.vac=v.vac==="1"; t.progress=Math.max(0,Math.min(100,numOrNull(v.progress)||0)); },
     del:function(){ st().tasks=st().tasks.filter(function(x){ return x.id!==id; }); }, toast:"Tâche modifiée." });
 }
 function editNote(id,ep){
@@ -1726,6 +1732,7 @@ document.addEventListener("click",function(ev){
   if(a==="vaccopy"){ var txt=vacText(); (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){ toast("Liste copiée : colle-la à Claude pour organiser tes vacances."); },function(){ sheetText(txt); }); return; }
   if(a==="toggle"){ var t=s.tasks.find(function(x){return x.id===b.getAttribute("data-id");}); if(t){ t.done=!t.done; t.doneAt=t.done?new Date().toISOString():null; save(); render(); } return; }
   if(a==="del"){ s.tasks=s.tasks.filter(function(x){return x.id!==b.getAttribute("data-id");}); save(); render(); toast("Tâche supprimée."); return; }
+  if(a==="unhard"){ var th=s.tasks.find(function(x){ return x.id===b.getAttribute("data-id"); }); if(th){ th.hard=false; save(); if(typeof Plan!=="undefined") Plan.invalidate(); render(); toast("Elle sera rattrapée sur tes prochaines séances."+placeToast(th)); } return; }
   if(a==="tfilter"){ S.todoFilter=b.getAttribute("data-f"); render(); return; }
   if(a==="csh-skip"){ s.cshSkip=(s.cshSkip||0)+1; save(); render(); return; }
   if(a==="agmode"){ S.agMode=b.getAttribute("data-m"); render(); return; }

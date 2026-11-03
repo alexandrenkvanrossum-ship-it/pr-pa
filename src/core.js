@@ -56,6 +56,14 @@ var TYPES = [
   ["Dissertation",/\bdissert\w*/,240],["Flashcards",/\b(anki|flashcards?)\b/,20],["Traduction",/\b(traduction|theme|version)\b/,30],
   ["RAC",/\brac\b/,120],["Essay",/\bessay\b/,90],["Révision",/\b(reviser|revision|revoir|apprendre)\b/,45],["Colle",/\bcolle\b/,60]
 ];
+/* « pour X » : date limite stricte (inutile après : exposé, revue de presse, colle, DM, devoir à rendre…) ou échéance souple (à rattraper).
+   On peut forcer : « date limite », « au plus tard », « impérativement » → stricte ; « si possible », « rattrapable » → souple. */
+function dueHard(txt){
+  var n=" "+norm(txt||"")+" ";
+  if(/\b(si possible|rattrapable|pas grave|idealement|souple)\b/.test(n)) return false;
+  if(/\b(date limite|au plus tard|imperativement|strict|stricte|dernier delai)\b/.test(n)) return true;
+  return /\b(revue de presse|expose|exposes|oral|colle|kholle|khôlle|presentation|dst|interro|controle|a rendre|rendre|dm|devoirs?|ds|concours|examen|partiel)\b/.test(n);
+}
 function parseTask(raw, now){
   now = now || new Date();
   var t0=new Date(now); t0.setHours(0,0,0,0);
@@ -116,6 +124,7 @@ function parseTask(raw, now){
   if(out.dur!=null && !/\d\s*(min|mn|h)/.test(norm(raw))){ if(longHint) out.dur=Math.round(out.dur*1.5); if(shortHint) out.dur=Math.round(out.dur*0.6); }
   if(out.type==="Lecture" && /\b(texte|article|extrait|poeme)\b/.test(n2) && !/\d\s*(min|mn|h)/.test(norm(raw))) out.dur=longHint?15:10;
   if(out.action==="rappel" && !out.day && !out.due && out.time) out.day=iso(t0);
+  if(out.due) out.hard=dueHard(raw);
   if(out.action!=="rappel" && (out.due || /\b(devoirs?|a rendre|a faire pour|pour (le )?(prochain )?cours|dm)\b/.test(n2))) out.devoir=true;
   if(out.rappelDevoir && /\b(rendre|apporter|imprimer|envoyer|donner|signer|deposer)\b/.test(n2) && out.type==null){ out.memo=true; out.type="Rappel"; }
   out.durEstimee=out.dur!=null && !/\d\s*(min|mn|h)\b/.test(norm(raw));

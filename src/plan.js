@@ -47,7 +47,9 @@ var Plan = (function(){
       var o={key:"task|"+x.id, ref:{k:"task",id:x.id}, lab:x.title, sub:x.sub, min:left, prio:x.prio||0, created:x.created||"", chunk:15, dm:x.action==="dm"};
       if(x.slot) o.slot=x.slot;
       if(x.day){ o.day=x.day<t?t:x.day; o.late=x.day<t; o.cls=0; }
-      else if(x.due){ var dl=iso(addDays(parseISO(x.due),-1)); if(dl<t){ dl=t; o.late=x.due<t; } o.dl=dl; o.cls=1; }
+      else if(x.due){
+        if(x.hard && x.due<t) return; /* date limite stricte dépassée : plus rien à placer (la To-Do demande si c'est fait) */
+        var dl=iso(addDays(parseISO(x.due),-1)); if(dl<t){ dl=t; o.late=!x.hard && x.due<t; } o.dl=dl; o.cls=1; }
       else o.cls=3;
       out.push(o);
     });
@@ -63,7 +65,7 @@ var Plan = (function(){
         if(ev.kind!=="work" || ev.items) return;
         var s=toMin(ev.s), e=toMin(ev.e), state="future";
         if(d===t){ if(e<=nm) state="past"; else if(s<=nm) state="now"; }
-        var cap=Math.max(0, Math.floor((e-s-fixedMin(ev))*(1-pauseRatio(ev))));
+        var cap=e-s<20? 0 : Math.max(0, Math.floor((e-s-fixedMin(ev))*(1-pauseRatio(ev)))); /* moins de 20 min : réservé à l'Anki (voir roadFor) */
         out.push({d:d, wd:wd, ev:ev, id:d+"|"+ev.id, subs:ev.subs||[ev.sub], cap:cap, left:state==="future"?cap:0, state:state, items:[]});
       });
     }
