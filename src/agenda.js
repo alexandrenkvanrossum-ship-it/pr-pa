@@ -78,7 +78,7 @@ function dayEvents(dISO){
       carve(toMin(b.s),toMin(b.e));
       if(b.prep){ carve(toMin(b.prep.s),toMin(b.prep.e));
         add({kind:"exam",s:b.prep.s,e:b.prep.e,t:"Préparation colle – "+c.discipline.replace(/ LV\d$/,"")+" (tirage anticipé, passage "+hLabel(c.debut)+")",sub:BJ.subOf(c),colle:c.id,prepColle:true,lieu:""}); }
-      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isAumonier(c)?"Colle aumônier":BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
+      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isAumonier(c)?"Colle aumônier":BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":"")+(c.salle?" · "+c.salle:""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
     });
   }
   /* jour de colle de maths : tout le travail de l'après-midi avant la colle devient des maths (révision du programme) */

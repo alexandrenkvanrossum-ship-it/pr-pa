@@ -402,6 +402,12 @@ function openSlot(dISO,id){
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+fmtLong(dISO)+' · '+hLabel(e.s)+'–'+hLabel(e.e)+(e.edited||e.added?' · modifié':'')+'</div><h2>'+esc(e.t)+'</h2></div>'+(e.taskId?'<button class="btn sm" data-a="edittask" data-id="'+e.taskId+'">Modifier</button>':editable?'<button class="btn sm" data-a="slotedit" data-d="'+dISO+'" data-id="'+esc(e.id)+'">Modifier</button><button class="icon-btn del-btn" data-a="slotdel" data-d="'+dISO+'" data-id="'+esc(e.id)+'" aria-label="Supprimer le créneau" title="Supprimer le créneau">'+I.trash+'</button>':'')+'<button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(e.taskId){ h+='<p class="muted" style="margin:0">Rendez-vous ajouté depuis la to-do. Rappel prévu '+(st().tasks.find(function(t){return t.id===e.taskId;})||{}).remind+' min avant.</p>'; }
   else if(e.kind==="course"){ h+='<p class="muted" style="margin:0">Cours. Horaire imposé : l\'app ne le déplace jamais.</p>'; }
+  else if(e.colle && typeof BJ!=="undefined"){ var cc=BJ.data().colles.find(function(x){ return x.id===e.colle; })||{}, bb=cc.debut?BJ.block(cc):{};
+    var rows=[["Salle",cc.salle||"non indiquée sur BJcolle"],["Colleur",cc.colleur||""],
+      ["Préparation",e.prepColle?hLabel(e.s)+"–"+hLabel(e.e):BJ.isAnticipe(cc)&&bb.prep?"le midi, "+hLabel(bb.prep.s)+"–"+hLabel(bb.prep.e)+" (tirage anticipé)":/^\d/.test(cc.tirage||"")?"tirage à "+hLabel(cc.tirage):BJ.isEntretien(cc)?"aucune":"à partir de "+hLabel(bb.s)],
+      ["Passage",cc.debut?hLabel(cc.debut)+(cc.fin?"–"+hLabel(cc.fin):""):""]].filter(function(r){ return r[1]; });
+    h+='<div class="stack" style="gap:6px">'+rows.map(function(r){ return '<div class="row" style="justify-content:space-between;gap:12px"><span class="muted">'+r[0]+'</span><b style="text-align:right">'+esc(r[1])+'</b></div>'; }).join("")+'</div>';
+  }
   else if(e.kind==="exam"){ h+='<p class="muted" style="margin:0">Pale. Les révisions démarrent automatiquement à J-14 (réactivation, entraînement, consolidation).</p>'; }
   else if(!road.length){ h+='<p class="muted" style="margin:0">Routine fixe.</p>'; }
   else{

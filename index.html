@@ -1196,13 +1196,14 @@ var BJ = (function(){
   function isAnticipe(c){ return !!c && /anticip/i.test(c.tirage||""); }
   function isFri(c){ return !!c.date && parseISO(c.date).getDay()===5; }
   function prepMidi(c){ if(!isAnticipe(c)||isFri(c)) return null; var s=subOf(c); return {s:(s==="ang"||s==="all")?"13:30":"13:20", e:"13:50"}; }
-  function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
+  function block(c){ // créneau bloqué dans l'agenda : de l'heure pile de la préparation, 1 h au moins (fin du passage si plus tard)
     if(isAumonier(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+45))};
     var s=subOf(c), end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0), start;
     if(isAnticipe(c)&&!isFri(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+25)), prep:prepMidi(c)}; // préparée le midi, premier à passer : passage pile à l'heure, 20 min + 5 min, sans marge
     if(isAnticipe(c)) start=toMin(c.debut)-35; // vendredi : préparation 35 min avant le passage
-    else { var prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20); start=toMin(c.debut)-prep-10; }
-    return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end)), prep:prepMidi(c)};
+    else { var prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20); start=toMin(c.debut)-prep; }
+    start=Math.max(0,start); end=Math.max(end,start+60);
+    return {s:fromMin(start), e:fromMin(Math.min(1439,end)), prep:prepMidi(c)};
   }
   function colleurKey(n){ return String(n||"").replace(/\s+[A-Z]$/,"").trim(); }
   function colleurs(){
@@ -1871,7 +1872,7 @@ function dayEvents(dISO){
       carve(toMin(b.s),toMin(b.e));
       if(b.prep){ carve(toMin(b.prep.s),toMin(b.prep.e));
         add({kind:"exam",s:b.prep.s,e:b.prep.e,t:"Préparation colle – "+c.discipline.replace(/ LV\d$/,"")+" (tirage anticipé, passage "+hLabel(c.debut)+")",sub:BJ.subOf(c),colle:c.id,prepColle:true,lieu:""}); }
-      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isAumonier(c)?"Colle aumônier":BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
+      add({kind:"exam",s:b.s,e:b.e,t:(BJ.isAumonier(c)?"Colle aumônier":BJ.isEntretien(c)?"Entretien de personnalité":"Colle – "+c.discipline.replace(/ LV\d$/,""))+(c.colleur?" ("+c.colleur+")":"")+(c.salle?" · "+c.salle:""),sub:BJ.subOf(c),colle:c.id,lieu:c.salle||""});
     });
   }
   /* jour de colle de maths : tout le travail de l'après-midi avant la colle devient des maths (révision du programme) */
@@ -2572,6 +2573,12 @@ function openSlot(dISO,id){
   var h='<div class="band '+s.cls+'"></div><div class="sheet-h"><div class="ttl"><div class="eyebrow">'+fmtLong(dISO)+' · '+hLabel(e.s)+'–'+hLabel(e.e)+(e.edited||e.added?' · modifié':'')+'</div><h2>'+esc(e.t)+'</h2></div>'+(e.taskId?'<button class="btn sm" data-a="edittask" data-id="'+e.taskId+'">Modifier</button>':editable?'<button class="btn sm" data-a="slotedit" data-d="'+dISO+'" data-id="'+esc(e.id)+'">Modifier</button><button class="icon-btn del-btn" data-a="slotdel" data-d="'+dISO+'" data-id="'+esc(e.id)+'" aria-label="Supprimer le créneau" title="Supprimer le créneau">'+I.trash+'</button>':'')+'<button class="icon-btn" data-a="close" aria-label="Fermer">'+I.close+'</button></div><div class="sheet-b">';
   if(e.taskId){ h+='<p class="muted" style="margin:0">Rendez-vous ajouté depuis la to-do. Rappel prévu '+(st().tasks.find(function(t){return t.id===e.taskId;})||{}).remind+' min avant.</p>'; }
   else if(e.kind==="course"){ h+='<p class="muted" style="margin:0">Cours. Horaire imposé : l\'app ne le déplace jamais.</p>'; }
+  else if(e.colle && typeof BJ!=="undefined"){ var cc=BJ.data().colles.find(function(x){ return x.id===e.colle; })||{}, bb=cc.debut?BJ.block(cc):{};
+    var rows=[["Salle",cc.salle||"non indiquée sur BJcolle"],["Colleur",cc.colleur||""],
+      ["Préparation",e.prepColle?hLabel(e.s)+"–"+hLabel(e.e):BJ.isAnticipe(cc)&&bb.prep?"le midi, "+hLabel(bb.prep.s)+"–"+hLabel(bb.prep.e)+" (tirage anticipé)":/^\d/.test(cc.tirage||"")?"tirage à "+hLabel(cc.tirage):BJ.isEntretien(cc)?"aucune":"à partir de "+hLabel(bb.s)],
+      ["Passage",cc.debut?hLabel(cc.debut)+(cc.fin?"–"+hLabel(cc.fin):""):""]].filter(function(r){ return r[1]; });
+    h+='<div class="stack" style="gap:6px">'+rows.map(function(r){ return '<div class="row" style="justify-content:space-between;gap:12px"><span class="muted">'+r[0]+'</span><b style="text-align:right">'+esc(r[1])+'</b></div>'; }).join("")+'</div>';
+  }
   else if(e.kind==="exam"){ h+='<p class="muted" style="margin:0">Pale. Les révisions démarrent automatiquement à J-14 (réactivation, entraînement, consolidation).</p>'; }
   else if(!road.length){ h+='<p class="muted" style="margin:0">Routine fixe.</p>'; }
   else{

@@ -53,13 +53,14 @@ var BJ = (function(){
   function isAnticipe(c){ return !!c && /anticip/i.test(c.tirage||""); }
   function isFri(c){ return !!c.date && parseISO(c.date).getDay()===5; }
   function prepMidi(c){ if(!isAnticipe(c)||isFri(c)) return null; var s=subOf(c); return {s:(s==="ang"||s==="all")?"13:30":"13:20", e:"13:50"}; }
-  function block(c){ // créneau bloqué dans l'agenda : 10 min avant la préparation → fin du passage
+  function block(c){ // créneau bloqué dans l'agenda : de l'heure pile de la préparation, 1 h au moins (fin du passage si plus tard)
     if(isAumonier(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+45))};
     var s=subOf(c), end=toMin(c.fin||fromMin(toMin(c.debut)+(c.duree||20)))+((s==="hgg"||s==="csh")?5:0), start;
     if(isAnticipe(c)&&!isFri(c)) return {s:c.debut, e:fromMin(Math.min(1439,toMin(c.debut)+25)), prep:prepMidi(c)}; // préparée le midi, premier à passer : passage pile à l'heure, 20 min + 5 min, sans marge
     if(isAnticipe(c)) start=toMin(c.debut)-35; // vendredi : préparation 35 min avant le passage
-    else { var prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20); start=toMin(c.debut)-prep-10; }
-    return {s:fromMin(Math.max(0,start)), e:fromMin(Math.min(1439,end)), prep:prepMidi(c)};
+    else { var prep=/^\d/.test(c.tirage||"")? toMin(c.debut)-toMin(c.tirage) : isEntretien(c)? 0 : (PREP[s]||20); start=toMin(c.debut)-prep; }
+    start=Math.max(0,start); end=Math.max(end,start+60);
+    return {s:fromMin(start), e:fromMin(Math.min(1439,end)), prep:prepMidi(c)};
   }
   function colleurKey(n){ return String(n||"").replace(/\s+[A-Z]$/,"").trim(); }
   function colleurs(){
