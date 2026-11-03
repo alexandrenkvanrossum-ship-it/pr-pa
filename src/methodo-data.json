@@ -1129,12 +1129,18 @@
     "ecoles": [
      {
       "ecole": "ESSEC",
+      "src": "Ton doc METHODO + fiche « Conseils de Rosemary Sanz (ESSEC), Head of BCE concours » (essai argumenté, question 2)",
       "points": [
-       "**ALWAYS DEFEND A CLEAR-CUT POV !** Toujours défendre un point de vue tranché.",
-       "**Étudier le dossier** : les **docs 3, 4 et 5 sont OBLIGATOIRES** (« MANDATORY ») ; on peut ensuite **développer un POV**.",
-       "Essay : **utiliser le contenu** des documents, mais **NEVER QUOTING !!!** Même pas un peu, **jamais de calque**.",
-       "**Préparer une vraie conclusion** : ne pas se répéter, jamais « In a nutshell » et consorts.",
-       "**Jamais de buzzwords ni de catchphrases gratuites.** En faire trop (overdoing) est mal vu : **empty rhetoric et phrases apprises par cœur = USELESS**.",
+       "**Défendre un POV : être neutre ou « sitting on the fence » est déconseillé.** ALWAYS DEFEND A CLEAR-CUT POV !",
+       "**Étudier le dossier** : les **docs 3, 4 et 5 sont OBLIGATOIRES** (« MANDATORY »).",
+       "Les documents sont **un point d'appui, pas une fin** : **réagir à leurs idées et arguments** et les **intégrer à l'argumentation**, **jamais les décrire ni les résumer**. La copie doit montrer que **le dossier a nourri la réflexion**.",
+       "**Ne pas se limiter au dossier** : mobiliser aussi des **connaissances sur la culture, la civilisation, l'histoire, la société et l'actualité** des pays anglophones.",
+       "**Images du dossier** : beaucoup de candidats se contentent de les mentionner ou de les décrire. **Il faut se servir de leur contenu** pour élargir ou approfondir son argument.",
+       "**NEVER QUOTING the documents !!!** Recopier un document (au-delà de quelques mots indispensables) = **copier-coller, plagiat, à éviter absolument**. Jamais de calque.",
+       "Citations extérieures : **bienvenues si elles sont tissées dans l'analyse** ou servent à introduire ou synthétiser un argument. **Inutiles si elles sont plaquées** (Shakespeare cité sans contexte).",
+       "**Pas de « catchy phrase » en ouverture ou en fermeture juste pour l'effet**, pas de buzzwords gratuits, pas de phrases apprises par cœur (empty rhetoric = USELESS). **Mieux vaut une structure nette et intentionnelle qu'un style trop dramatique.**",
+       "**Une vraie conclusion qui apporte « closure and synthesis »** : ni « In a nutshell, I believe that… » qui répète la question, ni un résumé répétitif des arguments.",
+       "Quatre façons de conclure : **« full circle »** (une idée ouverte en intro et refermée en conclusion) ; **ouvrir sur des implications plus larges**, éventuellement par une question qui fait réfléchir ; **« call to action »** (plutôt pour l'oral, parfois pertinent) ; après un pour-contre, **trancher fermement et avec autorité**, à partir des positions opposées exposées.",
        "Sujet de l'année : **l'actualité d'août à février** (Andy Burnham, midterms, Jason Arday / Cambridge / éducation…), **SAUF Epstein et les très grosses affaires**. Donc : **lire les revues de presse**.",
        "Références : **séries Netflix OK**, **musique OK, SAUF le rap**."
       ]
@@ -1143,6 +1149,16 @@
       "ecole": "ESCP",
       "points": [],
       "vide": "Rien pour l'écrit dans ton document pour l'instant."
+     }
+    ],
+    "sources": [
+     {
+      "titre": "METHODO (ton Drive, dossier Anglais)",
+      "lien": "https://docs.google.com/document/d/1YHBgWrQR2dbehiJOk594P6-fH9t7zys8MOpVZIOwCFA/edit"
+     },
+     {
+      "titre": "Conseils de Rosemary Sanz (ESSEC), Head of BCE concours — photo de la fiche",
+      "lien": ""
      }
     ]
    }

@@ -1551,7 +1551,7 @@ function offHTML(id,compact){
   var ec=o.ecoles.filter(function(e){ return e.points.length || !compact; });
   if(!ec.length) return "";
   var h='<div class="off'+(compact?" off-c":"")+'"><div class="off-h"><span class="off-t">Infos officielles · concours '+esc(o.annee||"")+'</span>'+(o.source&&!compact?'<a class="link-btn" href="'+esc(o.source.lien)+'" target="_blank" rel="noopener">ton doc ↗</a>':'')+'</div>';
-  ec.forEach(function(e){ h+='<div class="off-ec"><div class="off-n">'+esc(e.ecole)+'</div>'+(e.points.length?'<ul>'+e.points.map(function(x){ return '<li>'+mtx(x)+'</li>'; }).join("")+'</ul>':'<p class="small muted" style="margin:2px 0 0">'+esc(e.vide||"Rien pour l\'instant.")+'</p>')+'</div>'; });
+  ec.forEach(function(e){ h+='<div class="off-ec"><div class="off-n">'+esc(e.ecole)+'</div>'+(e.src&&!compact?'<div class="small muted" style="margin:0 0 4px">'+esc(e.src)+'</div>':'')+(e.points.length?'<ul>'+e.points.map(function(x){ return '<li>'+mtx(x)+'</li>'; }).join("")+'</ul>':'<p class="small muted" style="margin:2px 0 0">'+esc(e.vide||"Rien pour l\'instant.")+'</p>')+'</div>'; });
   return h+'</div>';
 }
 function mtx(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong class="hl">$1</strong>'); }
